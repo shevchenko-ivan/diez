@@ -1,68 +1,349 @@
+/* ── Stolzl local font ─────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Stolzl';
+  src: url('/fonts/Stolzl-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Stolzl';
+  src: url('/fonts/Stolzl-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Stolzl';
+  src: url('/fonts/Stolzl-Book.ttf') format('truetype');
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Stolzl';
+  src: url('/fonts/Stolzl-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Stolzl';
+  src: url('/fonts/Stolzl-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Stolzl';
+  src: url('/fonts/Stolzl-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
+/* ── Teenage Engineering / OP-1 design system ─────────────────────────────── */
+
+:root {
+  --bg:           #E4DFD5;
+  --surface:      #EDE9DF;   /* same material as bg, just slightly lighter */
+  --surface-hi:   #F5F2EA;
+  --surface-dk:   #D8D3C9;
+  --panel:        #1A1917;
+  --panel-text:   #C8F500;
+
+  --text:         #1A1917;
+  --text-mid:     #6B6560;
+  --text-muted:   #A09890;
+
+  --orange:       #FF4500;
+  --navy:         #1A1F3A;
+  --tan:          #B8956A;
+  --red:          #D63B2F;
+
+  /*
+    ── Neumorphic shadow system ──────────────────────────────────────────────
+    Rule: element and background are the SAME material.
+    Shadows = two-tone: dark corner + bright corner.
+    Offset 4–5px, blur 8–10px. Equal X and Y.
+    This gives "molded out of the surface" feel, not "floating above it".
+  */
+
+  /* Raised — extruded from the surface */
+  --sh-rest:
+     4px  4px  9px  rgba(0,0,0,0.18),
+    -4px -4px  9px  rgba(255,255,255,0.76);
+
+  /* Same as rest, slight increase — used where needed */
+  --sh-hover:
+     5px  5px  11px rgba(0,0,0,0.20),
+    -5px -5px  11px rgba(255,255,255,0.82);
+
+  /* Pressed / inset — pushed back into the surface */
+  --sh-pressed:
+    inset  3px  3px  7px rgba(0,0,0,0.18),
+    inset -3px -3px  7px rgba(255,255,255,0.76);
+
+  /* Recessed (inputs, LCD backgrounds) */
+  --sh-inset:
+    inset  4px  4px  9px rgba(0,0,0,0.16),
+    inset -4px -4px  9px rgba(255,255,255,0.72);
+
+  /* Transitions */
+  --t-press:   70ms  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --t-release: 180ms cubic-bezier(0.34, 1.3, 0.64, 1);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  *, *::before, *::after { box-sizing: border-box; }
+
   body {
-    @apply bg-background text-foreground;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Stolzl', -apple-system, sans-serif;
+    font-weight: 350;
+    -webkit-font-smoothing: antialiased;
+    cursor: default;
   }
+
+  ::placeholder { color: var(--text-muted); }
+}
+
+@layer utilities {
+
+  /* ── Raised surface (non-interactive slab) ── */
+  .te-surface {
+    background: var(--surface);
+    box-shadow: var(--sh-rest);
+  }
+
+  .te-surface-lg {
+    background: var(--surface);
+    box-shadow: var(--sh-hover);
+  }
+
+  /* Recessed / input */
+  .te-inset {
+    background: var(--surface-dk);
+    box-shadow: var(--sh-inset);
+  }
+
+  /*
+    ── te-pressable ─────────────────────────────────────────────────────────
+    Universal press mechanic:
+    default  → raised (extruded from surface)
+    hover    → slightly more compact inset, "finger resting on button"
+    active   → fully pressed in, shadow inverts
+  */
+  .te-pressable {
+    position: relative;
+    cursor: pointer;
+    transition:
+      box-shadow var(--t-release),
+      transform   var(--t-release);
+  }
+
+  /* Hover: barely dip — like a finger touching without pressing */
+  .te-pressable:hover {
+    box-shadow:
+       3px  3px  7px rgba(0,0,0,0.15),
+      -3px -3px  7px rgba(255,255,255,0.72),
+      inset  1px  1px 3px rgba(0,0,0,0.06),
+      inset -1px -1px 3px rgba(255,255,255,0.50);
+    transform: translateY(1px);
+    transition:
+      box-shadow 120ms ease,
+      transform  120ms ease;
+  }
+
+  /* Active: fully pressed into the surface */
+  .te-pressable:active {
+    box-shadow: var(--sh-pressed);
+    transform: translateY(2px);
+    transition:
+      box-shadow var(--t-press),
+      transform  var(--t-press);
+  }
+
+  /*
+    ── te-key ───────────────────────────────────────────────────────────────
+    Pill-shaped button (nav, tags, chips)
+  */
+  .te-key {
+    background: var(--surface);
+    box-shadow: var(--sh-rest);
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+      box-shadow var(--t-release),
+      transform   var(--t-release);
+  }
+
+  .te-key:hover {
+    box-shadow:
+       3px  3px  7px rgba(0,0,0,0.15),
+      -3px -3px  7px rgba(255,255,255,0.72),
+      inset  1px  1px 3px rgba(0,0,0,0.05),
+      inset -1px -1px 3px rgba(255,255,255,0.48);
+    transform: translateY(1px);
+    transition: box-shadow 120ms ease, transform 120ms ease;
+  }
+
+  .te-key:active {
+    box-shadow: var(--sh-pressed);
+    transform: translateY(2px);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
+  /*
+    ── te-knob ──────────────────────────────────────────────────────────────
+    Circular knob — embossed dome on the surface
+  */
+  .te-knob {
+    border-radius: 50%;
+    cursor: pointer;
+    background: radial-gradient(circle at 38% 36%,
+      var(--surface-hi) 0%,
+      var(--surface)    52%,
+      var(--surface-dk) 100%
+    );
+    box-shadow:
+       4px  4px  9px rgba(0,0,0,0.20),
+      -4px -4px  9px rgba(255,255,255,0.82),
+      inset  1px  1px 2px rgba(255,255,255,0.60),
+      inset -1px -1px 2px rgba(0,0,0,0.08);
+    transition:
+      box-shadow var(--t-release),
+      transform  var(--t-release);
+  }
+
+  .te-knob:hover {
+    box-shadow:
+       3px  3px  7px rgba(0,0,0,0.16),
+      -3px -3px  7px rgba(255,255,255,0.76),
+      inset  2px  2px 5px rgba(0,0,0,0.10),
+      inset -2px -2px 5px rgba(255,255,255,0.60);
+    transform: scale(0.98);
+    transition: box-shadow 120ms ease, transform 120ms ease;
+  }
+
+  .te-knob:active {
+    box-shadow:
+      inset  4px  4px 10px rgba(0,0,0,0.22),
+      inset -3px -3px  8px rgba(255,255,255,0.78);
+    transform: scale(0.96);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
+  /*
+    ── te-btn-orange ─────────────────────────────────────────────────────────
+    The accent orange button
+  */
+  .te-btn-orange {
+    background: linear-gradient(160deg, #ff5520 0%, #e03800 100%);
+    box-shadow:
+       4px  4px  9px rgba(160, 40, 0, 0.40),
+      -3px -3px  8px rgba(255, 190, 150, 0.50),
+      inset  1px  1px 2px rgba(255, 170, 120, 0.40),
+      inset -1px -1px 2px rgba(120, 20, 0, 0.30);
+    border-radius: 999px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      box-shadow var(--t-release),
+      transform  var(--t-release);
+  }
+
+  .te-btn-orange:hover {
+    box-shadow:
+       3px  3px  7px rgba(160, 40, 0, 0.35),
+      -2px -2px  6px rgba(255, 190, 150, 0.44),
+      inset  2px  2px 5px rgba(120, 20, 0, 0.22),
+      inset -1px -1px 4px rgba(255, 140, 80, 0.28);
+    transform: translateY(1px);
+    transition: box-shadow 120ms ease, transform 120ms ease;
+  }
+
+  .te-btn-orange:active {
+    box-shadow:
+      inset  4px  4px 10px rgba(120, 20, 0, 0.50),
+      inset -3px -3px  7px rgba(255, 130, 70, 0.38);
+    background: linear-gradient(160deg, #d93200 0%, #ff5520 100%);
+    transform: translateY(2px);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
+  /*
+    ── te-card-hover ─────────────────────────────────────────────────────────
+    Card-sized pressable tiles
+  */
+  .te-card-hover {
+    cursor: pointer;
+    transition:
+      box-shadow var(--t-release),
+      transform  var(--t-release);
+  }
+
+  .te-card-hover:hover {
+    box-shadow:
+       3px  3px  7px rgba(0,0,0,0.15),
+      -3px -3px  7px rgba(255,255,255,0.72),
+      inset  1px  1px 3px rgba(0,0,0,0.06),
+      inset -1px -1px 3px rgba(255,255,255,0.50);
+    transform: translateY(1px);
+    transition: box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  .te-card-hover:active {
+    box-shadow: var(--sh-pressed);
+    transform: translateY(2px);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
+  /*
+    ── te-lcd ────────────────────────────────────────────────────────────────
+    Dark LCD panel — always inset, not pressable
+  */
+  .te-lcd {
+    background: var(--panel);
+    border-radius: 0.625rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--panel-text);
+    box-shadow:
+      inset  3px  3px  8px rgba(0,0,0,0.65),
+      inset -2px -2px  5px rgba(255,255,255,0.04);
+  }
+
+  /* Speaker grille dot pattern */
+  .te-grille {
+    background-image: radial-gradient(circle, var(--surface-dk) 1.5px, transparent 1.5px);
+    background-size: 8px 8px;
+  }
+
+  /* Dark nav key */
+  .te-key-dark {
+    background: var(--navy);
+    box-shadow:
+       3px  3px  8px rgba(0,0,0,0.50),
+      -2px -2px  5px rgba(255,255,255,0.06);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  /* Mono font */
+  .font-mono-te {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Scrollbar none */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
 }
