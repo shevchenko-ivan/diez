@@ -73,7 +73,7 @@ export default function HomePage() {
         <section className="mb-12">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {CATEGORIES.map((cat) => (
-              <Link
+              <HapticLink
                 key={cat.label}
                 href={cat.href}
                 id={`cat-${cat.label.toLowerCase().replace(/\s+/g, "-")}`}
