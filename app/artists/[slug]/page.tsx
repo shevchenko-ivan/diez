@@ -4,6 +4,14 @@ import { SongCard } from "@/features/song/components/SongCard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+export function generateStaticParams() {
+  const songs = getAllSongs();
+  const artists = Array.from(new Set(songs.map(s => s.artist)));
+  return artists.map(artist => ({
+    slug: artist.toLowerCase().replace(/\s+/g, '-')
+  }));
+}
+
 export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const artistName = decodeURIComponent(slug).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
