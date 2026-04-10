@@ -1,97 +1,123 @@
+"use client";
+
 import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
+import { Heart, Play, Star } from "lucide-react";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
 
-interface SongCardProps {
+export interface SongCardProps {
   slug?: string;
   title: string;
   artist: string;
   difficulty: "easy" | "medium" | "hard";
   chords: string[];
   views: number;
-  index?: number;
+  rating?: number;
+  isSaved?: boolean;
+  isNew?: boolean;
+  isTrending?: boolean;
   coverColor?: string;
   coverImage?: string;
+  index?: number;
 }
 
-const difficultyDot: Record<string, string> = {
-  easy: "#30D158",
-  medium: "#FF9F0A",
-  hard: "#FF453A",
+const difficultyConfig = {
+  easy: { label: "Легко", color: "text-[#30D158]", bg: "bg-[#30D158]/10" },
+  medium: { label: "Середньо", color: "text-[#FF9F0A]", bg: "bg-[#FF9F0A]/10" },
+  hard: { label: "Складно", color: "text-[#FF453A]", bg: "bg-[#FF453A]/10" },
 };
 
-export function SongCard({ slug, title, artist, difficulty, chords, views, index = 0, coverColor = "#C8D5E8", coverImage }: SongCardProps) {
-  const href = slug
-    ? `/songs/${slug}`
-    : `/songs/${encodeURIComponent(title.toLowerCase().replace(/\s+/g, "-"))}`;
+export function SongCard({ ...props }: SongCardProps) {
+  const diff = difficultyConfig[props.difficulty];
+
+  // Функція збереження, що не пускає лінк далі
+  const handleSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Виклик хука мутації або попапа
+  };
+
+  const href = props.slug
+    ? `/songs/${props.slug}`
+    : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
 
   return (
     <HapticLink
       href={href}
       hapticType="strum"
-      className="te-surface te-pressable flex flex-col"
+      className="te-surface te-pressable flex flex-col group relative overflow-hidden"
       style={{ borderRadius: "1.25rem" }}
     >
-      {/* Cover image area */}
-      <div
-        className="w-full aspect-square relative overflow-hidden"
-        style={{ borderRadius: "1.25rem 1.25rem 0 0" }}
-      >
-        {coverImage ? (
-          <Image
-            src={coverImage}
-            alt={title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw"
+      {/* --- MEDIA ZONE --- */}
+      <div className="w-full aspect-[4/3] relative overflow-hidden bg-[var(--surface)] border-b border-[rgba(0,0,0,0.05)]">
+        {/* Cover */}
+        {props.coverImage ? (
+          <img 
+            src={props.coverImage} 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+            alt={props.title} 
           />
         ) : (
           <div
+            className="w-full h-full transition-transform duration-500 group-hover:scale-105"
             style={{
-              position: "absolute", inset: 0,
-              background: `linear-gradient(145deg, ${coverColor}CC, ${coverColor}66)`,
+              background: `linear-gradient(145deg, ${props.coverColor || '#C8D5E8'}CC, ${props.coverColor || '#C8D5E8'}66)`,
             }}
           />
         )}
-        {/* Difficulty dot */}
-        <div
-          className="absolute top-3 right-3"
-          style={{
-            width: 8, height: 8, borderRadius: "50%",
-            background: difficultyDot[difficulty],
-            boxShadow: `0 0 6px ${difficultyDot[difficulty]}`,
-            zIndex: 1,
-          }}
-        />
-        {/* Chord tag */}
-        <div className="absolute bottom-3 left-3 flex gap-1 flex-wrap max-w-[85%]" style={{ zIndex: 1 }}>
-          {chords.slice(0, 3).map((c) => (
-            <span
-              key={c}
-              className="te-lcd font-mono-te text-xs px-2 py-0.5"
-              style={{ fontSize: "0.65rem" }}
-            >
-              {c}
+        
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+          <div className="te-knob w-12 h-12 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300">
+            <Play size={20} fill="currentColor" className="text-white ml-1" />
+          </div>
+        </div>
+
+        {/* Save/Favorite Button */}
+        <button 
+          onClick={handleSave}
+          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/20 backdrop-blur-md text-white/80 hover:text-white hover:bg-[#f43f5e] transition-colors z-10"
+        >
+          <Heart size={14} fill={props.isSaved ? "currentColor" : "none"} />
+        </button>
+
+        {/* Chords Preview */}
+        <div className="absolute bottom-2 left-2 flex gap-1 z-10">
+          {props.chords.slice(0, 3).map(chord => (
+            <span key={chord} className="bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-black border border-black/10 shadow-sm">
+              {chord}
             </span>
           ))}
         </div>
       </div>
 
-      {/* Name */}
-      <div className="p-3">
-        <p
-          className="font-medium text-xs tracking-wide leading-tight uppercase"
-          style={{ color: "var(--text)", letterSpacing: "0.04em" }}
-        >
-          {title}
+      {/* --- META ZONE --- */}
+      <div className="flex flex-col p-3.5 gap-1.5 flex-1">
+        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1" style={{ color: "var(--text)" }}>
+          {props.title}
+        </h3>
+        <p className="font-medium text-[11px] line-clamp-1 mb-1" style={{ color: "var(--text-muted)", opacity: 0.8 }}>
+          {props.artist}
         </p>
-        <p
-          className="text-xs font-medium mt-0.5 uppercase tracking-wide"
-          style={{ color: "var(--text-muted)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
-        >
-          {artist}
-        </p>
+        
+        {/* Badges / Stats Row */}
+        <div className="flex items-center gap-1.5 mt-auto flex-wrap">
+          {/* Difficulty Pill */}
+          <span className={`px-2 py-[2px] rounded text-[10px] font-bold uppercase tracking-wider ${diff.bg} ${diff.color}`}>
+            {diff.label}
+          </span>
+          <span className="opacity-30 text-[10px]" style={{ color: "var(--text-muted)" }}>•</span>
+          {/* Chords count */}
+          <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
+            {props.chords.length} ак.
+          </span>
+          {/* Rating */}
+          <div className="flex items-center gap-0.5 ml-auto">
+            <Star size={10} fill="#f59e0b" className="text-[#f59e0b]" />
+            <span className="text-[10px] font-bold" style={{ color: "var(--text)" }}>{props.rating || 4.9}</span>
+          </div>
+        </div>
       </div>
     </HapticLink>
   );
@@ -114,7 +140,7 @@ export function HeroSearch() {
           id="hero-search"
           name="q"
           type="text"
-          placeholder="Пісня або виконавець..."
+          placeholder="Шукайте: Океан Ельзи, Бумбокс або 'Wonderwall'..."
           className="flex-1 bg-transparent outline-none text-sm font-medium"
           style={{ color: "var(--text)" }}
         />

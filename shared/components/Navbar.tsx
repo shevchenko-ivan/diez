@@ -6,6 +6,7 @@ import { Menu, X, User } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/songs", label: "Акорди" },
+  { href: "/artists", label: "Виконавці" },
   { href: "/new", label: "Новинки" },
   { href: "/top", label: "Топ популярних" },
 ];
@@ -37,7 +38,29 @@ export function Navbar() {
         </div>
 
         {/* User area */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
+          <Link
+            href="/add"
+            className="te-key px-4 py-2 text-sm flex items-center gap-2"
+            style={{ color: "var(--text-mid)", fontWeight: 400 }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500 hidden lg:inline">СТВОРИТИ</span>
+            <span className="lg:hidden">Додати</span>
+          </Link>
+          <Link
+            href="/profile"
+            className="te-key px-4 py-2 text-sm"
+            style={{ color: "var(--text-mid)", fontWeight: 400 }}
+          >
+            Профіль
+          </Link>
+          <Link
+            href="/admin"
+            className="te-key px-4 py-2 text-sm"
+            style={{ color: "var(--text-mid)", fontWeight: 400 }}
+          >
+            Адмінка
+          </Link>
           <Link
             href="/auth/login"
             id="nav-login-btn"
@@ -82,6 +105,11 @@ export function Navbar() {
               {item.label}
             </Link>
           ))}
+          <div className="flex flex-col gap-2 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+            <Link href="/add" className="te-key w-full text-left px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setOpen(false)}>Додати пісню (СТВОРИТИ)</Link>
+            <Link href="/profile" className="te-key w-full text-left px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setOpen(false)}>Мій профіль</Link>
+            <Link href="/admin" className="te-key w-full text-left px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setOpen(false)}>Адмін-панель</Link>
+          </div>
           <div className="flex gap-2 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
             <Link href="/auth/login" className="te-key flex-1 text-center py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setOpen(false)}>Увійти</Link>
             <Link href="/auth/sign-up" className="te-btn-orange flex-1 text-center py-2.5 text-sm font-bold" onClick={() => setOpen(false)}>Реєстрація</Link>

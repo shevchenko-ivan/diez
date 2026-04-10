@@ -4,6 +4,20 @@ import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+// Simple hash function for stable colors
+function stringToColor(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).substr(-2);
+  }
+  return color;
+}
+
 export default async function ArtistsPage() {
   const songs = getAllSongs();
   
@@ -15,7 +29,7 @@ export default async function ArtistsPage() {
         name: s.artist,
         songsCount: 0,
         genre: s.genre, // Just pick first genre for now
-        color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0') // Randomish stable color would be better but this works for mock
+        color: stringToColor(s.artist)
       });
     }
     artistMap.get(s.artist).songsCount++;
