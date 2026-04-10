@@ -149,13 +149,13 @@ export default function HomePage() {
                   style={{
                     borderRadius: "1.25rem 1.25rem 0 0",
                     aspectRatio: "16/9",
-                    background: `linear-gradient(145deg, ${v.color}99, ${v.color}44)`,
+                    background: "var(--surface)",
                   }}
                 >
                   <img 
                     src={`https://img.youtube.com/vi/${v.id}/mqdefault.jpg`} 
                     alt={v.title}
-                    className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-80"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                   {/* Play knob */}
                   <div className="absolute inset-0 flex items-center justify-center">
