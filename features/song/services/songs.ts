@@ -1,4 +1,4 @@
-import { Song } from "./types";
+import { Song } from "../types";
 
 // ─── Mock songs database ───────────────────────────────────────────────────────
 // Replace with Supabase queries when ready
