@@ -18,10 +18,28 @@ async function SongsContent({ searchParams }: SearchProps) {
 
   let songs = getAllSongs();
   
+  // Handle filters from categories
+  const filter = resolvedParams.filter;
+  if (filter === "recent") {
+    // Just mock recent by returning them in current order
+  } else if (filter === "love" || filter === "movies" || filter === "camping") {
+    // For now showing all, but could filter by genre in future
+  }
+
+  // Handle search query
   if (q) {
     songs = songs.filter(
       s => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
     );
+  }
+
+  // Handle sorting
+  const sort = resolvedParams.sort;
+  if (sort === "popular") {
+    songs = [...songs].sort((a, b) => b.views - a.views);
+  } else if (sort === "new") {
+    // Mock new sort
+    songs = [...songs].reverse();
   }
 
   return (

@@ -104,6 +104,7 @@ export const MOCK_SONGS: Song[] = [
     chords: ["Dm", "Am", "G", "C", "Bb"],
     views: 8900,
     coverImage: "/songs/strilyaly-ochi.png",
+    strumming: ["D", "D", "Ux", "U", "D", "U"],
     sections: [
       {
         label: "Куплет 1",

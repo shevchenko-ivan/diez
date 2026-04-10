@@ -49,53 +49,46 @@
 /* ── Teenage Engineering / OP-1 design system ─────────────────────────────── */
 
 :root {
-  --bg:           #E4DFD5;
-  --surface:      #EDE9DF;   /* same material as bg, just slightly lighter */
-  --surface-hi:   #F5F2EA;
-  --surface-dk:   #D8D3C9;
+  --bg:           #F2F2F2;
+  --surface:      #F8F8F8;
+  --surface-hi:   #FFFFFF;
+  --surface-dk:   #EBEBEB;
   --panel:        #1A1917;
   --panel-text:   #C8F500;
 
-  --text:         #1A1917;
+  --text:         #4A4A4A;
   --text-mid:     #6B6560;
-  --text-muted:   #A09890;
+  --text-muted:   #9C9C9C;
 
-  --orange:       #FF4500;
+  --accent:       #FF8800; /* New vibrant orange */
+  --orange:       #FF8800;
   --navy:         #1A1F3A;
-  --tan:          #B8956A;
-  --red:          #D63B2F;
+  --tan:          #D1B894;
+  --red:          #FF4444;
 
-  /*
-    ── Neumorphic shadow system ──────────────────────────────────────────────
-    Rule: element and background are the SAME material.
-    Shadows = two-tone: dark corner + bright corner.
-    Offset 4–5px, blur 8–10px. Equal X and Y.
-    This gives "molded out of the surface" feel, not "floating above it".
-  */
+  /* Socket — a deep hole where elements sit */
+  --sh-socket:
+    inset  2px  2px  5px rgba(0,0,0,0.08),
+    inset -2px -2px  5px rgba(255,255,255,0.8),
+    0px 1px 1px rgba(255,255,255,0.5);
 
-  /* Raised — extruded from the surface */
-  --sh-rest:
-     4px  4px  9px  rgba(0,0,0,0.18),
-    -4px -4px  9px  rgba(255,255,255,0.76);
+  /* Protrusion — a physical button sticking out */
+  --sh-physical:
+     0px  4px  8px rgba(0,0,0,0.06),
+     0px  2px  4px rgba(0,0,0,0.04),
+    -1px -1px  2px rgba(255,255,255,0.8);
 
-  /* Same as rest, slight increase — used where needed */
-  --sh-hover:
-     5px  5px  11px rgba(0,0,0,0.20),
-    -5px -5px  11px rgba(255,255,255,0.82);
+  /* Pressed state for physical buttons */
+  --sh-physical-pressed:
+    inset  3px  3px  7px rgba(0,0,0,0.06),
+    inset -2px -2px  6px rgba(255,255,255,0.8);
 
-  /* Pressed / inset — pushed back into the surface */
-  --sh-pressed:
-    inset  3px  3px  7px rgba(0,0,0,0.18),
-    inset -3px -3px  7px rgba(255,255,255,0.76);
-
-  /* Recessed (inputs, LCD backgrounds) */
-  --sh-inset:
-    inset  4px  4px  9px rgba(0,0,0,0.16),
-    inset -4px -4px  9px rgba(255,255,255,0.72);
+  /* Glow for active LEDs */
+  --sh-glow-orange: 0 0 8px rgba(255, 136, 0, 0.6), 0 0 3px rgba(255, 136, 0, 0.4);
 
   /* Transitions */
-  --t-press:   70ms  cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --t-release: 180ms cubic-bezier(0.34, 1.3, 0.64, 1);
+  --t-press:   70ms  ease;
+  --t-release: 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @layer base {
@@ -104,8 +97,8 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Stolzl', -apple-system, sans-serif;
-    font-weight: 350;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-weight: 450;
     -webkit-font-smoothing: antialiased;
     cursor: default;
   }
@@ -118,125 +111,97 @@
   /* ── Raised surface (non-interactive slab) ── */
   .te-surface {
     background: var(--surface);
-    box-shadow: var(--sh-rest);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical);
   }
 
-  .te-surface-lg {
-    background: var(--surface);
-    box-shadow: var(--sh-hover);
-  }
-
-  /* Recessed / input */
-  .te-inset {
+  .te-socket {
     background: var(--surface-dk);
-    box-shadow: var(--sh-inset);
+    box-shadow: var(--sh-socket);
   }
 
-  /*
-    ── te-pressable ─────────────────────────────────────────────────────────
-    Universal press mechanic:
-    default  → raised (extruded from surface)
-    hover    → slightly more compact inset, "finger resting on button"
-    active   → fully pressed in, shadow inverts
-  */
-  .te-pressable {
-    position: relative;
-    cursor: pointer;
-    transition:
-      box-shadow var(--t-release),
-      transform   var(--t-release);
-  }
-
-  /* Hover: barely dip — like a finger touching without pressing */
-  .te-pressable:hover {
-    box-shadow:
-       3px  3px  7px rgba(0,0,0,0.15),
-      -3px -3px  7px rgba(255,255,255,0.72),
-      inset  1px  1px 3px rgba(0,0,0,0.06),
-      inset -1px -1px 3px rgba(255,255,255,0.50);
-    transform: translateY(1px);
-    transition:
-      box-shadow 120ms ease,
-      transform  120ms ease;
-  }
-
-  /* Active: fully pressed into the surface */
-  .te-pressable:active {
-    box-shadow: var(--sh-pressed);
-    transform: translateY(2px);
-    transition:
-      box-shadow var(--t-press),
-      transform  var(--t-press);
-  }
-
-  /*
-    ── te-key ───────────────────────────────────────────────────────────────
-    Pill-shaped button (nav, tags, chips)
-  */
+  /* The Keys / Small Buttons in the new style */
   .te-key {
-    background: var(--surface);
-    box-shadow: var(--sh-rest);
-    border-radius: 999px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%);
+    box-shadow: var(--sh-physical);
+    border-radius: 6px;
     cursor: pointer;
-    transition:
-      box-shadow var(--t-release),
-      transform   var(--t-release);
+    border: 1px solid rgba(0,0,0,0.03);
+    transition: all var(--t-release);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .te-key:hover {
-    box-shadow:
-       3px  3px  7px rgba(0,0,0,0.15),
-      -3px -3px  7px rgba(255,255,255,0.72),
-      inset  1px  1px 3px rgba(0,0,0,0.05),
-      inset -1px -1px 3px rgba(255,255,255,0.48);
-    transform: translateY(1px);
-    transition: box-shadow 120ms ease, transform 120ms ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transform: translateY(0.5px);
   }
 
   .te-key:active {
-    box-shadow: var(--sh-pressed);
-    transform: translateY(2px);
-    transition: box-shadow var(--t-press), transform var(--t-press);
+    box-shadow: var(--sh-physical-pressed);
+    transform: translateY(1.5px);
+    transition: all var(--t-press);
+  }
+
+  /* LED indicator dot */
+  .te-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #444;
+    transition: all 0.2s ease;
+  }
+  .te-led-active {
+    background: var(--orange);
+    box-shadow: var(--sh-glow-orange);
   }
 
   /*
     ── te-knob ──────────────────────────────────────────────────────────────
-    Circular knob — embossed dome on the surface
+    New Knob Style: Clean white with orange dash
   */
   .te-knob {
+    position: relative;
     border-radius: 50%;
     cursor: pointer;
-    background: radial-gradient(circle at 38% 36%,
-      var(--surface-hi) 0%,
-      var(--surface)    52%,
-      var(--surface-dk) 100%
+    background: radial-gradient(circle at 35% 35%,
+      #ffffff 0%,
+      #f8f8f8 50%,
+      #e8e8e8 100%
     );
-    box-shadow:
-       4px  4px  9px rgba(0,0,0,0.20),
-      -4px -4px  9px rgba(255,255,255,0.82),
-      inset  1px  1px 2px rgba(255,255,255,0.60),
-      inset -1px -1px 2px rgba(0,0,0,0.08);
-    transition:
-      box-shadow var(--t-release),
-      transform  var(--t-release);
+    box-shadow: var(--sh-physical);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all var(--t-release);
+  }
+
+  .te-knob::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 8px;
+    background: var(--orange);
+    border-radius: 2px;
   }
 
   .te-knob:hover {
-    box-shadow:
-       3px  3px  7px rgba(0,0,0,0.16),
-      -3px -3px  7px rgba(255,255,255,0.76),
-      inset  2px  2px 5px rgba(0,0,0,0.10),
-      inset -2px -2px 5px rgba(255,255,255,0.60);
-    transform: scale(0.98);
-    transition: box-shadow 120ms ease, transform 120ms ease;
+    transform: scale(0.99) rotate(5deg);
   }
 
   .te-knob:active {
-    box-shadow:
-      inset  4px  4px 10px rgba(0,0,0,0.22),
-      inset -3px -3px  8px rgba(255,255,255,0.78);
-    transform: scale(0.96);
-    transition: box-shadow var(--t-press), transform var(--t-press);
+    box-shadow: var(--sh-physical-pressed);
+    transform: scale(0.97);
+  }
+
+  .te-label {
+    font-family: 'stolzl', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    font-weight: 600;
   }
 
   /*
@@ -276,6 +241,73 @@
     background: linear-gradient(160deg, #d93200 0%, #ff5520 100%);
     transform: translateY(2px);
     transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
+  /*
+    ── te-control-pill ────────────────────────────────────────────────────────
+    Embossed segmented control (as in reference image)
+  */
+  .te-control-pill {
+    background: #eef0f2;
+    padding: 3px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 
+      inset 0 2px 5px rgba(0,0,0,0.08), 
+      inset 0 1px 1px rgba(0,0,0,0.05), 
+      0 1px 0 rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.02);
+  }
+
+  .te-control-pill-btn {
+    background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 42px;
+    transition: all 0.15s var(--t-ease);
+    color: var(--text);
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05), inset 0 1px 0 #fff;
+  }
+
+  .te-control-pill-btn:first-of-type {
+    border-radius: 999px 2px 2px 999px;
+  }
+
+  .te-control-pill-btn:last-of-type {
+    border-radius: 2px 999px 999px 2px;
+  }
+
+  /* Divider */
+  .te-control-pill-btn:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 1px;
+    background: rgba(0,0,0,0.08);
+  }
+
+  .te-control-pill-btn:active {
+    background: #f0f2f5;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.12);
+    transform: scale(0.97);
+  }
+
+  .te-control-pill-btn svg {
+    opacity: 0.8;
+    color: var(--text);
+    transition: all 0.2s ease;
+  }
+  
+  .te-control-pill-btn:active svg {
+    transform: scale(0.9);
   }
 
   /*
