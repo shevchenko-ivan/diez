@@ -130,7 +130,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
 
         {/* ── Lyrics + chords ───────────────────────────────────────────── */}
         <div className="space-y-3">
-          {song.sections.map((section) => (
+          {song.sections.map((section: any) => (
             <SongSectionBlock key={section.label} section={section} />
           ))}
         </div>
