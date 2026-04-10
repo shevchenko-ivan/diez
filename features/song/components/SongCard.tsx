@@ -1,8 +1,5 @@
-"use client";
-
-import Link from "next/link";
 import Image from "next/image";
-import { useHaptics } from "@/shared/hooks/useHaptics";
+import { HapticLink } from "@/shared/components/HapticLink";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
 
@@ -25,17 +22,15 @@ const difficultyDot: Record<string, string> = {
 };
 
 export function SongCard({ slug, title, artist, difficulty, chords, views, index = 0, coverColor = "#C8D5E8", coverImage }: SongCardProps) {
-  const { trigger } = useHaptics();
   const href = slug
     ? `/songs/${slug}`
     : `/songs/${encodeURIComponent(title.toLowerCase().replace(/\s+/g, "-"))}`;
 
   return (
-    <Link
+    <HapticLink
       href={href}
+      hapticType="strum"
       className="te-surface te-pressable flex flex-col"
-      onMouseDown={() => trigger("light")}
-      onTouchStart={() => trigger("light")}
       style={{ borderRadius: "1.25rem" }}
     >
       {/* Cover image area */}
@@ -98,7 +93,7 @@ export function SongCard({ slug, title, artist, difficulty, chords, views, index
           {artist}
         </p>
       </div>
-    </Link>
+    </HapticLink>
   );
 }
 

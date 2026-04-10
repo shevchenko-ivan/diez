@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Navbar } from "@/shared/components/Navbar";
+import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 
@@ -105,7 +105,7 @@ export default function HomePage() {
                 >
                   {cat.label}
                 </p>
-              </Link>
+              </HapticLink>
             ))}
           </div>
         </section>
@@ -135,9 +135,10 @@ export default function HomePage() {
           <SectionHeader title="Рекомендовані відео" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {VIDEOS.map((v) => (
-              <div
+              <HapticLink
                 key={v.title}
-                className="te-surface te-pressable"
+                href="#"
+                className="te-surface te-pressable block"
                 style={{ borderRadius: "1.25rem" }}
               >
                 {/* Video thumbnail */}
@@ -182,7 +183,7 @@ export default function HomePage() {
                     {v.title}
                   </p>
                 </div>
-              </div>
+              </HapticLink>
             ))}
           </div>
         </section>

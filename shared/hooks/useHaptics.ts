@@ -33,5 +33,18 @@ export function useHaptics() {
     [getHaptics],
   );
 
-  return { trigger };
+  const strum = useCallback(
+    async () => {
+      // Arpeggio-like vibration pattern for a guitar strum
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([15, 25, 15, 25, 15, 25, 20]);
+      } else {
+        const h = await getHaptics();
+        h?.trigger("medium");
+      }
+    },
+    [getHaptics],
+  );
+
+  return { trigger, strum };
 }

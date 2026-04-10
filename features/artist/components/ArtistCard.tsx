@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HapticLink } from "@/shared/components/HapticLink";
 import Image from "next/image";
 
 interface ArtistCardProps {
@@ -11,7 +11,7 @@ interface ArtistCardProps {
 
 export function ArtistCard({ name, genre, songsCount, color, image }: ArtistCardProps) {
   return (
-    <Link
+    <HapticLink
       href={`/artists/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"))}`}
       className="te-surface te-pressable flex flex-col"
       style={{ borderRadius: "1.25rem" }}
@@ -59,6 +59,6 @@ export function ArtistCard({ name, genre, songsCount, color, image }: ArtistCard
           {genre} · {songsCount} ♪
         </p>
       </div>
-    </Link>
+    </HapticLink>
   );
 }
