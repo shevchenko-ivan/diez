@@ -31,7 +31,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
 
         <h2 className="text-xl font-bold mb-6 uppercase tracking-wider">Пісні виконавця</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {songs.map((s) => (
+          {songs.map(({ key: _musicalKey, ...s }) => (
             <SongCard key={s.slug} {...s} />
           ))}
           {songs.length === 0 && (
