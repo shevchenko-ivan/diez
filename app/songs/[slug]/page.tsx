@@ -122,7 +122,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
             Акорди
           </p>
           <div className="flex flex-wrap gap-2">
-            {song.chords.map((chord) => (
+            {song.chords.map((chord: string) => (
               <ChordBadge key={chord} chord={chord} />
             ))}
           </div>
