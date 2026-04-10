@@ -33,10 +33,10 @@ const SONGS = [
 ];
 
 const VIDEOS = [
-  { title: "Океан Ельзи — Обійми (урок)", duration: "12:34", color: "#C4CAFF" },
-  { title: "Скрябін — Мовчати (акорди)", duration: "8:12", color: "#FFD4C2" },
-  { title: "ДахаБраха — Лілея", duration: "15:20", color: "#B8E8CE" },
-  { title: "Антитіла — Воїни Світла", duration: "10:05", color: "#FFDDE8" },
+  { id: "HKoZijznoM8", title: "Океан Ельзи — Я Їду Додому (Фінгерстайл)", duration: "2:46", color: "#C4CAFF" },
+  { id: "2jF4_nB9q1g", title: "LATEXFAUNA — Surfer (Фінгерстайл)", duration: "2:43", color: "#FFD4C2" },
+  { id: "TL7JKmOxIdY", title: "Свято Наближається (Фінгерстайл)", duration: "1:22", color: "#B8E8CE" },
+  { id: "d_puZwM7Ny0", title: "Збірка Українських Пісень На Гітарі", duration: "10:33", color: "#FFDDE8" },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -136,8 +136,10 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {VIDEOS.map((v) => (
               <HapticLink
-                key={v.title}
-                href="#"
+                key={v.id}
+                href={`https://www.youtube.com/watch?v=${v.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="te-surface te-pressable block"
                 style={{ borderRadius: "1.25rem" }}
               >
@@ -150,6 +152,11 @@ export default function HomePage() {
                     background: `linear-gradient(145deg, ${v.color}99, ${v.color}44)`,
                   }}
                 >
+                  <img 
+                    src={`https://img.youtube.com/vi/${v.id}/mqdefault.jpg`} 
+                    alt={v.title}
+                    className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-80"
+                  />
                   {/* Play knob */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div
