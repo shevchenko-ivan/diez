@@ -23,6 +23,8 @@ export interface Song {
   chords: string[];
   views: number;
   sections: SongSection[];
+  youtubeId?: string;
+  strumming?: ("D" | "U" | "Dx" | "Ux")[]; // D=Down, U=Up, x=Mute
   coverImage?: string;
   coverColor?: string;
 }

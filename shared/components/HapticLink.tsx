@@ -4,7 +4,7 @@ import Link, { LinkProps } from "next/link";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { ReactNode } from "react";
 
-interface HapticLinkProps extends LinkProps {
+interface HapticLinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps>, LinkProps {
   children: ReactNode;
   className?: string;
   style?: React.CSSProperties;

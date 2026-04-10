@@ -17,6 +17,8 @@ export const MOCK_SONGS: Song[] = [
     chords: ["Am", "F", "C", "G"],
     views: 12400,
     coverImage: "/songs/obiymy.png",
+    youtubeId: "8OmsKeIikm0",
+    strumming: ["D", "D", "U", "U", "D", "U"],
     sections: [
       {
         label: "Куплет 1",
@@ -127,4 +129,8 @@ export const MOCK_SONGS: Song[] = [
 
 export function getSongBySlug(slug: string): Song | undefined {
   return MOCK_SONGS.find((s) => s.slug === slug);
+}
+
+export function getAllSongs(): Song[] {
+  return MOCK_SONGS;
 }

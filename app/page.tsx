@@ -7,8 +7,8 @@ import { ArtistCard } from "@/features/artist/components/ArtistCard";
 
 const CATEGORIES = [
   { label: "Останні переглянуті", href: "/songs?filter=recent", emoji: "🕐", color: "#6366f1" },
-  { label: "Топ популярних", href: "/top", emoji: "🔥", color: "#FF4500" },
-  { label: "Нові релізи", href: "/new", emoji: "✨", color: "#10b981" },
+  { label: "Топ популярних", href: "/songs?sort=popular", emoji: "🔥", color: "#FF4500" },
+  { label: "Нові релізи", href: "/songs?sort=new", emoji: "✨", color: "#10b981" },
   { label: "Про кохання", href: "/songs?filter=love", emoji: "❤️", color: "#f43f5e" },
   { label: "Кемпінг", href: "/songs?filter=camping", emoji: "🏕️", color: "#B8956A" },
   { label: "Пісні із фільмів", href: "/songs?filter=movies", emoji: "🎬", color: "#8b5cf6" },

@@ -101,7 +101,7 @@ export function SongCard({ slug, title, artist, difficulty, chords, views, index
 
 export function HeroSearch() {
   return (
-    <div className="flex items-center gap-3 max-w-lg w-full">
+    <form action="/songs" method="GET" className="flex items-center gap-3 max-w-lg w-full">
       {/* Main search — inset pill */}
       <div
         className="te-inset flex-1 flex items-center gap-3 px-4 py-3"
@@ -112,6 +112,7 @@ export function HeroSearch() {
         </svg>
         <input
           id="hero-search"
+          name="q"
           type="text"
           placeholder="Пісня або виконавець..."
           className="flex-1 bg-transparent outline-none text-sm font-medium"
@@ -121,12 +122,13 @@ export function HeroSearch() {
 
       {/* Search button — raised pill */}
       <button
+        type="submit"
         id="hero-search-submit"
         className="te-btn-orange px-5 py-3 text-xs font-bold tracking-widest shrink-0"
       >
         ЗНАЙТИ
       </button>
-    </div>
+    </form>
   );
 }
 

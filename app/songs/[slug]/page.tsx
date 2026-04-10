@@ -4,6 +4,7 @@ import { getSongBySlug, MOCK_SONGS } from "@/features/song/services/songs";
 import { Song, SongSection } from "@/features/song/types";
 import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
+import { SongViewer } from "@/features/song/components/SongViewer";
 import { ChevronLeft, Eye, Music } from "lucide-react";
 
 // ─── generateStaticParams ─────────────────────────────────────────────────────
@@ -113,27 +114,8 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
           </div>
         </div>
 
-        {/* ── Chord palette ─────────────────────────────────────────────── */}
-        <div className="te-surface mb-4" style={{ borderRadius: "1.25rem", padding: "1rem 1.25rem" }}>
-          <p
-            className="uppercase mb-3"
-            style={{ fontSize: "0.6rem", letterSpacing: "0.1em", color: "var(--text-muted)", fontWeight: 400 }}
-          >
-            Акорди
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {song.chords.map((chord: string) => (
-              <ChordBadge key={chord} chord={chord} />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Lyrics + chords ───────────────────────────────────────────── */}
-        <div className="space-y-3">
-          {song.sections.map((section: any) => (
-            <SongSectionBlock key={section.label} section={section} />
-          ))}
-        </div>
+        {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
+        <SongViewer song={song} />
 
         {/* ── Album / author meta ───────────────────────────────────────── */}
         <div
@@ -165,100 +147,6 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
-
-function SongSectionBlock({ section }: { section: SongSection }) {
-  return (
-    <div className="te-surface" style={{ borderRadius: "1.25rem", overflow: "hidden" }}>
-      {/* Section label */}
-      <div
-        className="te-inset px-4 py-2 flex items-center gap-2"
-        style={{ borderRadius: 0 }}
-      >
-        <span
-          className="uppercase font-mono-te"
-          style={{ fontSize: "0.6rem", letterSpacing: "0.12em", color: "var(--text-muted)" }}
-        >
-          {section.label}
-        </span>
-      </div>
-
-      {/* Chord + lyric lines */}
-      <div className="px-5 py-4 space-y-4">
-        {section.lines.map((line, i) => (
-          <ChordLyricLine key={i} chords={line.chords} lyrics={line.lyrics} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ChordLyricLine({ chords, lyrics }: { chords: string[]; lyrics: string }) {
-  // Build inline chord+lyric display
-  // Split lyrics by spaces and pair with chords array
-  const words = lyrics.split(" ");
-
-  return (
-    <div>
-      {/* Chord row */}
-      <div className="flex gap-0 mb-0.5 min-h-[1.25rem]" style={{ flexWrap: "nowrap" }}>
-        {words.map((word, i) => {
-          const chord = chords[i] || "";
-          return (
-            <div key={i} className="relative" style={{ marginRight: "0.5rem" }}>
-              {chord && (
-                <span
-                  className="font-mono-te absolute"
-                  style={{
-                    top: "-1.1rem",
-                    left: 0,
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    color: "var(--orange)",
-                    whiteSpace: "nowrap",
-                    letterSpacing: "0.01em",
-                  }}
-                >
-                  {chord}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {/* Lyric row */}
-      <p
-        style={{
-          fontSize: "1rem",
-          lineHeight: 1.6,
-          color: "var(--text)",
-          fontWeight: 350,
-          letterSpacing: "0.005em",
-        }}
-      >
-        {lyrics}
-      </p>
-    </div>
-  );
-}
-
-function ChordBadge({ chord }: { chord: string }) {
-  return (
-    <div
-      className="te-key te-pressable font-mono-te flex items-center justify-center"
-      style={{
-        minWidth: 44,
-        height: 36,
-        padding: "0 0.75rem",
-        fontSize: "0.82rem",
-        fontWeight: 600,
-        color: "var(--text)",
-        letterSpacing: "0.02em",
-      }}
-    >
-      {chord}
-    </div>
-  );
-}
 
 function DifficultyBadge({ difficulty }: { difficulty: Song["difficulty"] }) {
   const map = {
