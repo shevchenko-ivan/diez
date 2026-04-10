@@ -210,14 +210,14 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-2">
             {["Акорди", "Виконавці", "Реєстрація"].map((label, i) => (
-              <Link
+              <HapticLink
                 key={label}
                 href={i === 0 ? "/songs" : i === 1 ? "/artists" : "/auth/sign-up"}
                 className="te-key px-4 py-2 text-xs font-semibold"
                 style={{ color: "var(--text-muted)" }}
               >
                 {label}
-              </Link>
+              </HapticLink>
             ))}
           </div>
         </div>
@@ -238,13 +238,13 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
         {title}
       </h2>
       {href && (
-        <Link
+        <HapticLink
           href={href}
           className="te-key px-3 py-1.5 text-xs font-semibold"
           style={{ color: "var(--text-muted)" }}
         >
           Переглянути всі
-        </Link>
+        </HapticLink>
       )}
     </div>
   );
