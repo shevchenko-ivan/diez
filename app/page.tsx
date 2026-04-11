@@ -183,8 +183,7 @@ export default function HomePage() {
                 Створюймо українську базу акордів разом.
               </h2>
               <p className="text-lg font-medium mb-8" style={{ color: "var(--text-muted)" }}>
-                У нас вже понад <strong>12,450</strong> пісень та <strong>5,000</strong> активних гітаристів. 
-                Не знайшли свою улюблену пісню? Додайте її у два кліки та допоможіть спільноті.
+                Не знайшли свою улюблену пісню? Допоможіть спільноті — підберіть акорди та поділіться з іншими гітаристами.
               </p>
               <HapticLink href="/add" className="te-btn-orange inline-flex items-center gap-2 px-8 py-4 rounded-xl text-[13px] font-bold tracking-widest uppercase">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

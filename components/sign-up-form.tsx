@@ -34,7 +34,7 @@ export function SignUpForm({
     setError(null);
 
     if (password !== repeatPassword) {
-      setError("Passwords do not match");
+      setError("Паролі не збігаються");
       setIsLoading(false);
       return;
     }
@@ -44,13 +44,13 @@ export function SignUpForm({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
       if (error) throw error;
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(error instanceof Error ? error.message : "Помилка реєстрації");
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +60,8 @@ export function SignUpForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle className="text-2xl">Реєстрація</CardTitle>
+          <CardDescription>Створіть акаунт Diez</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
@@ -71,16 +71,14 @@ export function SignUpForm({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="you@example.com"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
+                <Label htmlFor="password">Пароль</Label>
                 <Input
                   id="password"
                   type="password"
@@ -90,9 +88,7 @@ export function SignUpForm({
                 />
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
-                </div>
+                <Label htmlFor="repeat-password">Повторіть пароль</Label>
                 <Input
                   id="repeat-password"
                   type="password"
@@ -103,13 +99,13 @@ export function SignUpForm({
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+                {isLoading ? "Реєстрація..." : "Зареєструватись"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
+              Вже є акаунт?{" "}
               <Link href="/auth/login" className="underline underline-offset-4">
-                Login
+                Увійти
               </Link>
             </div>
           </form>

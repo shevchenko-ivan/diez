@@ -14,14 +14,14 @@ export default function Page() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Thank you for signing up!
+                Дякуємо за реєстрацію!
               </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardDescription>Перевірте вашу пошту</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+                Ми надіслали вам листа з підтвердженням. Перейдіть за посиланням
+                у листі, щоб активувати акаунт.
               </p>
             </CardContent>
           </Card>

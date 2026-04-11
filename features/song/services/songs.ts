@@ -1,137 +1,59 @@
-import { Song } from "../types";
+import { createBrowserClient } from "@supabase/ssr";
+import { type Song, type SongSection, type Difficulty } from "../types";
+import { hasEnvVars } from "@/lib/utils";
 
-// ─── Mock songs database ───────────────────────────────────────────────────────
-// Replace with Supabase queries when ready
-
-export const MOCK_SONGS: Song[] = [
-  {
-    slug: "obiymy",
-    title: "Обійми",
-    artist: "Океан Ельзи",
-    album: "Земля",
-    genre: "Рок",
-    key: "Am",
-    capo: 0,
-    tempo: 76,
-    difficulty: "easy",
-    chords: ["Am", "F", "C", "G"],
-    views: 12400,
-    coverImage: "/songs/obiymy.png",
-    youtubeId: "8OmsKeIikm0",
-    strumming: ["D", "D", "U", "U", "D", "U"],
-    sections: [
-      {
-        label: "Куплет 1",
-        lines: [
-          {
-            chords: ["Am", "", "", "F", "", ""],
-            lyrics: "Обійми мене, обійми",
-          },
-          {
-            chords: ["C", "", "", "G", "", ""],
-            lyrics: "Так, як ти вмієш тільки ти",
-          },
-          {
-            chords: ["Am", "", "", "F", "", ""],
-            lyrics: "Обійми мене і лети",
-          },
-          {
-            chords: ["C", "", "G", "", "Am", ""],
-            lyrics: "Зі мною в небо, в небо",
-          },
-        ],
-      },
-      {
-        label: "Приспів",
-        lines: [
-          {
-            chords: ["F", "", "", "C", "", ""],
-            lyrics: "Ти моя, моя земля",
-          },
-          {
-            chords: ["G", "", "", "Am", "", ""],
-            lyrics: "Ти моє тепле вогнище",
-          },
-          {
-            chords: ["F", "", "", "C", "", ""],
-            lyrics: "Ти моя, моя зоря",
-          },
-          {
-            chords: ["G", "", "", "", "", ""],
-            lyrics: "Що веде мене додому",
-          },
-        ],
-      },
-      {
-        label: "Куплет 2",
-        lines: [
-          {
-            chords: ["Am", "", "", "F", "", ""],
-            lyrics: "Обійми мене, обійми",
-          },
-          {
-            chords: ["C", "", "", "G", "", ""],
-            lyrics: "Серед ночі і гризоти",
-          },
-          {
-            chords: ["Am", "", "", "F", "", ""],
-            lyrics: "Обійми і я знайду",
-          },
-          {
-            chords: ["C", "", "G", "", "Am", ""],
-            lyrics: "Дорогу крізь всі тумани",
-          },
-        ],
-      },
-      {
-        label: "Аутро",
-        lines: [
-          {
-            chords: ["Am", "F", "C", "G"],
-            lyrics: "× 4",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    slug: "strilyaly-ochi",
-    title: "Стріляли очі",
-    artist: "Скрябін",
-    genre: "Поп-рок",
-    key: "Dm",
-    difficulty: "medium",
-    chords: ["Dm", "Am", "G", "C", "Bb"],
-    views: 8900,
-    coverImage: "/songs/strilyaly-ochi.png",
-    strumming: ["D", "D", "Ux", "U", "D", "U"],
-    sections: [
-      {
-        label: "Куплет 1",
-        lines: [
-          { chords: ["Dm", "", "", "Am", ""], lyrics: "Стріляли очі, чорні очі" },
-          { chords: ["G", "", "", "Dm", ""], lyrics: "У саме серце вцілили" },
-          { chords: ["Bb", "", "", "C", ""], lyrics: "І залишили без сили" },
-          { chords: ["Dm", "", "Am", ""], lyrics: "Мене самого зовсім" },
-        ],
-      },
-      {
-        label: "Приспів",
-        lines: [
-          { chords: ["Dm", "", "C", "", ""], lyrics: "Ти — моя загибель" },
-          { chords: ["Bb", "", "G", "", ""], lyrics: "Ти — моя любов" },
-          { chords: ["Dm", "", "C", "", ""], lyrics: "Без тебе холодно і зимно" },
-          { chords: ["Bb", "C", "Dm", ""], lyrics: "Навіть серед слів" },
-        ],
-      },
-    ],
-  },
-];
-
-export function getSongBySlug(slug: string): Song | undefined {
-  return MOCK_SONGS.find((s) => s.slug === slug);
+// Public read-only client — no cookie/session needed for published song reads.
+// Works at build time (generateStaticParams) and at request time.
+function getClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  );
 }
 
-export function getAllSongs(): Song[] {
-  return MOCK_SONGS;
+const SONG_COLUMNS =
+  "slug, title, artist, album, genre, key, capo, tempo, difficulty, chords, views, sections, strumming, cover_image, cover_color, youtube_id";
+
+function mapRow(row: Record<string, unknown>): Song {
+  return {
+    slug: row.slug as string,
+    title: row.title as string,
+    artist: row.artist as string,
+    album: (row.album as string | null) ?? undefined,
+    genre: row.genre as string,
+    key: row.key as string,
+    capo: (row.capo as number | null) ?? undefined,
+    tempo: (row.tempo as number | null) ?? undefined,
+    difficulty: row.difficulty as Difficulty,
+    chords: row.chords as string[],
+    views: row.views as number,
+    sections: row.sections as SongSection[],
+    strumming: (row.strumming as Song["strumming"] | null) ?? undefined,
+    coverImage: (row.cover_image as string | null) ?? undefined,
+    coverColor: (row.cover_color as string | null) ?? undefined,
+    youtubeId: (row.youtube_id as string | null) ?? undefined,
+  };
+}
+
+export async function getAllSongs(): Promise<Song[]> {
+  if (!hasEnvVars) return [];
+  const { data, error } = await getClient()
+    .from("songs")
+    .select(SONG_COLUMNS)
+    .eq("status", "published")
+    .order("views", { ascending: false });
+  if (error || !data) return [];
+  return data.map(mapRow);
+}
+
+export async function getSongBySlug(slug: string): Promise<Song | undefined> {
+  if (!hasEnvVars) return undefined;
+  const { data, error } = await getClient()
+    .from("songs")
+    .select(SONG_COLUMNS)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
+  if (error || !data) return undefined;
+  return mapRow(data as Record<string, unknown>);
 }

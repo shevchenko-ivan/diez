@@ -7,8 +7,8 @@ export const metadata = {
   title: "Адмін-панель — Diez",
 };
 
-export default function AdminPage() {
-  const songs = getAllSongs();
+export default async function AdminPage() {
+  const songs = await getAllSongs();
   // Mock some pending songs
   const pendingSongs = [
     { title: "Там, де ми є", artist: "Антитіла", user: "Іван Іванов", date: "Сьогодні" },

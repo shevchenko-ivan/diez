@@ -7,8 +7,8 @@ import { Menu, X, User } from "lucide-react";
 const NAV_LINKS = [
   { href: "/songs", label: "Акорди" },
   { href: "/artists", label: "Виконавці" },
-  { href: "/new", label: "Новинки" },
-  { href: "/top", label: "Топ популярних" },
+  { href: "/songs?sort=new", label: "Новинки" },
+  { href: "/songs?sort=popular", label: "Топ популярних" },
 ];
 
 export function Navbar() {

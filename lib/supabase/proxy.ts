@@ -47,20 +47,13 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  // Public routes — accessible without login
-  const publicPaths = [
-    "/songs",
-    "/artists",
-    "/albums",
-    "/top",
-    "/new",
-    "/search",
-  ];
+  // Public routes — accessible without login.
+  // Must match the approved routing in CLAUDE.md exactly.
+  const publicPaths = ["/songs", "/artists"];
 
   const isPublic =
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/auth") ||
-    request.nextUrl.pathname.startsWith("/login") ||
     publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (!isPublic && !user) {

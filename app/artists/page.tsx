@@ -33,7 +33,7 @@ function stringToColor(str: string) {
 }
 
 export default async function ArtistsPage() {
-  const songs = getAllSongs();
+  const songs = await getAllSongs();
   
   // Group by artist and calculate stats
   const artistMap = new Map();
