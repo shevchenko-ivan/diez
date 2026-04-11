@@ -1,24 +1,81 @@
+import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { getAllSongs } from "@/features/song/services/songs";
 import { SongCard } from "@/features/song/components/SongCard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { siteUrl } from "@/lib/utils";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function slugToName(slug: string): string {
+  return decodeURIComponent(slug)
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+// ─── Static params ────────────────────────────────────────────────────────────
 
 export function generateStaticParams() {
   const songs = getAllSongs();
-  const artists = Array.from(new Set(songs.map(s => s.artist)));
-  return artists.map(artist => ({
-    slug: artist.toLowerCase().replace(/\s+/g, '-')
+  const artists = Array.from(new Set(songs.map((s) => s.artist)));
+  return artists.map((artist) => ({
+    slug: artist.toLowerCase().replace(/\s+/g, "-"),
   }));
 }
 
+// ─── Metadata ─────────────────────────────────────────────────────────────────
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const artistName = slugToName(slug);
+  const songs = getAllSongs().filter(
+    (s) => s.artist.toLowerCase() === artistName.toLowerCase()
+  );
+
+  const title = `${artistName} — Акорди пісень | Diez`;
+  const description = `Акорди пісень ${artistName} на Diez. ${songs.length} ${songs.length === 1 ? "пісня" : "пісень"} у каталозі. Грай улюблені пісні вже зараз!`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/artists/${slug}` },
+    openGraph: {
+      title: `${artistName} — Акорди пісень`,
+      description,
+      type: "profile",
+      url: `/artists/${slug}`,
+    },
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const artistName = decodeURIComponent(slug).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  const songs = getAllSongs().filter(s => s.artist.toLowerCase() === artistName.toLowerCase());
+  const artistName = slugToName(slug);
+  const songs = getAllSongs().filter(
+    (s) => s.artist.toLowerCase() === artistName.toLowerCase()
+  );
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "MusicGroup",
+    name: artistName,
+    url: `${siteUrl}/artists/${slug}`,
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <main className="max-w-6xl mx-auto px-6 py-8">
         <Link href="/" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
