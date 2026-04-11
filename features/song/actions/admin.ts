@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { slugify } from "@/lib/slugify";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,27 +22,6 @@ async function requireAdmin(): Promise<string> {
 
   if (!profile?.is_admin) throw new Error("Тільки для адміністраторів");
   return user.id;
-}
-
-const CYRILLIC_MAP: Record<string, string> = {
-  а:"a",б:"b",в:"v",г:"h",ґ:"g",д:"d",е:"e",є:"ye",ж:"zh",з:"z",
-  и:"y",і:"i",ї:"yi",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",
-  р:"r",с:"s",т:"t",у:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",
-  щ:"shch",ь:"",ю:"yu",я:"ya",
-  // Russian letters that might appear
-  ё:"yo",э:"e",ъ:"",ы:"y",
-};
-
-function slugify(title: string): string {
-  const raw = title
-    .toLowerCase()
-    .replace(/[''ʼ]/g, "")
-    .split("")
-    .map((ch) => CYRILLIC_MAP[ch] ?? ch)
-    .join("")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return raw || `song-${Date.now()}`;
 }
 
 // Parse "[Am]lyrics [F]more lyrics" into sections format.
@@ -107,7 +87,7 @@ export async function createSong(formData: FormData) {
     throw new Error("Заповніть обов'язкові поля: назва, виконавець, текст");
   }
 
-  const slug = slugify(title);
+  const slug = slugify(title) || `song-${Date.now()}`;
   const { sections, chords } = parseLyricsWithChords(lyricsRaw);
 
   const admin = createAdminClient();
