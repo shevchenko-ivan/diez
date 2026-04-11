@@ -1,8 +1,22 @@
+import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { getAllSongs } from "@/features/song/services/songs";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Виконавці — Акорди для гітари | Diez",
+  description:
+    "Усі виконавці в каталозі Diez. Знаходьте акорди улюблених українських та зарубіжних артистів.",
+  alternates: { canonical: "/artists" },
+  openGraph: {
+    title: "Виконавці — Diez",
+    description: "Усі виконавці в каталозі Diez. Знаходьте акорди улюблених артистів.",
+    type: "website",
+    url: "/artists",
+  },
+};
 
 // Simple hash function for stable colors
 function stringToColor(str: string) {

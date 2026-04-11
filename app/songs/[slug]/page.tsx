@@ -57,13 +57,17 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
     .filter((s) => s.artist === song.artist && s.slug !== slug)
     .slice(0, 4);
 
-  const jsonLd = {
+  const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "MusicComposition",
     name: song.title,
     composer: { "@type": "MusicGroup", name: song.artist },
     musicalKey: song.key,
+    genre: song.genre,
     url: `${siteUrl}/songs/${song.slug}`,
+    ...(song.album && {
+      inAlbum: { "@type": "MusicAlbum", name: song.album },
+    }),
   };
 
   return (

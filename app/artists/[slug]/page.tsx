@@ -48,7 +48,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${artistName} — Акорди пісень`,
       description,
-      type: "profile",
+      type: "website",
       url: `/artists/${slug}`,
     },
   };

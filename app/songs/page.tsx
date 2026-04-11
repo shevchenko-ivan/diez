@@ -1,10 +1,21 @@
 import { Suspense } from "react";
+import { type Metadata } from "next";
 import { getAllSongs } from "@/features/song/services/songs";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Navbar } from "@/shared/components/Navbar";
 
-export const metadata = {
-  title: "Каталог пісень — Diez",
+export const metadata: Metadata = {
+  title: "Каталог пісень — Акорди для гітари | Diez",
+  description:
+    "Шукайте акорди для гітари. Тисячі пісень українських та зарубіжних виконавців. Фільтруйте за складністю та жанром.",
+  // Canonical always points to the clean URL, not to filtered/search variants.
+  alternates: { canonical: "/songs" },
+  openGraph: {
+    title: "Каталог пісень — Diez",
+    description: "Акорди для гітари. Знаходьте пісні та грайте разом.",
+    type: "website",
+    url: "/songs",
+  },
 };
 
 interface SearchProps {

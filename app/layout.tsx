@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+import { siteUrl } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(defaultUrl),
+  // metadataBase resolves relative URLs in alternates.canonical and openGraph.url.
+  // siteUrl prefers NEXT_PUBLIC_SITE_URL so previews never emit production canonicals.
+  metadataBase: new URL(siteUrl),
   title: "Diez — Guitar Chords Platform",
   description:
     "Search, view, and share guitar chords for thousands of songs. The best platform for guitarists.",
