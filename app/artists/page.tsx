@@ -1,6 +1,7 @@
 import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { getAllSongs } from "@/features/song/services/songs";
+import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -18,35 +19,40 @@ export const metadata: Metadata = {
   },
 };
 
-// Simple hash function for stable colors
 function stringToColor(str: string) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  let color = '#';
+  let color = "#";
   for (let i = 0; i < 3; i++) {
-    const value = (hash >> (i * 8)) & 0xFF;
-    color += ('00' + value.toString(16)).substr(-2);
+    const value = (hash >> (i * 8)) & 0xff;
+    color += ("00" + value.toString(16)).slice(-2);
   }
   return color;
 }
 
 export default async function ArtistsPage() {
-  const songs = await getAllSongs();
-  
-  // Group by artist and calculate stats
-  const artistMap = new Map();
-  songs.forEach(s => {
+  const [songs, dbArtists] = await Promise.all([getAllSongs(), getAllArtists()]);
+
+  // Map from artist name → db artist record
+  const dbMap = new Map(dbArtists.map((a) => [a.name.toLowerCase(), a]));
+
+  // Build list from songs, enrich with db data
+  const artistMap = new Map<string, { name: string; songsCount: number; genre: string; color: string; image?: string; slug?: string }>();
+  songs.forEach((s) => {
     if (!artistMap.has(s.artist)) {
+      const db = dbMap.get(s.artist.toLowerCase());
       artistMap.set(s.artist, {
         name: s.artist,
         songsCount: 0,
-        genre: s.genre, // Just pick first genre for now
-        color: stringToColor(s.artist)
+        genre: db?.genre ?? s.genre,
+        color: stringToColor(s.artist),
+        image: db?.photo_url ?? undefined,
+        slug: db?.slug,
       });
     }
-    artistMap.get(s.artist).songsCount++;
+    artistMap.get(s.artist)!.songsCount++;
   });
 
   const artists = Array.from(artistMap.values());
@@ -61,16 +67,14 @@ export default async function ArtistsPage() {
 
         <div className="te-surface p-12 mb-12 text-center" style={{ borderRadius: "2.5rem" }}>
           <h1 className="text-5xl font-bold mb-4 uppercase tracking-tighter">Виконавці</h1>
-          <p className="text-[var(--text-muted)] uppercase tracking-[0.2em] text-sm">Усі гітарні майстри в одному списку</p>
+          <p className="uppercase tracking-[0.2em] text-sm" style={{ color: "var(--text-muted)" }}>
+            Усі гітарні майстри в одному списку
+          </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
           {artists.map((artist) => (
-            <ArtistCard 
-              key={artist.name}
-              {...artist}
-              color={artist.name === "Океан Ельзи" ? "#31572C" : artist.name === "Charysmatic" ? "#4A1D1D" : artist.color}
-            />
+            <ArtistCard key={artist.name} {...artist} />
           ))}
         </div>
       </main>

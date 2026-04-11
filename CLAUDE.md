@@ -5,7 +5,7 @@ Diez is a Ukrainian web platform for searching, viewing, and later contributing 
 UI language: Ukrainian (buttons, labels, status text — all in Ukrainian).
 
 ## Current priority
-Batch 3 — UI consistency pass before launch. Backend is ready. Do not change data model or architecture.
+Batch 3 — UI consistency pass. Backend + deploy are done.
 
 ---
 
@@ -43,29 +43,30 @@ Batch 3 — UI consistency pass before launch. Backend is ready. Do not change d
 
 ---
 
-## Data model (actual, after Batch 2)
+## Data model (actual)
 
 Tables:
 - profiles
-- artists
 - songs
 - saved_songs
+
+> ⚠️ Таблиці `artists` в схемі немає — артист зберігається як текстове поле `songs.artist`.
 
 ### Song status values
 ```
 published | draft | archived
 ```
-> ⚠️ Not pending/rejected — those were the original plan, actual implementation uses published/draft/archived.
 
 ### Admin gate
 ```ts
 profiles.is_admin = true  // boolean field
 ```
-> ⚠️ Not `profiles.role = 'admin'` — actual implementation uses `is_admin` boolean.
 
 ### Notes
-- `profiles` 1:1 with `auth.users` (no conflict)
-- `songs.lyrics` stored as JSONB (sections + chords parsed from `[Am]` syntax)
+- `profiles` 1:1 with `auth.users`, створюється автоматично через тригер `on_auth_user_created`
+- `songs.sections` stored as JSONB (sections + chords parsed from `[Am]` syntax)
+- Supabase project ID: `gcrjfhwpgpzsqftsbped`
+- Production URL: `https://diez-ten.vercel.app`
 - Defer: albums, ratings, tags, comments, versioning, social features
 
 ---
@@ -93,26 +94,32 @@ lib/supabase/
 
 ---
 
-## Current implementation status
+## Implementation status
 
-### ✅ Done (Batch 1–2)
-- Schema + migrations (001, 002)
-- RLS policies (public reads, admin reads via 002_admin_read_policy.sql)
+### ✅ Done (Batch 1–2 + Deploy)
+- Schema + migrations (001, 002) — applied in prod
+- RLS policies (public reads, admin reads)
 - `lib/supabase/admin.ts` — service-role client
-- `features/song/actions/admin.ts` — createSong, updateSongStatus, deleteSong (all with requireAdmin)
-- `/add` page — song creation form with genre/key selects, `[Am]` lyrics parsing → JSONB
-- `/admin` page — dashboard with real stats, status badges, publish/archive/delete actions
-- Admin creates song → immediately published
-- Non-admin redirect from /admin
+- `features/song/actions/admin.ts` — createSong, updateSongStatus, deleteSong
+- `/add` — song creation form with genre/key selects, `[Am]` lyrics parsing → JSONB
+- `/admin` — dashboard with real stats, status badges, publish/archive/delete actions
+- Auth: registration + email confirmation
+- Profile auto-created via trigger on sign-up
+- Search working
+- `SUPABASE_SERVICE_ROLE_KEY` в Vercel (Production only)
+- `is_admin = true` встановлено для власника
+- MVP live: `https://diez-ten.vercel.app`
 
-### ⏳ Launch blockers
-- [ ] Apply migrations 001 + 002 in Supabase prod
-- [ ] Add SUPABASE_SERVICE_ROLE_KEY to Vercel env vars
-- [ ] `UPDATE profiles SET is_admin = true WHERE email = 'your@email.com'`
+### ✅ Done (Batch 3 — partial)
+- `.te-inset` і `.te-pressable` додані в `globals.css`
+- Всі 4 auth форми переписані з shadcn/ui на TE design system
+- `forgot-password` і `update-password` сторінки отримали Navbar + фон
+- Фікс редіректу `update-password` → `/profile`
 
 ### ⏳ Low priority (post-launch)
 - Profile saved_songs queries (currently mock)
 - Root layout metadata (currently in English)
+- Seed реальних пісень
 
 ---
 
@@ -121,8 +128,8 @@ lib/supabase/
 Goal: make existing UI minimal but coherent. No redesign — align patterns across pages.
 
 1. App shell + page headers
-2. Button variants (primary / secondary / destructive)
-3. Form patterns
+2. ✅ Button variants — `te-btn-orange` уніфікований в auth формах
+3. ✅ Form patterns — auth форми на TE design system
 4. Status chips/badges (published / draft / archived)
 5. Table/list row patterns
 6. Card/detail patterns
@@ -140,7 +147,7 @@ Goal: make existing UI minimal but coherent. No redesign — align patterns acro
 
 ---
 
-## Model routing (for reference)
+## Model routing
 | Task | Model |
 |------|-------|
 | Batch / architecture / system decisions | Opus 4.6 |
