@@ -1,7 +1,13 @@
+import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { Link } from "lucide-react";
+
+// Title and description inherit from root layout. Only canonical is unique to this page.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 

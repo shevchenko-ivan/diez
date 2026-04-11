@@ -1,16 +1,53 @@
+import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSongBySlug, MOCK_SONGS } from "@/features/song/services/songs";
-import { Song, SongSection } from "@/features/song/types";
+import { getSongBySlug, getAllSongs } from "@/features/song/services/songs";
+import { type Song } from "@/features/song/types";
 import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
 import { SongViewer } from "@/features/song/components/SongViewer";
+import { SongCard } from "@/features/song/components/SongCard";
 import { ChevronLeft, Eye, Music } from "lucide-react";
+import { siteUrl } from "@/lib/utils";
 
-// ─── generateStaticParams ─────────────────────────────────────────────────────
+// ─── Static params ────────────────────────────────────────────────────────────
 
 export function generateStaticParams() {
-  return MOCK_SONGS.map((s) => ({ slug: s.slug }));
+  return getAllSongs().map((s) => ({ slug: s.slug }));
+}
+
+// ─── Metadata ─────────────────────────────────────────────────────────────────
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const song = getSongBySlug(slug);
+  if (!song) return {};
+
+  const difficultyLabel =
+    song.difficulty === "easy" ? "легка" : song.difficulty === "medium" ? "середня" : "складна";
+  const title = `${song.title} — ${song.artist} | Акорди | Diez`;
+  const description = `Акорди пісні «${song.title}» виконавця ${song.artist}. Тональність: ${song.key}, складність: ${difficultyLabel}. Акорди: ${song.chords.join(", ")}.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/songs/${slug}` },
+    openGraph: {
+      title: `${song.title} — ${song.artist}`,
+      description,
+      type: "article",
+      url: `/songs/${slug}`,
+      // Use song cover when available; falls back to app/opengraph-image.png via Next.js inheritance.
+      // Relative paths are resolved against metadataBase in app/layout.tsx.
+      ...(song.coverImage && {
+        images: [{ url: song.coverImage, alt: `${song.title} — ${song.artist}` }],
+      }),
+    },
+  };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -20,8 +57,30 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
   const song = getSongBySlug(slug);
   if (!song) return notFound();
 
+  const artistSlug = song.artist.toLowerCase().replace(/\s+/g, "-");
+  const otherSongs = getAllSongs()
+    .filter((s) => s.artist === song.artist && s.slug !== slug)
+    .slice(0, 4);
+
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "MusicComposition",
+    name: song.title,
+    composer: { "@type": "MusicGroup", name: song.artist },
+    musicalKey: song.key,
+    genre: song.genre,
+    url: `${siteUrl}/songs/${song.slug}`,
+    ...(song.album && {
+      inAlbum: { "@type": "MusicAlbum", name: song.album },
+    }),
+  };
+
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
 
       <main className="max-w-3xl mx-auto px-4 pb-20">
@@ -48,7 +107,14 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
                 className="uppercase mb-1"
                 style={{ fontSize: "0.62rem", letterSpacing: "0.1em", color: "var(--text-muted)", fontWeight: 400 }}
               >
-                {song.genre} · {song.artist}
+                {song.genre} ·{" "}
+                <Link
+                  href={`/artists/${artistSlug}`}
+                  style={{ color: "var(--text-muted)" }}
+                  className="hover:underline"
+                >
+                  {song.artist}
+                </Link>
               </p>
               <h1
                 style={{
@@ -140,6 +206,32 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
             </p>
           </div>
         </div>
+
+        {/* ── Other songs by this artist ────────────────────────────────── */}
+        {otherSongs.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2
+                className="uppercase tracking-wider"
+                style={{ fontSize: "0.65rem", fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.12em" }}
+              >
+                Ще від {song.artist}
+              </h2>
+              <Link
+                href={`/artists/${artistSlug}`}
+                className="te-key px-3 py-1.5"
+                style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}
+              >
+                Всі пісні →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {otherSongs.map(({ key: _k, ...s }) => (
+                <SongCard key={s.slug} {...s} />
+              ))}
+            </div>
+          </div>
+        )}
 
       </main>
     </div>
