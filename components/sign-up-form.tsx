@@ -1,25 +1,11 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function SignUpForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+export function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -57,60 +43,70 @@ export function SignUpForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Реєстрація</CardTitle>
-          <CardDescription>Створіть акаунт Diez</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignUp}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Пароль</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="repeat-password">Повторіть пароль</Label>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Реєстрація..." : "Зареєструватись"}
-              </Button>
-            </div>
-            <div className="mt-4 text-center text-sm">
-              Вже є акаунт?{" "}
-              <Link href="/auth/login" className="underline underline-offset-4">
-                Увійти
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2 uppercase tracking-tighter" style={{ color: "var(--text)" }}>Реєстрація</h1>
+        <p className="text-sm opacity-60" style={{ color: "var(--text-muted)" }}>Створіть акаунт Diez</p>
+      </div>
+      <form onSubmit={handleSignUp} className="space-y-5">
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Email</label>
+          <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-transparent outline-none text-sm font-medium"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Пароль</label>
+          <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-transparent outline-none text-sm font-medium"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="repeat-password" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Повторіть пароль</label>
+          <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
+            <input
+              id="repeat-password"
+              type="password"
+              required
+              value={repeatPassword}
+              onChange={(e) => setRepeatPassword(e.target.value)}
+              className="w-full bg-transparent outline-none text-sm font-medium"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+        </div>
+        {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="te-btn-orange w-full py-4 text-xs font-bold tracking-widest"
+        >
+          {isLoading ? "Реєстрація..." : "ЗАРЕЄСТРУВАТИСЬ"}
+        </button>
+        <p className="text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          Вже є акаунт?{" "}
+          <Link href="/auth/login" className="font-bold hover:underline" style={{ color: "var(--text)" }}>
+            Увійти
+          </Link>
+        </p>
+      </form>
     </div>
   );
 }
