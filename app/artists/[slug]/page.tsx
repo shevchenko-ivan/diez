@@ -17,8 +17,8 @@ function slugToName(slug: string): string {
 
 // ─── Static params ────────────────────────────────────────────────────────────
 
-export function generateStaticParams() {
-  const songs = getAllSongs();
+export async function generateStaticParams() {
+  const songs = await getAllSongs();
   const artists = Array.from(new Set(songs.map((s) => s.artist)));
   return artists.map((artist) => ({
     slug: artist.toLowerCase().replace(/\s+/g, "-"),
@@ -34,7 +34,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const artistName = slugToName(slug);
-  const songs = getAllSongs().filter(
+  const allSongs = await getAllSongs();
+  const songs = allSongs.filter(
     (s) => s.artist.toLowerCase() === artistName.toLowerCase()
   );
 
@@ -59,7 +60,8 @@ export async function generateMetadata({
 export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const artistName = slugToName(slug);
-  const songs = getAllSongs().filter(
+  const allSongs = await getAllSongs();
+  const songs = allSongs.filter(
     (s) => s.artist.toLowerCase() === artistName.toLowerCase()
   );
 

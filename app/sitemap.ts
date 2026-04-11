@@ -5,9 +5,9 @@ import { siteUrl } from "@/lib/utils";
 // Mirror the robots.ts guard: no sitemap on non-production deployments.
 const isProduction = !!process.env.NEXT_PUBLIC_SITE_URL;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!isProduction) return [];
-  const songs = getAllSongs();
+  const songs = await getAllSongs();
   const artistSlugs = [
     ...new Set(songs.map((s) => s.artist.toLowerCase().replace(/\s+/g, "-"))),
   ];

@@ -12,8 +12,9 @@ import { siteUrl } from "@/lib/utils";
 
 // ─── Static params ────────────────────────────────────────────────────────────
 
-export function generateStaticParams() {
-  return getAllSongs().map((s) => ({ slug: s.slug }));
+export async function generateStaticParams() {
+  const songs = await getAllSongs();
+  return songs.map((s) => ({ slug: s.slug }));
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
@@ -24,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const song = getSongBySlug(slug);
+  const song = await getSongBySlug(slug);
   if (!song) return {};
 
   const difficultyLabel =
@@ -54,11 +55,12 @@ export async function generateMetadata({
 
 export default async function SongPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const song = getSongBySlug(slug);
+  const song = await getSongBySlug(slug);
   if (!song) return notFound();
 
   const artistSlug = song.artist.toLowerCase().replace(/\s+/g, "-");
-  const otherSongs = getAllSongs()
+  const allSongs = await getAllSongs();
+  const otherSongs = allSongs
     .filter((s) => s.artist === song.artist && s.slug !== slug)
     .slice(0, 4);
 

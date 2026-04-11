@@ -27,7 +27,7 @@ async function SongsContent({ searchParams }: SearchProps) {
   const rawQ = resolvedParams.q;
   const q = typeof rawQ === 'string' ? rawQ.toLowerCase() : '';
 
-  let songs = getAllSongs();
+  let songs = await getAllSongs();
   
   // Handle filters from categories
   const filter = resolvedParams.filter;

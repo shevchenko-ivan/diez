@@ -7,6 +7,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Suspense } from "react";
 
+async function signOut() {
+  "use server";
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/auth/login");
+}
+
 export const metadata = {
   title: "Мій профіль — Diez",
 };
@@ -15,15 +22,16 @@ async function ProfileDashboard() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
 
-  const mockUser = data?.user?.email ? {
-    name: data.user.email.split("@")[0],
-    email: data.user.email
-  } : {
-    name: "Гітарист_123",
-    email: "user@example.com"
+  if (error || !data?.user) {
+    redirect("/auth/login");
+  }
+
+  const mockUser = {
+    name: data.user.email!.split("@")[0],
+    email: data.user.email!,
   };
 
-  const allSongs = getAllSongs();
+  const allSongs = await getAllSongs();
   const savedSongs = allSongs.slice(0, 3);
   const addedSongs = allSongs.slice(allSongs.length - 2);
 
@@ -56,10 +64,10 @@ async function ProfileDashboard() {
           <button disabled className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1 hover:bg-[var(--surface-active)]" style={{ color: "var(--text)", transition: "background 0.2s" }}>
             <Settings size={16} style={{ color: "var(--text-muted)" }} /> Налаштування
           </button>
-          <form action="/auth/login" method="GET" className="w-full">
-             <button className="w-full flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl hover:bg-red-500/10 text-red-500" style={{ transition: "background 0.2s" }}>
-               <LogOut size={16} /> Вийти
-             </button>
+          <form action={signOut} className="w-full">
+            <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl hover:bg-red-500/10 text-red-500" style={{ transition: "background 0.2s" }}>
+              <LogOut size={16} /> Вийти
+            </button>
           </form>
         </div>
       </aside>
