@@ -1,5 +1,5 @@
 import { Navbar } from "@/shared/components/Navbar";
-import { ArrowLeft, Plus, Music, Eye, EyeOff, Trash2, Archive } from "lucide-react";
+import { ArrowLeft, Plus, Music, Eye, EyeOff, Trash2, Archive, Users } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -104,6 +104,21 @@ export default async function AdminPage() {
             </div>
             <span className="text-4xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{archived.length}</span>
           </div>
+        </div>
+
+        {/* Quick links */}
+        <div className="mb-10">
+          <Link
+            href="/admin/artists"
+            className="te-surface inline-flex items-center gap-3 px-6 py-4 te-pressable"
+            style={{ borderRadius: "1.25rem" }}
+          >
+            <Users size={20} style={{ color: "var(--orange)" }} />
+            <div>
+              <p className="text-sm font-bold" style={{ color: "var(--text)" }}>Керування артистами</p>
+              <p className="text-xs opacity-60" style={{ color: "var(--text-muted)" }}>Фото, жанр, біо</p>
+            </div>
+          </Link>
         </div>
 
         {/* Song table */}
