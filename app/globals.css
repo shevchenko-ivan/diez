@@ -372,6 +372,41 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
+  /*
+    ── te-inset ──────────────────────────────────────────────────────────────
+    Recessed/inset container — used for search fields and form inputs
+  */
+  .te-inset {
+    background: var(--surface-dk);
+    box-shadow: var(--sh-socket);
+  }
+
+  /*
+    ── te-pressable ──────────────────────────────────────────────────────────
+    Interactive card tile — adds hover/press lift effects
+  */
+  .te-pressable {
+    cursor: pointer;
+    transition:
+      box-shadow var(--t-release),
+      transform  var(--t-release);
+  }
+
+  .te-pressable:hover {
+    box-shadow:
+       3px  3px  8px rgba(0,0,0,0.10),
+      -2px -2px  6px rgba(255,255,255,0.70),
+      0 0 0 1px rgba(0,0,0,0.02);
+    transform: translateY(-1px);
+    transition: box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  .te-pressable:active {
+    box-shadow: var(--sh-physical-pressed);
+    transform: translateY(1px);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
   /* Scrollbar none */
   .scrollbar-none {
     -ms-overflow-style: none;
