@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { slugify } from "@/lib/slugify";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,15 +22,6 @@ async function requireAdmin(): Promise<string> {
 
   if (!profile?.is_admin) throw new Error("Тільки для адміністраторів");
   return user.id;
-}
-
-function slugify(title: string, artist: string): string {
-  const raw = `${title}`
-    .toLowerCase()
-    .replace(/[''ʼ]/g, "")
-    .replace(/[^a-zа-яіїєґ0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return raw || `song-${Date.now()}`;
 }
 
 // Parse "[Am]lyrics [F]more lyrics" into sections format.
@@ -95,7 +87,7 @@ export async function createSong(formData: FormData) {
     throw new Error("Заповніть обов'язкові поля: назва, виконавець, текст");
   }
 
-  const slug = slugify(title, artist);
+  const slug = slugify(title) || `song-${Date.now()}`;
   const { sections, chords } = parseLyricsWithChords(lyricsRaw);
 
   const admin = createAdminClient();
@@ -129,6 +121,7 @@ export async function createSong(formData: FormData) {
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/");
+  revalidatePath(`/songs/${finalSlug}`);
   redirect(`/songs/${finalSlug}`);
 }
 

@@ -7,8 +7,6 @@ import { redirect } from "next/navigation";
 import { updateSongStatus, deleteSong } from "@/features/song/actions/admin";
 import { hasEnvVars } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
-
 export const metadata = {
   title: "Адмін-панель — Diez",
 };
