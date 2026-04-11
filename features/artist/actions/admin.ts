@@ -59,6 +59,30 @@ export async function createArtist(formData: FormData) {
   redirect("/admin/artists");
 }
 
+export async function updateArtist(formData: FormData) {
+  await requireAdmin();
+
+  const artistId = formData.get("artistId") as string;
+  const name = (formData.get("name") as string)?.trim();
+  const photo_url = (formData.get("photo_url") as string)?.trim() || null;
+  const bio = (formData.get("bio") as string)?.trim() || null;
+  const genre = (formData.get("genre") as string)?.trim() || null;
+
+  if (!artistId) throw new Error("Відсутній ID");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ name, photo_url, bio, genre })
+    .eq("id", artistId);
+
+  if (error) throw new Error(`Помилка збереження: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+  redirect("/admin/artists");
+}
+
 export async function deleteArtist(formData: FormData) {
   await requireAdmin();
 

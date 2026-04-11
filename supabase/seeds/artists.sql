@@ -1,6 +1,6 @@
 -- ─── Artists seed ─────────────────────────────────────────────────────────────
 -- Run this AFTER migration 003_artists.sql has been applied in the Supabase SQL Editor.
--- Uses ON CONFLICT DO NOTHING so it's safe to re-run.
+-- Safe to re-run (ON CONFLICT DO NOTHING for inserts, UPDATE for photo_url).
 
 INSERT INTO artists (slug, name, genre, bio, photo_url) VALUES
 
@@ -168,3 +168,10 @@ INSERT INTO artists (slug, name, genre, bio, photo_url) VALUES
  NULL)
 
 ON CONFLICT (slug) DO NOTHING;
+
+-- ─── Додати фото для вже існуючих артистів ────────────────────────────────────
+-- Виконай цей UPDATE після INSERT вище.
+-- Фото можна оновити через /admin/artists або цим SQL.
+
+UPDATE artists SET photo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/OKEAN_TITULNI_2016.jpg/320px-OKEAN_TITULNI_2016.jpg'
+  WHERE slug = 'okean-elzy' AND photo_url IS NULL;

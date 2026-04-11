@@ -7,7 +7,6 @@ import { getArtistBySlug } from "@/features/artist/services/artists";
 import { SongCard } from "@/features/song/components/SongCard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { siteUrl } from "@/lib/utils";
 
 export async function generateMetadata({
@@ -69,11 +68,10 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="w-32 h-32 rounded-full overflow-hidden te-inset flex-shrink-0 flex items-center justify-center">
               {artist?.photo_url ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={artist.photo_url}
                   alt={artistName}
-                  width={128}
-                  height={128}
                   className="object-cover w-full h-full"
                 />
               ) : (

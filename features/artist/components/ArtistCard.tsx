@@ -1,5 +1,4 @@
 import { HapticLink } from "@/shared/components/HapticLink";
-import Image from "next/image";
 
 interface ArtistCardProps {
   name: string;
@@ -22,12 +21,11 @@ export function ArtistCard({ name, genre, songsCount, color, image }: ArtistCard
         style={{ borderRadius: "1.25rem 1.25rem 0 0" }}
       >
         {image ? (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={image}
             alt={name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div

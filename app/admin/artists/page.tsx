@@ -1,13 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { Navbar } from "@/shared/components/Navbar";
-import { ArrowLeft, Plus, Trash2, User } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, User, Pencil } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { deleteArtist } from "@/features/artist/actions/admin";
-import Image from "next/image";
 
 export const metadata = { title: "Артисти — Адмінка | Diez" };
 
@@ -73,7 +72,8 @@ export default async function AdminArtistsPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full overflow-hidden te-inset flex-shrink-0 flex items-center justify-center">
                           {artist.photo_url ? (
-                            <Image src={artist.photo_url} alt={artist.name} width={40} height={40} className="object-cover w-full h-full" />
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={artist.photo_url} alt={artist.name} className="object-cover w-full h-full" />
                           ) : (
                             <User size={16} style={{ color: "var(--text-muted)" }} />
                           )}
@@ -85,6 +85,13 @@ export default async function AdminArtistsPage() {
                     <td className="px-6 py-4 font-mono text-xs opacity-60">{artist.slug}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/admin/artists/edit?id=${artist.id}`}
+                          title="Редагувати"
+                          className="p-2 te-key rounded-lg opacity-60 hover:opacity-100"
+                        >
+                          <Pencil size={16} />
+                        </Link>
                         <form action={deleteArtist}>
                           <input type="hidden" name="artistId" value={artist.id} />
                           <button
