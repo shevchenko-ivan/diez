@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Navbar } from "@/shared/components/Navbar";
 import { getAllSongs } from "@/features/song/services/songs";
 import { SongCard } from "@/features/song/components/SongCard";
