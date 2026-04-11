@@ -41,6 +41,11 @@ export async function generateMetadata({
       description,
       type: "article",
       url: `/songs/${slug}`,
+      // Use song cover when available; falls back to app/opengraph-image.png via Next.js inheritance.
+      // Relative paths are resolved against metadataBase in app/layout.tsx.
+      ...(song.coverImage && {
+        images: [{ url: song.coverImage, alt: `${song.title} — ${song.artist}` }],
+      }),
     },
   };
 }
