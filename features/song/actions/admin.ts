@@ -23,11 +23,23 @@ async function requireAdmin(): Promise<string> {
   return user.id;
 }
 
-function slugify(title: string, artist: string): string {
-  const raw = `${title}`
+const CYRILLIC_MAP: Record<string, string> = {
+  а:"a",б:"b",в:"v",г:"h",ґ:"g",д:"d",е:"e",є:"ye",ж:"zh",з:"z",
+  и:"y",і:"i",ї:"yi",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",
+  р:"r",с:"s",т:"t",у:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",
+  щ:"shch",ь:"",ю:"yu",я:"ya",
+  // Russian letters that might appear
+  ё:"yo",э:"e",ъ:"",ы:"y",
+};
+
+function slugify(title: string): string {
+  const raw = title
     .toLowerCase()
     .replace(/[''ʼ]/g, "")
-    .replace(/[^a-zа-яіїєґ0-9]+/g, "-")
+    .split("")
+    .map((ch) => CYRILLIC_MAP[ch] ?? ch)
+    .join("")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return raw || `song-${Date.now()}`;
 }
@@ -95,7 +107,7 @@ export async function createSong(formData: FormData) {
     throw new Error("Заповніть обов'язкові поля: назва, виконавець, текст");
   }
 
-  const slug = slugify(title, artist);
+  const slug = slugify(title);
   const { sections, chords } = parseLyricsWithChords(lyricsRaw);
 
   const admin = createAdminClient();
@@ -129,6 +141,7 @@ export async function createSong(formData: FormData) {
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/");
+  revalidatePath(`/songs/${finalSlug}`);
   redirect(`/songs/${finalSlug}`);
 }
 

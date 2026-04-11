@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -9,13 +11,6 @@ import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { ChevronLeft, Eye, Music } from "lucide-react";
 import { siteUrl } from "@/lib/utils";
-
-// ─── Static params ────────────────────────────────────────────────────────────
-
-export async function generateStaticParams() {
-  const songs = await getAllSongs();
-  return songs.map((s) => ({ slug: s.slug }));
-}
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
