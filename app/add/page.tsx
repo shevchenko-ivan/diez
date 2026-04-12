@@ -2,12 +2,15 @@ import { Navbar } from "@/shared/components/Navbar";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { AddSongForm } from "@/features/song/components/AddSongForm";
+import { getAllArtists } from "@/features/artist/services/artists";
 
 export const metadata = {
   title: "Додати пісню — Diez",
 };
 
-export default function AddSongPage() {
+export default async function AddSongPage() {
+  const artists = await getAllArtists();
+
   return (
     <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
       <Navbar />
@@ -22,7 +25,7 @@ export default function AddSongPage() {
             <p className="text-sm font-medium tracking-wide uppercase opacity-60" style={{ color: "var(--text-muted)" }}>Додайте нову пісню до каталогу</p>
           </div>
 
-          <AddSongForm />
+          <AddSongForm artists={artists} />
         </div>
       </main>
     </div>

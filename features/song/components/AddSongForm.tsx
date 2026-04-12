@@ -4,16 +4,35 @@ import { useState } from "react";
 import { Save } from "lucide-react";
 import { createSong } from "@/features/song/actions/admin";
 import { slugify } from "@/lib/slugify";
+import type { Artist } from "@/features/artist/services/artists";
 
 const KEYS = ["C","Cm","C#","C#m","D","Dm","Eb","Ebm","E","Em","F","Fm","F#","F#m","G","Gm","Ab","Abm","A","Am","Bb","Bbm","B","Bm"];
 
-export function AddSongForm() {
+interface Props {
+  artists?: Artist[];
+}
+
+export function AddSongForm({ artists = [] }: Props) {
   const [title, setTitle] = useState("");
+  const [artistValue, setArtistValue] = useState("");
+  const [customArtist, setCustomArtist] = useState("");
+  const [search, setSearch] = useState("");
+
   const slugPreview = slugify(title);
+  const isCustom = artistValue === "__custom__";
+  const finalArtist = isCustom ? customArtist : artistValue;
+
+  const filtered = search.trim()
+    ? artists.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+    : artists;
 
   return (
     <form action={createSong} className="space-y-8">
+      {/* Hidden field with final artist value */}
+      <input type="hidden" name="artist" value={finalArtist} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Title */}
         <div className="space-y-2">
           <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
             Назва пісні *
@@ -36,19 +55,98 @@ export function AddSongForm() {
           )}
         </div>
 
+        {/* Artist */}
         <div className="space-y-2">
           <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
             Виконавець *
           </label>
-          <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
-            <input
-              name="artist"
-              required
-              placeholder="Напр. Океан Ельзи"
-              className="w-full bg-transparent outline-none text-sm font-medium"
-              style={{ color: "var(--text)" }}
-            />
-          </div>
+
+          {artists.length > 0 ? (
+            <div className="space-y-2">
+              {/* Search + select */}
+              <div className="te-inset" style={{ borderRadius: "1rem", overflow: "hidden" }}>
+                <div className="px-4 pt-3 pb-1">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Пошук виконавця..."
+                    className="w-full bg-transparent outline-none text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  />
+                </div>
+                <div className="overflow-y-auto" style={{ maxHeight: "10rem" }}>
+                  {filtered.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => { setArtistValue(a.name); setSearch(""); }}
+                      className="w-full text-left px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
+                      style={{
+                        background: artistValue === a.name ? "var(--orange)" : "transparent",
+                        color: artistValue === a.name ? "#fff" : "var(--text)",
+                      }}
+                    >
+                      {a.photo_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.photo_url} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                      )}
+                      {a.name}
+                    </button>
+                  ))}
+                  {filtered.length === 0 && (
+                    <p className="px-4 py-2 text-xs opacity-50" style={{ color: "var(--text-muted)" }}>
+                      Не знайдено
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setArtistValue("__custom__"); setSearch(""); }}
+                    className="w-full text-left px-4 py-2 text-sm font-medium border-t"
+                    style={{
+                      borderColor: "rgba(0,0,0,0.06)",
+                      background: isCustom ? "var(--orange)" : "transparent",
+                      color: isCustom ? "#fff" : "var(--text-muted)",
+                    }}
+                  >
+                    + Інший виконавець
+                  </button>
+                </div>
+              </div>
+
+              {/* Selected display */}
+              {artistValue && !isCustom && (
+                <p className="ml-1 text-xs font-medium" style={{ color: "var(--orange)" }}>
+                  ✓ {artistValue}
+                </p>
+              )}
+
+              {/* Custom input */}
+              {isCustom && (
+                <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
+                  <input
+                    value={customArtist}
+                    onChange={(e) => setCustomArtist(e.target.value)}
+                    placeholder="Введіть ім'я виконавця"
+                    className="w-full bg-transparent outline-none text-sm font-medium"
+                    style={{ color: "var(--text)" }}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Fallback: plain text input if no artists in DB */
+            <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
+              <input
+                value={finalArtist}
+                onChange={(e) => setArtistValue(e.target.value)}
+                required
+                placeholder="Напр. Океан Ельзи"
+                className="w-full bg-transparent outline-none text-sm font-medium"
+                style={{ color: "var(--text)" }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -131,7 +229,11 @@ export function AddSongForm() {
       </div>
 
       <div className="pt-4 flex justify-end">
-        <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+        <button
+          type="submit"
+          disabled={!finalArtist.trim()}
+          className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <Save size={16} /> ОПУБЛІКУВАТИ
         </button>
       </div>
