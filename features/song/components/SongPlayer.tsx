@@ -22,14 +22,11 @@ function formatTime(sec: number) {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-// Deterministic bar heights from title string
 function getBars(seed: string, count = 42): number[] {
-  const bars: number[] = [];
-  for (let i = 0; i < count; i++) {
+  return Array.from({ length: count }, (_, i) => {
     const c = seed.charCodeAt(i % seed.length) + i * 7;
-    bars.push(20 + (c % 70));
-  }
-  return bars;
+    return 20 + (c % 70);
+  });
 }
 
 export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
@@ -41,6 +38,11 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Animation states
+  const [playBtnAnim, setPlayBtnAnim] = useState<"idle" | "press" | "launch">("idle");
+  const [skipAnim, setSkipAnim] = useState<"none" | "back" | "fwd">("none");
+  const [cardGlow, setCardGlow] = useState(false);
 
   const bars = getBars(title + artist);
   const progress = duration > 0 ? current / duration : 0;
@@ -60,7 +62,12 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
         onStateChange: (e) => {
           const isPlaying = e.data === window.YT.PlayerState.PLAYING;
           setPlaying(isPlaying);
-          if (isPlaying) setDuration(playerRef.current?.getDuration() ?? 0);
+          if (isPlaying) {
+            setDuration(playerRef.current?.getDuration() ?? 0);
+            // Card glow on play start
+            setCardGlow(true);
+            setTimeout(() => setCardGlow(false), 600);
+          }
         },
       },
     });
@@ -97,11 +104,17 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
 
   const togglePlay = () => {
     if (!ready) return;
+    // Press → spring back → if starting, launch glow
+    setPlayBtnAnim("press");
+    setTimeout(() => setPlayBtnAnim("launch"), 100);
+    setTimeout(() => setPlayBtnAnim("idle"), 400);
     playing ? playerRef.current?.pauseVideo() : playerRef.current?.playVideo();
   };
 
   const skip = (secs: number) => {
     if (!ready) return;
+    setSkipAnim(secs < 0 ? "back" : "fwd");
+    setTimeout(() => setSkipAnim("none"), 350);
     const t = Math.max(0, (playerRef.current?.getCurrentTime() ?? 0) + secs);
     playerRef.current?.seekTo(t, true);
     setCurrent(t);
@@ -110,16 +123,42 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
   const seekClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ready || duration === 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    const t = ratio * duration;
+    const t = ((e.clientX - rect.left) / rect.width) * duration;
     playerRef.current?.seekTo(t, true);
     setCurrent(t);
   };
 
+  const playBtnStyle = {
+    idle:   { transform: "scale(1)",    transition: "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)" },
+    press:  { transform: "scale(0.88)", transition: "transform 0.1s ease" },
+    launch: { transform: "scale(1.08)", transition: "transform 0.25s cubic-bezier(0.34,1.56,0.64,1)" },
+  }[playBtnAnim];
+
+  const skipBackStyle = {
+    transform: skipAnim === "back" ? "translateX(-4px) scale(0.9)" : "translateX(0) scale(1)",
+    transition: skipAnim === "back"
+      ? "transform 0.1s ease"
+      : "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+  };
+
+  const skipFwdStyle = {
+    transform: skipAnim === "fwd" ? "translateX(4px) scale(0.9)" : "translateX(0) scale(1)",
+    transition: skipAnim === "fwd"
+      ? "transform 0.1s ease"
+      : "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+  };
+
   return (
     <div
-      className="te-surface overflow-hidden select-none"
-      style={{ borderRadius: "1.5rem", padding: "1.25rem" }}
+      className="te-surface overflow-hidden"
+      style={{
+        borderRadius: "1.5rem",
+        padding: "1.25rem",
+        transition: "box-shadow 0.4s ease",
+        boxShadow: cardGlow
+          ? "0 0 0 2px var(--orange), var(--sh-float)"
+          : undefined,
+      }}
     >
       {/* Hidden YouTube mount */}
       <div
@@ -129,12 +168,12 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
 
       {/* ── Waveform ───────────────────────────────────────── */}
       <div
-        className="relative mb-3 cursor-pointer"
-        style={{ height: 56 }}
+        className="relative mb-2 cursor-pointer"
+        style={{ height: 52 }}
         onClick={seekClick}
+        title="Клікни для перемотки"
       >
-        {/* Bars */}
-        <div className="absolute inset-0 flex items-end gap-[2px] px-0.5 pb-0">
+        <div className="absolute inset-0 flex items-end gap-[2px]">
           {bars.map((h, i) => {
             const barProgress = i / bars.length;
             const isPast = barProgress < progress;
@@ -146,33 +185,30 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
                   height: `${h}%`,
                   borderRadius: 2,
                   background: isPast ? "var(--orange)" : "var(--surface-dk)",
-                  transition: "height 0.15s ease",
-                  animation: playing ? `waveBar ${0.6 + (i % 5) * 0.13}s ease-in-out infinite alternate` : "none",
-                  animationDelay: `${(i % 7) * 0.07}s`,
+                  transition: "background 0.15s ease, height 0.15s ease",
                 }}
               />
             );
           })}
         </div>
-
-        {/* Red playhead */}
+        {/* Playhead */}
         <div
-          className="absolute top-0 bottom-0 w-px"
+          className="absolute top-0 bottom-0 w-px pointer-events-none"
           style={{
             left: `${progress * 100}%`,
             background: "var(--orange)",
-            boxShadow: "0 0 6px var(--orange)",
+            boxShadow: "0 0 8px var(--orange)",
             transition: "left 0.25s linear",
           }}
         />
       </div>
 
-      {/* ── Time labels ────────────────────────────────────── */}
-      <div className="flex justify-between mb-4 px-0.5">
-        <span className="font-mono text-[10px]" style={{ color: "var(--text-muted)" }}>
+      {/* Time labels */}
+      <div className="flex justify-between mb-4">
+        <span className="font-mono" style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
           {formatTime(current)}
         </span>
-        <span className="font-mono text-[10px]" style={{ color: "var(--text-muted)" }}>
+        <span className="font-mono" style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
           {formatTime(duration)}
         </span>
       </div>
@@ -181,100 +217,87 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
       <div className="flex items-center gap-4">
 
         {/* LCD display */}
-        <div
-          className="te-inset flex-1 p-3 min-w-0"
-          style={{ borderRadius: "1rem" }}
-        >
-          {/* Time counter */}
+        <div className="te-inset flex-1 p-3 min-w-0" style={{ borderRadius: "1rem" }}>
           <div className="flex items-baseline gap-1 mb-1">
-            {["MM", "SS"].map((unit, i) => {
-              const val = i === 0
-                ? Math.floor(current / 60).toString().padStart(2, "0")
-                : Math.floor(current % 60).toString().padStart(2, "0");
-              return (
-                <span key={unit} className="flex items-baseline gap-0.5">
-                  <span
-                    className="font-mono-te tabular-nums"
-                    style={{
-                      fontSize: "1.5rem",
-                      fontWeight: 800,
-                      letterSpacing: "-0.04em",
-                      color: "var(--text)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {val}
-                  </span>
-                  <span style={{ fontSize: "0.5rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                    {unit}
-                  </span>
-                  {i === 0 && (
-                    <span style={{ fontSize: "1.2rem", color: "var(--orange)", lineHeight: 1, marginBottom: 2 }}>
-                      :
-                    </span>
-                  )}
-                </span>
-              );
-            })}
+            <span
+              className="font-mono-te tabular-nums"
+              style={{
+                fontSize: "1.6rem",
+                fontWeight: 800,
+                letterSpacing: "-0.03em",
+                color: playing ? "var(--text)" : "var(--text-muted)",
+                transition: "color 0.3s ease",
+              }}
+            >
+              {formatTime(current)}
+            </span>
           </div>
-          {/* Song info */}
-          <p className="truncate font-bold" style={{ fontSize: "0.72rem", color: "var(--text)", letterSpacing: "-0.01em" }}>
+          <p className="truncate font-bold" style={{ fontSize: "0.72rem", color: "var(--text)" }}>
             {title}
           </p>
-          <p className="truncate" style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          <p className="truncate" style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
             {artist}
           </p>
         </div>
 
         {/* Controls */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Skip back */}
+
+          {/* Skip back −10s */}
           <button
             onClick={() => skip(-10)}
             disabled={!ready}
-            className="te-key flex items-center justify-center active:scale-95 transition-transform"
-            style={{ width: 36, height: 36, borderRadius: "50%", opacity: ready ? 1 : 0.4 }}
+            className="te-key flex items-center justify-center"
+            style={{
+              width: 36, height: 36, borderRadius: "50%",
+              opacity: ready ? 1 : 0.35,
+              cursor: ready ? "pointer" : "default",
+              ...skipBackStyle,
+            }}
           >
             <SkipBackIcon />
           </button>
 
-          {/* Play / Pause — big */}
+          {/* Play / Pause */}
           <button
             onClick={togglePlay}
             disabled={!ready}
-            className="te-knob flex items-center justify-center active:scale-95 transition-transform"
+            className="te-knob flex items-center justify-center"
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
+              width: 56, height: 56, borderRadius: "50%",
               color: "var(--orange)",
-              opacity: ready ? 1 : 0.4,
-              fontSize: 0,
+              opacity: ready ? 1 : 0.35,
+              cursor: ready ? "pointer" : "default",
+              ...playBtnStyle,
             }}
           >
-            {playing ? <PauseIcon /> : <PlayIcon />}
+            <span
+              style={{
+                display: "flex",
+                transition: "opacity 0.15s ease, transform 0.15s ease",
+                opacity: 1,
+              }}
+            >
+              {playing ? <PauseIcon /> : <PlayIcon />}
+            </span>
           </button>
 
-          {/* Skip forward */}
+          {/* Skip forward +10s */}
           <button
             onClick={() => skip(10)}
             disabled={!ready}
-            className="te-key flex items-center justify-center active:scale-95 transition-transform"
-            style={{ width: 36, height: 36, borderRadius: "50%", opacity: ready ? 1 : 0.4 }}
+            className="te-key flex items-center justify-center"
+            style={{
+              width: 36, height: 36, borderRadius: "50%",
+              opacity: ready ? 1 : 0.35,
+              cursor: ready ? "pointer" : "default",
+              ...skipFwdStyle,
+            }}
           >
             <SkipForwardIcon />
           </button>
         </div>
-
       </div>
-
-      {/* ── CSS keyframes ──────────────────────────────────── */}
-      <style>{`
-        @keyframes waveBar {
-          from { transform: scaleY(0.6); }
-          to   { transform: scaleY(1.15); }
-        }
-      `}</style>
     </div>
   );
 }
@@ -286,7 +309,6 @@ function PlayIcon() {
     </svg>
   );
 }
-
 function PauseIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -295,20 +317,18 @@ function PauseIcon() {
     </svg>
   );
 }
-
 function SkipBackIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--text-muted)" }}>
-      <polygon points="19 20 9 12 19 4 19 20" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }}>
+      <polygon points="19 20 9 12 19 4 19 20" fill="currentColor" />
       <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
-
 function SkipForwardIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--text-muted)" }}>
-      <polygon points="5 4 15 12 5 20 5 4" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }}>
+      <polygon points="5 4 15 12 5 20 5 4" fill="currentColor" />
       <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
