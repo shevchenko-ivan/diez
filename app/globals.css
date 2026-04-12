@@ -103,7 +103,12 @@
     cursor: default;
   }
 
-  ::placeholder { color: var(--text-muted); }
+  input, textarea, select {
+    color: var(--text);
+    background: transparent;
+  }
+
+  ::placeholder { color: var(--text-muted); opacity: 1; }
 }
 
 @layer utilities {
@@ -451,12 +456,12 @@
 
     --text:         #E4E0DA;
     --text-mid:     #A09A94;
-    --text-muted:   #6A6468;
+    --text-muted:   #8E8A92;
 
     --sh-socket:
       inset  2px  2px  6px rgba(0,0,0,0.70),
       inset -1px -1px  3px rgba(255,255,255,0.04),
-      0px 1px 1px rgba(255,255,255,0.02);
+      0 0 0 1px rgba(255,255,255,0.07);
 
     --sh-physical:
        0px  4px  8px rgba(0,0,0,0.55),
@@ -519,12 +524,12 @@
 
   --text:         #E4E0DA;
   --text-mid:     #A09A94;
-  --text-muted:   #6A6468;
+  --text-muted:   #8E8A92;
 
   --sh-socket:
     inset  2px  2px  6px rgba(0,0,0,0.70),
     inset -1px -1px  3px rgba(255,255,255,0.04),
-    0px 1px 1px rgba(255,255,255,0.02);
+    0 0 0 1px rgba(255,255,255,0.07);
 
   --sh-physical:
      0px  4px  8px rgba(0,0,0,0.55),
