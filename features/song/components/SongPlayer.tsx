@@ -214,35 +214,31 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
         </span>
       </div>
 
-      {/* ── Bottom row ─────────────────────────────────────── */}
-      <div className="flex items-center gap-4">
+      {/* ── LCD display (full width) ───────────────────────── */}
+      <div className="te-inset p-3 mb-3 w-full" style={{ borderRadius: "1rem" }}>
+        <span
+          className="font-mono-te tabular-nums block mb-1"
+          style={{
+            fontSize: "1.5rem",
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+            color: playing ? "var(--text)" : "var(--text-muted)",
+            transition: "color 0.3s ease",
+          }}
+        >
+          {formatTime(current)}
+        </span>
+        <p className="truncate font-bold" style={{ fontSize: "0.72rem", color: "var(--text)" }}>
+          {title}
+        </p>
+        <p className="truncate" style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
+          {artist}
+        </p>
+      </div>
 
-        {/* LCD display */}
-        <div className="te-inset flex-1 p-3 min-w-0" style={{ borderRadius: "1rem" }}>
-          <div className="flex items-baseline gap-1 mb-1">
-            <span
-              className="font-mono-te tabular-nums"
-              style={{
-                fontSize: "1.6rem",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-                color: playing ? "var(--text)" : "var(--text-muted)",
-                transition: "color 0.3s ease",
-              }}
-            >
-              {formatTime(current)}
-            </span>
-          </div>
-          <p className="truncate font-bold" style={{ fontSize: "0.72rem", color: "var(--text)" }}>
-            {title}
-          </p>
-          <p className="truncate" style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
-            {artist}
-          </p>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+      {/* ── Controls row ───────────────────────────────────── */}
+      <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center gap-2">
 
           {/* Skip back −10s */}
           <button
@@ -302,6 +298,7 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
     </div>
   );
 }
+
 
 function PlayIcon() {
   return (

@@ -80,7 +80,7 @@ export function Navbar() {
   const userInitial = userEmail ? userEmail[0].toUpperCase() : "?";
 
   return (
-    <header className="sticky top-0 z-50 px-6 py-4">
+    <header className="px-6 py-4">
       <nav className="max-w-6xl mx-auto flex items-center justify-between">
 
         {/* Logo */}
