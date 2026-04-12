@@ -179,37 +179,6 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* ── 5. CTA ───────────────────────────────────────────────────────── */}
-        <section className="mb-8">
-          <div
-            className="te-surface p-8 md:p-12 text-center relative overflow-hidden"
-            style={{ borderRadius: "1.5rem" }}
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#f43f5e] rounded-full blur-[100px] opacity-10 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#6366f1] rounded-full blur-[100px] opacity-10 pointer-events-none" />
-            <div className="relative z-10 max-w-2xl mx-auto">
-              <h2
-                className="text-3xl md:text-4xl font-bold mb-4"
-                style={{ color: "var(--text)", letterSpacing: "-0.03em" }}
-              >
-                Створюймо українську базу акордів разом.
-              </h2>
-              <p className="text-lg font-medium mb-8" style={{ color: "var(--text-muted)" }}>
-                Не знайшли свою улюблену пісню? Допоможіть спільноті — підберіть акорди та поділіться з іншими гітаристами.
-              </p>
-              <HapticLink
-                href="/add"
-                className="te-btn-orange inline-flex items-center gap-2 px-8 py-4 rounded-xl text-[13px] font-bold tracking-widest uppercase"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Додати пісню
-              </HapticLink>
-            </div>
-          </div>
-        </section>
-
       </main>
 
       <SiteFooter />
