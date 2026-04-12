@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   // metadataBase resolves relative URLs in alternates.canonical and openGraph.url.
   // siteUrl prefers NEXT_PUBLIC_SITE_URL so previews never emit production canonicals.
   metadataBase: new URL(siteUrl),
-  title: "Diez — Guitar Chords Platform",
+  title: "Diez — Акорди для гітари",
   description:
-    "Search, view, and share guitar chords for thousands of songs. The best platform for guitarists.",
-  keywords: ["guitar chords", "tabs", "songs", "music", "guitar"],
+    "Шукайте, переглядайте та ділітесь акордами для тисяч пісень. Найкраща платформа для гітаристів.",
+  keywords: ["акорди", "гітара", "табулатури", "пісні", "музика", "guitar chords"],
 };
 
 export default function RootLayout({
