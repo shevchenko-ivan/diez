@@ -1,5 +1,6 @@
 import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
+import { SiteFooter } from "@/shared/components/SiteFooter";
 import { getAllSongs } from "@/features/song/services/songs";
 import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
@@ -84,6 +85,7 @@ export default async function ArtistsPage() {
           </div>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { type Metadata } from "next";
 import { getAllSongs } from "@/features/song/services/songs";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Navbar } from "@/shared/components/Navbar";
+import { SiteFooter } from "@/shared/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Каталог пісень — Акорди для гітари | Diez",
@@ -169,6 +170,7 @@ export default function SongsPage({ searchParams }: SearchProps) {
           <SongsContent searchParams={searchParams} />
         </Suspense>
       </main>
+      <SiteFooter />
     </div>
   );
 }

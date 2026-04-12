@@ -4,6 +4,7 @@ import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { getAllSongs, getFreshSongs } from "@/features/song/services/songs";
 import { getArtists } from "@/features/artist/services/artists";
+import { SiteFooter } from "@/shared/components/SiteFooter";
 
 export const revalidate = 3600;
 
@@ -211,31 +212,7 @@ export default async function HomePage() {
 
       </main>
 
-      {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="px-6 pb-8">
-        <div
-          className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 te-surface"
-          style={{ borderRadius: "1.25rem" }}
-        >
-          <div className="flex items-center gap-1">
-            <span style={{ color: "var(--orange)", fontWeight: 900, fontSize: "1rem", letterSpacing: "-0.04em" }}>#</span>
-            <span style={{ color: "var(--text)", fontWeight: 900, fontSize: "1rem", letterSpacing: "-0.04em" }}>DIEZ</span>
-            <span className="font-mono-te ml-2" style={{ color: "var(--text-muted)", fontSize: "0.6rem" }}>© 2026</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {["Акорди", "Виконавці", "Реєстрація"].map((label, i) => (
-              <HapticLink
-                key={label}
-                href={i === 0 ? "/songs" : i === 1 ? "/artists" : "/auth/sign-up"}
-                className="te-key px-4 py-2 text-xs font-semibold"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {label}
-              </HapticLink>
-            ))}
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

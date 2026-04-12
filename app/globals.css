@@ -415,6 +415,14 @@
     transition: box-shadow var(--t-press), transform var(--t-press);
   }
 
+  /* Footer links */
+  .footer-link {
+    transition: color 0.15s ease;
+  }
+  .footer-link:hover {
+    color: var(--text) !important;
+  }
+
   /* Scrollbar none */
   .scrollbar-none {
     -ms-overflow-style: none;

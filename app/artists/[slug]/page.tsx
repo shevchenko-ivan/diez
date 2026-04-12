@@ -10,6 +10,7 @@ import Link from "next/link";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SiteFooter } from "@/shared/components/SiteFooter";
 
 export async function generateMetadata({
   params,
@@ -138,6 +139,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
           )}
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

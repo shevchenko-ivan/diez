@@ -14,6 +14,7 @@ import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SiteFooter } from "@/shared/components/SiteFooter";
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -264,6 +265,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
         )}
 
       </main>
+      <SiteFooter />
     </div>
   );
 }
