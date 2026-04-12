@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
   interface Window {
-    YT: typeof YT;
+    YT: any;
     onYouTubeIframeAPIReady: () => void;
   }
 }
@@ -59,7 +60,7 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
           setDuration(playerRef.current?.getDuration() ?? 0);
           setReady(true);
         },
-        onStateChange: (e) => {
+        onStateChange: (e: any) => {
           const isPlaying = e.data === window.YT.PlayerState.PLAYING;
           setPlaying(isPlaying);
           if (isPlaying) {
