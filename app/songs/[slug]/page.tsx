@@ -11,6 +11,7 @@ import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { ChevronLeft, Eye, Music, Pencil } from "lucide-react";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
+import { slugify } from "@/lib/slugify";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -55,7 +56,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
   const song = await getSongBySlug(slug);
   if (!song) return notFound();
 
-  const artistSlug = song.artist.toLowerCase().replace(/\s+/g, "-");
+  const artistSlug = slugify(song.artist);
   const allSongs = await getAllSongs();
   const otherSongs = allSongs
     .filter((s) => s.artist === song.artist && s.slug !== slug)

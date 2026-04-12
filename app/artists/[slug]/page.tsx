@@ -5,9 +5,11 @@ import { Navbar } from "@/shared/components/Navbar";
 import { getAllSongs } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
 import { SongCard } from "@/features/song/components/SongCard";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
-import { siteUrl } from "@/lib/utils";
+import { siteUrl, hasEnvVars } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function generateMetadata({
   params,
@@ -44,6 +46,21 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
     (s) => s.artist.toLowerCase() === artistName.toLowerCase()
   );
 
+  // Admin check for edit button
+  let isAdmin = false;
+  if (hasEnvVars && artist?.id) {
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const admin = createAdminClient();
+        const { data: profile } = await admin
+          .from("profiles").select("is_admin").eq("id", user.id).single();
+        isAdmin = profile?.is_admin ?? false;
+      }
+    } catch { /* not logged in */ }
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "MusicGroup",
@@ -78,8 +95,20 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
                 <span style={{ fontSize: "3.5rem" }}>🎸</span>
               )}
             </div>
-            <div>
-              <h1 className="text-4xl font-bold mb-2 uppercase tracking-tight">{artistName}</h1>
+            <div className="flex-1">
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="text-4xl font-bold mb-2 uppercase tracking-tight">{artistName}</h1>
+                {isAdmin && artist?.id && (
+                  <Link
+                    href={`/admin/artists/edit?id=${artist.id}`}
+                    className="te-key inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold shrink-0"
+                    style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
+                  >
+                    <Pencil size={12} />
+                    Редагувати
+                  </Link>
+                )}
+              </div>
               {artist?.genre && (
                 <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--orange)" }}>
                   {artist.genre}

@@ -1,4 +1,5 @@
 import { HapticLink } from "@/shared/components/HapticLink";
+import { slugify } from "@/lib/slugify";
 
 interface ArtistCardProps {
   name: string;
@@ -10,9 +11,7 @@ interface ArtistCardProps {
 }
 
 export function ArtistCard({ name, genre, songsCount, color, image, slug }: ArtistCardProps) {
-  const href = slug
-    ? `/artists/${slug}`
-    : `/artists/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"))}`;
+  const href = `/artists/${slug ?? slugify(name)}`;
 
   return (
     <HapticLink
