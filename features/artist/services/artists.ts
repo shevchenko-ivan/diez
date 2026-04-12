@@ -32,7 +32,7 @@ export async function getArtists(limit = 12): Promise<Artist[]> {
   if (!hasEnvVars) return [];
   const { data, error } = await getClient()
     .from("artists")
-    .select("id, slug, name, photo_url")
+    .select("id, slug, name, photo_url, genre")
     .order("name")
     .limit(limit);
   if (error || !data) return [];

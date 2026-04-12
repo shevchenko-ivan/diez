@@ -102,53 +102,61 @@ export default async function HomePage() {
         {artists.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Виконавці" href="/artists" />
-            <div className="flex overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 gap-4 scrollbar-none">
+            <div className="flex overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none">
               {artists.map((artist) => {
                 const initial = artist.name.charAt(0).toUpperCase();
                 const hue = artist.name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
-                const placeholderBg = `hsl(${hue}, 45%, 72%)`;
+                const placeholderBg = `hsl(${hue}, 40%, 68%)`;
                 return (
                   <HapticLink
                     key={artist.slug}
                     href={`/artists/${artist.slug}`}
-                    className="flex flex-col items-center gap-2 flex-shrink-0"
-                    style={{ width: 80 }}
+                    className="te-surface te-pressable flex-shrink-0 overflow-hidden"
+                    style={{ width: 160, borderRadius: "1.25rem" }}
                   >
-                    <div
-                      className="te-surface overflow-hidden flex-shrink-0"
-                      style={{ width: 72, height: 72, borderRadius: "50%" }}
-                    >
+                    {/* Photo */}
+                    <div style={{ width: 160, height: 160, position: "relative", overflow: "hidden" }}>
                       {artist.photo_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={artist.photo_url}
                           alt={artist.name}
-                          className="w-full h-full object-cover"
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                         />
                       ) : (
                         <div
-                          className="w-full h-full flex items-center justify-center"
-                          style={{ background: placeholderBg }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            background: placeholderBg,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
                         >
-                          <span
-                            style={{
-                              fontSize: "1.5rem",
-                              fontWeight: 800,
-                              color: "rgba(255,255,255,0.9)",
-                              letterSpacing: "-0.02em",
-                            }}
-                          >
+                          <span style={{ fontSize: "3rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", letterSpacing: "-0.02em" }}>
                             {initial}
                           </span>
                         </div>
                       )}
                     </div>
-                    <p
-                      className="text-center leading-tight w-full truncate"
-                      style={{ fontSize: "0.68rem", fontWeight: 500, color: "var(--text-mid)" }}
-                    >
-                      {artist.name}
-                    </p>
+                    {/* Info */}
+                    <div className="px-3 py-2.5">
+                      <p
+                        className="truncate uppercase font-bold"
+                        style={{ fontSize: "0.72rem", letterSpacing: "0.04em", color: "var(--text)" }}
+                      >
+                        {artist.name}
+                      </p>
+                      {artist.genre && (
+                        <p
+                          className="truncate uppercase"
+                          style={{ fontSize: "0.6rem", letterSpacing: "0.06em", color: "var(--text-muted)", marginTop: 2 }}
+                        >
+                          {artist.genre}
+                        </p>
+                      )}
+                    </div>
                   </HapticLink>
                 );
               })}
