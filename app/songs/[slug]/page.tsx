@@ -9,8 +9,10 @@ import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
-import { ChevronLeft, Eye, Music } from "lucide-react";
-import { siteUrl } from "@/lib/utils";
+import { ChevronLeft, Eye, Music, Pencil } from "lucide-react";
+import { siteUrl, hasEnvVars } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -58,6 +60,24 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
   const otherSongs = allSongs
     .filter((s) => s.artist === song.artist && s.slug !== slug)
     .slice(0, 4);
+
+  // Check admin — get song ID for edit link
+  let songId: string | null = null;
+  if (hasEnvVars) {
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const admin = createAdminClient();
+        const { data: profile } = await admin
+          .from("profiles").select("is_admin").eq("id", user.id).single();
+        if (profile?.is_admin) {
+          const { data } = await admin.from("songs").select("id").eq("slug", slug).single();
+          songId = data?.id ?? null;
+        }
+      }
+    } catch { /* not admin or not logged in */ }
+  }
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -173,7 +193,19 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
               </div>
             </div>
 
-            <SongActions />
+            <div className="flex flex-col items-end gap-2">
+              <SongActions />
+              {songId && (
+                <Link
+                  href={`/admin/songs/edit?id=${songId}`}
+                  className="te-key inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold"
+                  style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
+                >
+                  <Pencil size={12} />
+                  Редагувати
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
