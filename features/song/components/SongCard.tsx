@@ -67,12 +67,6 @@ export function SongCard({ ...props }: SongCardProps) {
           />
         )}
         
-        {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-          <div className="te-knob w-12 h-12 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300">
-            <Play size={20} fill="currentColor" className="text-white ml-1" />
-          </div>
-        </div>
 
         {/* Save/Favorite Button */}
         <button 
