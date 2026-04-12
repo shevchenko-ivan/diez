@@ -36,27 +36,22 @@ function stringToColor(str: string) {
 export default async function ArtistsPage() {
   const [songs, dbArtists] = await Promise.all([getAllSongs(), getAllArtists()]);
 
-  // Map from artist name → db artist record
-  const dbMap = new Map(dbArtists.map((a) => [a.name.toLowerCase(), a]));
-
-  // Build list from songs, enrich with db data
-  const artistMap = new Map<string, { name: string; songsCount: number; genre: string; color: string; image?: string; slug?: string }>();
+  // Count songs per artist name (published only)
+  const songCount = new Map<string, number>();
   songs.forEach((s) => {
-    if (!artistMap.has(s.artist)) {
-      const db = dbMap.get(s.artist.toLowerCase());
-      artistMap.set(s.artist, {
-        name: s.artist,
-        songsCount: 0,
-        genre: db?.genre ?? s.genre,
-        color: stringToColor(s.artist),
-        image: db?.photo_url ?? undefined,
-        slug: db?.slug,
-      });
-    }
-    artistMap.get(s.artist)!.songsCount++;
+    const key = s.artist.toLowerCase();
+    songCount.set(key, (songCount.get(key) ?? 0) + 1);
   });
 
-  const artists = Array.from(artistMap.values());
+  // Build from artists table — all artists, not just those with songs
+  const artists = dbArtists.map((a) => ({
+    name: a.name,
+    songsCount: songCount.get(a.name.toLowerCase()) ?? 0,
+    genre: a.genre ?? "",
+    color: stringToColor(a.name),
+    image: a.photo_url ?? undefined,
+    slug: a.slug,
+  }));
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
