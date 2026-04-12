@@ -3,6 +3,7 @@ import { Navbar } from "@/shared/components/Navbar";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { getAllSongs, getFreshSongs } from "@/features/song/services/songs";
+import { getArtists } from "@/features/artist/services/artists";
 
 export const revalidate = 3600; // revalidate hourly
 
@@ -31,9 +32,10 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const [trendingSongs, freshSongs] = await Promise.all([
+  const [trendingSongs, freshSongs, artists] = await Promise.all([
     getAllSongs(),
     getFreshSongs(4),
+    getArtists(12),
   ]);
 
   const trending = trendingSongs.slice(0, 4);
@@ -192,7 +194,65 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* ── 6. Community CTA & Social Proof ──────────────────────────────── */}
+        {/* ── 6. Artists ───────────────────────────────────────────────────── */}
+        {artists.length > 0 && (
+          <section className="mb-16">
+            <SectionHeader title="Виконавці" href="/artists" />
+            <div className="flex overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 gap-4 scrollbar-none">
+              {artists.map((artist) => {
+                const initial = artist.name.charAt(0).toUpperCase();
+                const hue = artist.name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
+                const placeholderBg = `hsl(${hue}, 45%, 72%)`;
+                return (
+                  <HapticLink
+                    key={artist.slug}
+                    href={`/artists/${artist.slug}`}
+                    className="flex flex-col items-center gap-2 flex-shrink-0"
+                    style={{ width: 80 }}
+                  >
+                    <div
+                      className="te-surface overflow-hidden flex-shrink-0"
+                      style={{ width: 72, height: 72, borderRadius: "50%" }}
+                    >
+                      {artist.photo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={artist.photo_url}
+                          alt={artist.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full flex items-center justify-center"
+                          style={{ background: placeholderBg }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "1.5rem",
+                              fontWeight: 800,
+                              color: "rgba(255,255,255,0.9)",
+                              letterSpacing: "-0.02em",
+                            }}
+                          >
+                            {initial}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p
+                      className="text-center leading-tight w-full truncate"
+                      style={{ fontSize: "0.68rem", fontWeight: 500, color: "var(--text-mid)" }}
+                    >
+                      {artist.name}
+                    </p>
+                  </HapticLink>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── 7. Community CTA & Social Proof ──────────────────────────────── */}
         <section className="mb-8">
           <div className="te-surface p-8 md:p-12 text-center relative overflow-hidden" style={{ borderRadius: "1.5rem" }}>
             {/* Background elements */}
