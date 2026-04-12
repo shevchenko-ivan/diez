@@ -1,13 +1,13 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type Difficulty } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 
-// Public read-only client — no cookie/session needed for published song reads.
-// Works at build time (generateStaticParams) and at request time.
+// Public read-only client — no auth needed for published song reads.
 function getClient() {
-  return createBrowserClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
 
