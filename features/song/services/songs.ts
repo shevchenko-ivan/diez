@@ -35,13 +35,25 @@ function mapRow(row: Record<string, unknown>): Song {
   };
 }
 
-export async function getAllSongs(): Promise<Song[]> {
+export async function getAllSongs(options?: { sortBy?: "views" | "created_at" }): Promise<Song[]> {
   if (!hasEnvVars) return [];
   const { data, error } = await getClient()
     .from("songs")
     .select(SONG_COLUMNS)
     .eq("status", "published")
-    .order("views", { ascending: false });
+    .order(options?.sortBy ?? "views", { ascending: false });
+  if (error || !data) return [];
+  return data.map(mapRow);
+}
+
+export async function getFreshSongs(limit = 4): Promise<Song[]> {
+  if (!hasEnvVars) return [];
+  const { data, error } = await getClient()
+    .from("songs")
+    .select(SONG_COLUMNS)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limit);
   if (error || !data) return [];
   return data.map(mapRow);
 }

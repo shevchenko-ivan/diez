@@ -72,11 +72,17 @@ export default async function ArtistsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-          {artists.map((artist) => (
-            <ArtistCard key={artist.name} {...artist} />
-          ))}
-        </div>
+        {artists.length === 0 ? (
+          <div className="te-surface p-12 text-center" style={{ borderRadius: "1.5rem", color: "var(--text-muted)" }}>
+            <p className="font-medium opacity-60">Виконавців ще немає в каталозі.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {artists.map((artist) => (
+              <ArtistCard key={artist.name} {...artist} />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
