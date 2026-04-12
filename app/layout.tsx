@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteUrl } from "@/lib/utils";
-import { ThemeProvider, themeScript } from "@/shared/components/ThemeProvider";
+import { ThemeProvider } from "@/shared/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  // metadataBase resolves relative URLs in alternates.canonical and openGraph.url.
-  // siteUrl prefers NEXT_PUBLIC_SITE_URL so previews never emit production canonicals.
   metadataBase: new URL(siteUrl),
   title: "Diez — Акорди для гітари",
   description:
     "Шукайте, переглядайте та ділітесь акордами для тисяч пісень. Найкраща платформа для гітаристів.",
   keywords: ["акорди", "гітара", "табулатури", "пісні", "музика", "guitar chords"],
 };
+
+// Runs before paint — applies stored manual preference so there's no flash.
+// CSS @media (prefers-color-scheme: dark) handles auto without JS.
+const themeInitScript = `(function(){try{var s=localStorage.getItem('theme');if(s==='dark'||s==='light'){document.documentElement.setAttribute('data-theme',s)}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -20,9 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" suppressHydrationWarning>
-      {/* Blocking script prevents flash of wrong theme before hydration */}
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="antialiased">
         <ThemeProvider>

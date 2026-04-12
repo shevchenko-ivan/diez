@@ -80,7 +80,7 @@ export function Navbar() {
   const userEmail = isLoggedIn ? (navUser as NavUser).email : "";
   const userInitial = userEmail ? userEmail[0].toUpperCase() : "?";
 
-  const { theme, toggle } = useTheme();
+  const { isDark, toggle } = useTheme();
 
   return (
     <header className="px-6 py-4">
@@ -108,9 +108,9 @@ export function Navbar() {
           <button
             onClick={toggle}
             className="te-key p-2.5"
-            title={theme === "dark" ? "Світла тема" : "Темна тема"}
+            title={isDark ? "Світла тема" : "Темна тема"}
           >
-            {theme === "dark"
+            {isDark
               ? <Sun size={15} style={{ color: "var(--text-muted)" }} />
               : <Moon size={15} style={{ color: "var(--text-muted)" }} />
             }
@@ -201,8 +201,8 @@ export function Navbar() {
 
         {/* Mobile right: theme + hamburger */}
         <div className="md:hidden flex items-center gap-2">
-          <button onClick={toggle} className="te-key p-2.5" title={theme === "dark" ? "Світла тема" : "Темна тема"}>
-            {theme === "dark"
+          <button onClick={toggle} className="te-key p-2.5" title={isDark ? "Світла тема" : "Темна тема"}>
+            {isDark
               ? <Sun size={15} style={{ color: "var(--text-muted)" }} />
               : <Moon size={15} style={{ color: "var(--text-muted)" }} />
             }
