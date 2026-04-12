@@ -38,7 +38,8 @@ export default async function EditSongPage({
   if (!profile?.is_admin) redirect("/");
 
   const { id } = await searchParams;
-  if (!id) redirect("/admin/songs");
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!id || !UUID_RE.test(id)) redirect("/admin/songs");
 
   const { data: song } = await admin
     .from("songs")

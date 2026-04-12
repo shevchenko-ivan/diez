@@ -8,6 +8,19 @@ import { slugify } from "@/lib/slugify";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function assertUuid(value: string | null | undefined, label = "ID"): string {
+  if (!value || !UUID_RE.test(value)) throw new Error(`Невалідний ${label}`);
+  return value;
+}
+
+function sanitizeUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!value.startsWith("https://") && !value.startsWith("http://")) return null;
+  return value;
+}
+
 async function requireAdmin(): Promise<string> {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -130,10 +143,10 @@ export async function createSong(formData: FormData) {
 export async function updateSongStatus(formData: FormData) {
   const adminId = await requireAdmin();
 
-  const songId = formData.get("songId") as string;
+  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
   const status = formData.get("status") as string;
 
-  if (!songId || !status) throw new Error("Відсутні параметри");
+  if (!status) throw new Error("Відсутні параметри");
   if (!["published", "archived", "draft"].includes(status)) {
     throw new Error("Невалідний статус");
   }
@@ -162,8 +175,7 @@ export async function updateSongStatus(formData: FormData) {
 export async function updateSong(formData: FormData) {
   await requireAdmin();
 
-  const songId = formData.get("songId") as string;
-  if (!songId) throw new Error("Відсутній ID пісні");
+  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
 
   const title = (formData.get("title") as string)?.trim();
   const artist = (formData.get("artist") as string)?.trim();
@@ -174,7 +186,7 @@ export async function updateSong(formData: FormData) {
   const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
   const difficulty = (formData.get("difficulty") as string) || null;
   const status = (formData.get("status") as string) || null;
-  const cover_image = (formData.get("cover_image") as string)?.trim() || null;
+  const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
   const cover_color = (formData.get("cover_color") as string)?.trim() || null;
   const youtube_id = (formData.get("youtube_id") as string)?.trim() || null;
 
@@ -204,8 +216,7 @@ export async function updateSong(formData: FormData) {
 export async function deleteSong(formData: FormData) {
   await requireAdmin();
 
-  const songId = formData.get("songId") as string;
-  if (!songId) throw new Error("Відсутній ID пісні");
+  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
 
   const admin = createAdminClient();
   const { error } = await admin.from("songs").delete().eq("id", songId);
