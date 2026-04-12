@@ -151,7 +151,7 @@ export function SongViewer({ song }: { song: Song }) {
       {/* ── 3-column grid (desktop) ───────────────────────────────────────── */}
       <div
         className="lg:grid lg:gap-5"
-        style={{ gridTemplateColumns: "160px 1fr 152px" }}
+        style={{ gridTemplateColumns: "220px 1fr 200px" }}
       >
         {/* ── LEFT: Chord diagrams (sticky) ───────────────────────────────── */}
         <aside className="hidden lg:block self-start sticky top-6">
