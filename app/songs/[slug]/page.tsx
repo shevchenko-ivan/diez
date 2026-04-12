@@ -95,14 +95,14 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
 
-      <main className="max-w-[1400px] mx-auto px-4 lg:px-8 pb-20">
+      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pb-20">
 
         {/* ── Back ─────────────────────────────────────────────────────── */}
         <div className="pt-2 pb-6">

@@ -22,10 +22,10 @@ export default async function HomePage() {
   const trending = trendingSongs.slice(0, 4);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
 
-      <main className="max-w-6xl mx-auto px-6 pb-16">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 pb-16">
 
         {/* ── 1. Hero ──────────────────────────────────────────────────────── */}
         <section className="text-center py-16 md:py-24">

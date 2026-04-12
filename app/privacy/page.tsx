@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
-      <main className="max-w-2xl mx-auto px-6 py-16">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-16">
 
         <h1
           className="font-bold mb-2"

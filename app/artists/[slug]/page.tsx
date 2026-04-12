@@ -71,13 +71,13 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
         <Link href="/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
           <ArrowLeft size={14} /> Виконавці
         </Link>
