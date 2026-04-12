@@ -157,6 +157,48 @@ export async function updateSongStatus(formData: FormData) {
   revalidatePath("/");
 }
 
+// ─── Update song (metadata) ───────────────────────────────────────────────────
+
+export async function updateSong(formData: FormData) {
+  await requireAdmin();
+
+  const songId = formData.get("songId") as string;
+  if (!songId) throw new Error("Відсутній ID пісні");
+
+  const title = (formData.get("title") as string)?.trim();
+  const artist = (formData.get("artist") as string)?.trim();
+  const album = (formData.get("album") as string)?.trim() || null;
+  const genre = (formData.get("genre") as string)?.trim() || null;
+  const key = (formData.get("key") as string)?.trim() || null;
+  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
+  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const difficulty = (formData.get("difficulty") as string) || null;
+  const status = (formData.get("status") as string) || null;
+  const cover_image = (formData.get("cover_image") as string)?.trim() || null;
+  const cover_color = (formData.get("cover_color") as string)?.trim() || null;
+  const youtube_id = (formData.get("youtube_id") as string)?.trim() || null;
+
+  if (!title || !artist) throw new Error("Назва та виконавець обов'язкові");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("songs")
+    .update({
+      title, artist, album, genre, key, capo, tempo,
+      difficulty, status, cover_image, cover_color, youtube_id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", songId);
+
+  if (error) throw new Error(`Помилка збереження: ${error.message}`);
+
+  revalidatePath("/songs");
+  revalidatePath("/admin/songs");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  redirect("/admin/songs");
+}
+
 // ─── Delete song ──────────────────────────────────────────────────────────────
 
 export async function deleteSong(formData: FormData) {
@@ -174,4 +216,5 @@ export async function deleteSong(formData: FormData) {
   revalidatePath("/artists");
   revalidatePath("/admin");
   revalidatePath("/");
+  redirect("/admin/songs");
 }

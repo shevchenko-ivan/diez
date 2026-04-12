@@ -1,34 +1,21 @@
 import { Navbar } from "@/shared/components/Navbar";
-import { StatusBadge } from "@/shared/components/StatusBadge";
-import { ArrowLeft, Plus, Music, Eye, EyeOff, Trash2, Archive, Users } from "lucide-react";
+import { Music, Users, Eye, EyeOff, Archive } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { updateSongStatus, deleteSong } from "@/features/song/actions/admin";
 import { hasEnvVars } from "@/lib/utils";
 
 export const metadata = {
   title: "Адмін-панель — Diez",
 };
 
-interface AdminSong {
-  id: string;
-  slug: string;
-  title: string;
-  artist: string;
-  views: number;
-  status: string;
-  created_at: string;
-}
+async function getStats() {
+  if (!hasEnvVars) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
 
-async function getAdminData() {
-  if (!hasEnvVars) return { songs: [] as AdminSong[], isAdmin: false };
-
-  // Verify admin status
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { songs: [] as AdminSong[], isAdmin: false };
+  if (!user) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
 
   const admin = createAdminClient();
   const { data: profile } = await admin
@@ -37,170 +24,123 @@ async function getAdminData() {
     .eq("id", user.id)
     .single();
 
-  if (!profile?.is_admin) return { songs: [] as AdminSong[], isAdmin: false };
+  if (!profile?.is_admin) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
 
-  // Fetch all songs (all statuses) via service role
-  const { data: songs } = await admin
-    .from("songs")
-    .select("id, slug, title, artist, views, status, created_at")
-    .order("created_at", { ascending: false });
+  const [{ data: songs }, { data: artists }] = await Promise.all([
+    admin.from("songs").select("status"),
+    admin.from("artists").select("id"),
+  ]);
 
-  return { songs: (songs ?? []) as AdminSong[], isAdmin: true };
+  const published = songs?.filter((s) => s.status === "published").length ?? 0;
+  const drafts = songs?.filter((s) => s.status === "draft").length ?? 0;
+  const archived = songs?.filter((s) => s.status === "archived").length ?? 0;
+
+  return { published, drafts, archived, artists: artists?.length ?? 0, isAdmin: true };
 }
 
 export default async function AdminPage() {
-  const { songs, isAdmin } = await getAdminData();
+  const stats = await getStats();
 
-  if (!isAdmin) {
+  if (!stats.isAdmin) {
     redirect("/");
   }
-
-  const published = songs.filter((s) => s.status === "published");
-  const drafts = songs.filter((s) => s.status === "draft");
-  const archived = songs.filter((s) => s.status === "archived");
 
   return (
     <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
       <Navbar />
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <Link href="/profile" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
-          <ArrowLeft size={14} /> Мій профіль
-        </Link>
-
-        <div className="flex items-start justify-between mb-10">
-          <div>
-            <h1 className="text-4xl font-bold mb-3 uppercase tracking-tighter" style={{ color: "var(--text)" }}>Адмін-панель</h1>
-            <p className="text-sm font-medium tracking-wide border-l-2 pl-3 opacity-60" style={{ color: "var(--text-muted)", borderColor: "var(--orange)" }}>Керування контентом платформи</p>
-          </div>
-          <Link
-            href="/add"
-            className="te-btn-orange px-5 py-3 flex items-center gap-2 text-xs font-bold tracking-widest shrink-0"
-          >
-            <Plus size={14} /> ДОДАТИ ПІСНЮ
-          </Link>
-        </div>
-
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="te-surface p-6 flex flex-col gap-2" style={{ borderRadius: "1.5rem" }}>
-            <div className="flex items-center gap-3 mb-2" style={{ color: "var(--orange)" }}>
-              <Music size={24} />
-              <span className="text-xs font-bold tracking-widest uppercase">Опубліковано</span>
-            </div>
-            <span className="text-4xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{published.length}</span>
-          </div>
-
-          <div className="te-surface p-6 flex flex-col gap-2" style={{ borderRadius: "1.5rem" }}>
-            <div className="flex items-center gap-3 mb-2 text-blue-500">
-              <EyeOff size={24} />
-              <span className="text-xs font-bold tracking-widest uppercase">Чернетки</span>
-            </div>
-            <span className="text-4xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{drafts.length}</span>
-          </div>
-
-          <div className="te-surface p-6 flex flex-col gap-2" style={{ borderRadius: "1.5rem" }}>
-            <div className="flex items-center gap-3 mb-2 text-gray-400">
-              <Archive size={24} />
-              <span className="text-xs font-bold tracking-widest uppercase">В архіві</span>
-            </div>
-            <span className="text-4xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{archived.length}</span>
-          </div>
-        </div>
-
-        {/* Quick links */}
+      <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-10">
-          <Link
-            href="/admin/artists"
-            className="te-surface inline-flex items-center gap-3 px-6 py-4 te-pressable"
-            style={{ borderRadius: "1.25rem" }}
-          >
-            <Users size={20} style={{ color: "var(--orange)" }} />
-            <div>
-              <p className="text-sm font-bold" style={{ color: "var(--text)" }}>Керування артистами</p>
-              <p className="text-xs opacity-60" style={{ color: "var(--text-muted)" }}>Фото, жанр, біо</p>
-            </div>
-          </Link>
+          <h1 className="text-4xl font-bold mb-3 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+            Адмін-панель
+          </h1>
+          <p className="text-sm font-medium tracking-wide border-l-2 pl-3 opacity-60" style={{ color: "var(--text-muted)", borderColor: "var(--orange)" }}>
+            Керування контентом платформи
+          </p>
         </div>
 
-        {/* Song table */}
-        <div className="te-surface overflow-hidden" style={{ borderRadius: "1.5rem" }}>
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[rgba(0,0,0,0.02)] border-b" style={{ borderColor: "rgba(0,0,0,0.05)", color: "var(--text-muted)" }}>
-              <tr>
-                <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Назва</th>
-                <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Виконавець</th>
-                <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Статус</th>
-                <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Перегляди</th>
-                <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase text-right">Дії</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y" style={{ borderColor: "rgba(0,0,0,0.05)", color: "var(--text)" }}>
-              {songs.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center opacity-50">
-                    Поки що немає пісень. Додайте першу!
-                  </td>
-                </tr>
-              )}
-              {songs.map((song) => (
-                <tr key={song.id} className="hover:bg-[rgba(0,0,0,0.02)] transition-colors">
-                  <td className="px-6 py-4 font-bold whitespace-nowrap">
-                    <Link href={`/songs/${song.slug}`} className="hover:underline">
-                      {song.title}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 font-medium opacity-80 whitespace-nowrap">{song.artist}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={song.status} />
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs">{song.views}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      {song.status !== "published" && (
-                        <form action={updateSongStatus}>
-                          <input type="hidden" name="songId" value={song.id} />
-                          <input type="hidden" name="status" value="published" />
-                          <button
-                            type="submit"
-                            title="Опублікувати"
-                            className="p-2 te-key rounded-lg opacity-60 hover:opacity-100 text-green-600"
-                          >
-                            <Eye size={16} />
-                          </button>
-                        </form>
-                      )}
-                      {song.status === "published" && (
-                        <form action={updateSongStatus}>
-                          <input type="hidden" name="songId" value={song.id} />
-                          <input type="hidden" name="status" value="archived" />
-                          <button
-                            type="submit"
-                            title="Архівувати"
-                            className="p-2 te-key rounded-lg opacity-60 hover:opacity-100 text-yellow-600"
-                          >
-                            <Archive size={16} />
-                          </button>
-                        </form>
-                      )}
-                      <form action={deleteSong}>
-                        <input type="hidden" name="songId" value={song.id} />
-                        <button
-                          type="submit"
-                          title="Видалити"
-                          className="p-2 te-key rounded-lg opacity-60 hover:opacity-100 hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
+          <StatCard icon={<Eye size={18} />} label="Опубліковано" value={stats.published} color="var(--orange)" />
+          <StatCard icon={<EyeOff size={18} />} label="Чернетки" value={stats.drafts} color="#6366f1" />
+          <StatCard icon={<Archive size={18} />} label="В архіві" value={stats.archived} color="var(--text-muted)" />
+          <StatCard icon={<Users size={18} />} label="Артисти" value={stats.artists} color="#10b981" />
+        </div>
+
+        {/* Entity cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <EntityCard
+            href="/admin/songs"
+            icon={<Music size={32} />}
+            title="Пісні"
+            description="Додавання, редагування, публікація та видалення пісень"
+            count={stats.published + stats.drafts + stats.archived}
+            countLabel="всього"
+            color="var(--orange)"
+          />
+          <EntityCard
+            href="/admin/artists"
+            icon={<Users size={32} />}
+            title="Артисти"
+            description="Фото, жанр, біографія та керування виконавцями"
+            count={stats.artists}
+            countLabel="виконавців"
+            color="#10b981"
+          />
         </div>
       </main>
     </div>
   );
 }
 
+function StatCard({
+  icon, label, value, color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="te-surface p-5 flex flex-col gap-3" style={{ borderRadius: "1.25rem" }}>
+      <div style={{ color }}>{icon}</div>
+      <div>
+        <div className="text-3xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{value}</div>
+        <div className="text-xs font-bold tracking-widest uppercase mt-0.5" style={{ color: "var(--text-muted)", opacity: 0.7 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function EntityCard({
+  href, icon, title, description, count, countLabel, color,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  count: number;
+  countLabel: string;
+  color: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="te-surface te-pressable p-8 flex flex-col gap-4 group"
+      style={{ borderRadius: "1.5rem" }}
+    >
+      <div className="flex items-start justify-between">
+        <div style={{ color }}>{icon}</div>
+        <span className="text-xs font-mono font-bold opacity-50" style={{ color: "var(--text-muted)" }}>
+          {count} {countLabel}
+        </span>
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight mb-2" style={{ color: "var(--text)" }}>{title}</h2>
+        <p className="text-sm leading-snug" style={{ color: "var(--text-muted)", opacity: 0.8 }}>{description}</p>
+      </div>
+      <div className="text-xs font-bold tracking-widest uppercase mt-auto" style={{ color }}>
+        Перейти →
+      </div>
+    </Link>
+  );
+}

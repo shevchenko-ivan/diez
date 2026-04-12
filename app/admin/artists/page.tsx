@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { Navbar } from "@/shared/components/Navbar";
-import { ArrowLeft, Plus, Trash2, User } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, User, Pencil } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -113,9 +113,16 @@ export default async function AdminArtistsPage() {
                     {/* Genre */}
                     <td className="px-4 py-3 opacity-60 text-xs">{artist.genre ?? "—"}</td>
 
-                    {/* Delete */}
+                    {/* Actions */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/admin/artists/edit?id=${artist.id}`}
+                          title="Редагувати"
+                          className="p-2 te-key rounded-lg opacity-40 hover:opacity-100"
+                        >
+                          <Pencil size={15} />
+                        </Link>
                         <form action={deleteArtist}>
                           <input type="hidden" name="artistId" value={artist.id} />
                           <button

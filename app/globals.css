@@ -381,6 +381,14 @@
     box-shadow: var(--sh-socket);
   }
 
+  .field-input {
+    width: 100%;
+    background: transparent;
+    outline: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
   /*
     ── te-pressable ──────────────────────────────────────────────────────────
     Interactive card tile — adds hover/press lift effects
