@@ -59,6 +59,26 @@ export async function createArtist(formData: FormData) {
   redirect("/admin/artists");
 }
 
+export async function updateArtistPhoto(formData: FormData) {
+  await requireAdmin();
+
+  const artistId = formData.get("artistId") as string;
+  const photo_url = (formData.get("photo_url") as string)?.trim() || null;
+
+  if (!artistId) throw new Error("Відсутній ID");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ photo_url })
+    .eq("id", artistId);
+
+  if (error) throw new Error(`Помилка збереження: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
 export async function updateArtist(formData: FormData) {
   await requireAdmin();
 
