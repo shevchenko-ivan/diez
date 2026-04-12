@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, ChevronDown, User, LogOut, Shield, Plus } from "lucide-react";
+import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useTheme } from "@/shared/components/ThemeProvider";
 
 const NAV_LINKS = [
   { href: "/songs",             label: "Акорди" },
@@ -79,6 +80,8 @@ export function Navbar() {
   const userEmail = isLoggedIn ? (navUser as NavUser).email : "";
   const userInitial = userEmail ? userEmail[0].toUpperCase() : "?";
 
+  const { theme, toggle } = useTheme();
+
   return (
     <header className="px-6 py-4">
       <nav className="max-w-6xl mx-auto flex items-center justify-between">
@@ -100,6 +103,18 @@ export function Navbar() {
 
         {/* Desktop right area */}
         <div className="hidden md:flex items-center gap-2">
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggle}
+            className="te-key p-2.5"
+            title={theme === "dark" ? "Світла тема" : "Темна тема"}
+          >
+            {theme === "dark"
+              ? <Sun size={15} style={{ color: "var(--text-muted)" }} />
+              : <Moon size={15} style={{ color: "var(--text-muted)" }} />
+            }
+          </button>
 
           {/* Create button — always visible */}
           <Link href="/add" className="te-key px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--orange)" }}>
@@ -184,10 +199,18 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Mobile toggle */}
-        <button className="md:hidden te-key p-2.5" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X size={16} /> : <Menu size={16} />}
-        </button>
+        {/* Mobile right: theme + hamburger */}
+        <div className="md:hidden flex items-center gap-2">
+          <button onClick={toggle} className="te-key p-2.5" title={theme === "dark" ? "Світла тема" : "Темна тема"}>
+            {theme === "dark"
+              ? <Sun size={15} style={{ color: "var(--text-muted)" }} />
+              : <Moon size={15} style={{ color: "var(--text-muted)" }} />
+            }
+          </button>
+          <button className="te-key p-2.5" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
+        </div>
       </nav>
 
       {/* Mobile menu */}

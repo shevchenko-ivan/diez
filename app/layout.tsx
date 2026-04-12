@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteUrl } from "@/lib/utils";
+import { ThemeProvider, themeScript } from "@/shared/components/ThemeProvider";
 
 export const metadata: Metadata = {
   // metadataBase resolves relative URLs in alternates.canonical and openGraph.url.
@@ -19,8 +20,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" suppressHydrationWarning>
+      {/* Blocking script prevents flash of wrong theme before hydration */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="antialiased">
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
