@@ -102,7 +102,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
       />
       <Navbar />
 
-      <main className="max-w-6xl mx-auto px-4 lg:px-6 pb-20">
+      <main className="max-w-[1400px] mx-auto px-4 lg:px-8 pb-20">
 
         {/* ── Back ─────────────────────────────────────────────────────── */}
         <div className="pt-2 pb-6">
