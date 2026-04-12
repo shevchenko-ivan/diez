@@ -25,21 +25,35 @@ export function Navbar() {
 
   useEffect(() => {
     const sb = createClient();
+
     async function load() {
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) { setNavUser(null); return; }
+      try {
+        // getSession reads from localStorage — no network call, instant
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session?.user) { setNavUser(null); return; }
 
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single();
+        const { data: profile } = await sb
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", session.user.id)
+          .single();
 
-      setNavUser({ email: user.email ?? "", isAdmin: !!profile?.is_admin });
+        setNavUser({ email: session.user.email ?? "", isAdmin: !!profile?.is_admin });
+      } catch {
+        setNavUser(null);
+      }
     }
+
     load();
 
-    const { data: listener } = sb.auth.onAuthStateChange(() => load());
+    const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setNavUser(null); return; }
+      setNavUser({ email: session.user.email ?? "", isAdmin: false });
+      // refetch is_admin in background
+      sb.from("profiles").select("is_admin").eq("id", session.user.id).single()
+        .then(({ data }) => setNavUser({ email: session.user.email ?? "", isAdmin: !!data?.is_admin }));
+    });
+
     return () => listener.subscription.unsubscribe();
   }, []);
 
