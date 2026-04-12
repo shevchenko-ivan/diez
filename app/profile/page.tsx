@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { Navbar } from "@/shared/components/Navbar";
-import { getAllSongs } from "@/features/song/services/songs";
 import { SongCard } from "@/features/song/components/SongCard";
 import { LogOut, Settings, Heart, Plus, User as UserIcon } from "lucide-react";
 import Link from "next/link";
@@ -28,14 +27,31 @@ async function ProfileDashboard() {
     redirect("/auth/login");
   }
 
-  const mockUser = {
-    name: data.user.email!.split("@")[0],
-    email: data.user.email!,
-  };
+  const user = data.user;
 
-  const allSongs = await getAllSongs();
-  const savedSongs = allSongs.slice(0, 3);
-  const addedSongs = allSongs.slice(allSongs.length - 2);
+  // Saved songs — join saved_songs with songs via FK
+  const { data: savedData } = await supabase
+    .from("saved_songs")
+    .select("songs(slug, title, artist, difficulty, chords, views, cover_image, cover_color)")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  const savedSongs = (savedData ?? [])
+    .map((row: Record<string, unknown>) => row.songs as Record<string, unknown> | null)
+    .filter(Boolean) as Record<string, unknown>[];
+
+  // Songs submitted by this user
+  const { data: submittedData } = await supabase
+    .from("songs")
+    .select("slug, title, artist, difficulty, chords, views, cover_image, cover_color")
+    .eq("submitted_by", user.id)
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  const submittedSongs = (submittedData ?? []) as Record<string, unknown>[];
+
+  const userName = user.email!.split("@")[0];
 
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -44,16 +60,16 @@ async function ProfileDashboard() {
           <div className="w-24 h-24 mb-4 te-inset flex items-center justify-center rounded-full overflow-hidden">
             <UserIcon size={40} style={{ color: "var(--text-muted)" }} />
           </div>
-          <h2 className="text-xl font-bold tracking-tight mb-1" style={{ color: "var(--text)" }}>{mockUser.name}</h2>
-          <p className="text-sm font-medium opacity-60 mb-8" style={{ color: "var(--text-muted)" }}>{mockUser.email}</p>
-          
+          <h2 className="text-xl font-bold tracking-tight mb-1" style={{ color: "var(--text)" }}>{userName}</h2>
+          <p className="text-sm font-medium opacity-60 mb-8" style={{ color: "var(--text-muted)" }}>{user.email}</p>
+
           <div className="flex gap-4 w-full">
             <div className="flex-1 te-inset p-3 rounded-2xl flex flex-col items-center">
               <span className="text-xl font-bold tracking-tighter" style={{ color: "var(--orange)" }}>{savedSongs.length}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Збережених</span>
             </div>
             <div className="flex-1 te-inset p-3 rounded-2xl flex flex-col items-center">
-              <span className="text-xl font-bold tracking-tighter" style={{ color: "var(--orange)" }}>{addedSongs.length}</span>
+              <span className="text-xl font-bold tracking-tighter" style={{ color: "var(--orange)" }}>{submittedSongs.length}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Доданих</span>
             </div>
           </div>
@@ -78,28 +94,35 @@ async function ProfileDashboard() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
-              <Heart size={20} style={{ color: "var(--orange)" }} /> 
+              <Heart size={20} style={{ color: "var(--orange)" }} />
               Улюблені пісні
             </h3>
             <Link href="/songs" className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--orange)" }}>
               Всі
             </Link>
           </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {savedSongs.map((song) => (
-              <SongCard
-                key={song.slug}
-                slug={song.slug}
-                title={song.title}
-                artist={song.artist}
-                difficulty={song.difficulty}
-                chords={song.chords}
-                views={song.views}
-                coverImage={song.coverImage}
-              />
-            ))}
-          </div>
+
+          {savedSongs.length === 0 ? (
+            <div className="te-inset rounded-2xl p-8 text-center opacity-60" style={{ color: "var(--text-muted)" }}>
+              Збережених пісень ще немає. Знайдіть щось до душі!
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {savedSongs.map((song) => (
+                <SongCard
+                  key={song.slug as string}
+                  slug={song.slug as string}
+                  title={song.title as string}
+                  artist={song.artist as string}
+                  difficulty={song.difficulty as "easy" | "medium" | "hard"}
+                  chords={song.chords as string[]}
+                  views={song.views as number}
+                  coverImage={(song.cover_image as string) ?? undefined}
+                  coverColor={(song.cover_color as string) ?? undefined}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -108,21 +131,31 @@ async function ProfileDashboard() {
               Мої підбори
             </h3>
           </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {addedSongs.map((song) => (
-              <SongCard
-                key={song.slug}
-                slug={song.slug}
-                title={song.title}
-                artist={song.artist}
-                difficulty={song.difficulty}
-                chords={song.chords}
-                views={song.views}
-                coverImage={song.coverImage}
-              />
-            ))}
-          </div>
+
+          {submittedSongs.length === 0 ? (
+            <div className="te-inset rounded-2xl p-8 text-center opacity-60" style={{ color: "var(--text-muted)" }}>
+              Ви ще не додавали пісень.{" "}
+              <Link href="/add" className="font-bold underline" style={{ color: "var(--orange)" }}>
+                Додати зараз →
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {submittedSongs.map((song) => (
+                <SongCard
+                  key={song.slug as string}
+                  slug={song.slug as string}
+                  title={song.title as string}
+                  artist={song.artist as string}
+                  difficulty={song.difficulty as "easy" | "medium" | "hard"}
+                  chords={song.chords as string[]}
+                  views={song.views as number}
+                  coverImage={(song.cover_image as string) ?? undefined}
+                  coverColor={(song.cover_color as string) ?? undefined}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

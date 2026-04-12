@@ -1,13 +1,13 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type Difficulty } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 
-// Public read-only client — no cookie/session needed for published song reads.
-// Works at build time (generateStaticParams) and at request time.
+// Public read-only client — no auth needed for published song reads.
 function getClient() {
-  return createBrowserClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
 
@@ -35,13 +35,25 @@ function mapRow(row: Record<string, unknown>): Song {
   };
 }
 
-export async function getAllSongs(): Promise<Song[]> {
+export async function getAllSongs(options?: { sortBy?: "views" | "created_at" }): Promise<Song[]> {
   if (!hasEnvVars) return [];
   const { data, error } = await getClient()
     .from("songs")
     .select(SONG_COLUMNS)
     .eq("status", "published")
-    .order("views", { ascending: false });
+    .order(options?.sortBy ?? "views", { ascending: false });
+  if (error || !data) return [];
+  return data.map(mapRow);
+}
+
+export async function getFreshSongs(limit = 4): Promise<Song[]> {
+  if (!hasEnvVars) return [];
+  const { data, error } = await getClient()
+    .from("songs")
+    .select(SONG_COLUMNS)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limit);
   if (error || !data) return [];
   return data.map(mapRow);
 }

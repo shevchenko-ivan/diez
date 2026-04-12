@@ -6,12 +6,17 @@ interface ArtistCardProps {
   songsCount: number;
   color: string;
   image?: string;
+  slug?: string;
 }
 
-export function ArtistCard({ name, genre, songsCount, color, image }: ArtistCardProps) {
+export function ArtistCard({ name, genre, songsCount, color, image, slug }: ArtistCardProps) {
+  const href = slug
+    ? `/artists/${slug}`
+    : `/artists/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"))}`;
+
   return (
     <HapticLink
-      href={`/artists/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"))}`}
+      href={href}
       className="te-surface te-pressable flex flex-col"
       style={{ borderRadius: "1.25rem" }}
     >
