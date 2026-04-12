@@ -9,6 +9,7 @@ import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
+import { SongPlayer } from "@/features/song/components/SongPlayer";
 import { ChevronLeft, Eye, Music, Pencil } from "lucide-react";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
@@ -209,6 +210,13 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
             </div>
           </div>
         </div>
+
+        {/* ── Audio player ─────────────────────────────────────── */}
+        {song.youtubeId && (
+          <div className="mb-4">
+            <SongPlayer youtubeId={song.youtubeId} title={song.title} artist={song.artist} />
+          </div>
+        )}
 
         {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
         <SongViewer song={song} />
