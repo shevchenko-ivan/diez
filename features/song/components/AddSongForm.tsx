@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Save } from "lucide-react";
 import { createSong } from "@/features/song/actions/admin";
 import { slugify } from "@/lib/slugify";
@@ -14,24 +14,38 @@ interface Props {
 
 export function AddSongForm({ artists = [] }: Props) {
   const [title, setTitle] = useState("");
-  const [artistValue, setArtistValue] = useState("");
-  const [customArtist, setCustomArtist] = useState("");
-  const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");        // what user types
+  const [selected, setSelected] = useState("");  // confirmed artist name
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const slugPreview = slugify(title);
-  const isCustom = artistValue === "__custom__";
-  const finalArtist = isCustom ? customArtist : artistValue;
 
-  const filtered = search.trim()
-    ? artists.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
-    : artists;
+  const suggestions = input.trim().length > 0
+    ? artists.filter((a) => a.name.toLowerCase().includes(input.toLowerCase())).slice(0, 8)
+    : [];
 
-  const selectedArtist = artists.find((a) => a.name === artistValue);
+  function pick(name: string) {
+    setSelected(name);
+    setInput(name);
+    setShowSuggestions(false);
+  }
+
+  function handleInput(val: string) {
+    setInput(val);
+    setSelected("");           // clear confirmed selection when typing
+    setShowSuggestions(true);
+  }
+
+  function handleBlur() {
+    // small delay so click on suggestion fires first
+    setTimeout(() => setShowSuggestions(false), 150);
+  }
+
+  const finalArtist = selected || input;
 
   return (
     <form action={createSong} className="space-y-8">
-      {/* Hidden field with final artist value */}
       <input type="hidden" name="artist" value={finalArtist} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -58,108 +72,63 @@ export function AddSongForm({ artists = [] }: Props) {
           )}
         </div>
 
-        {/* Artist */}
+        {/* Artist autocomplete */}
         <div className="space-y-2">
           <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
             Виконавець *
           </label>
-
-          {artists.length > 0 ? (
-            <div className="space-y-2">
-              {/* Selected state — shows chip, click to change */}
-              {artistValue && !open ? (
-                <button
-                  type="button"
-                  onClick={() => { setOpen(true); setSearch(""); }}
-                  className="w-full te-inset px-4 py-3 flex items-center gap-3 text-left"
-                  style={{ borderRadius: "1rem" }}
-                >
-                  {selectedArtist?.photo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selectedArtist.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-                  )}
-                  <span className="text-sm font-medium flex-1" style={{ color: "var(--text)" }}>
-                    {isCustom ? customArtist : artistValue}
-                  </span>
-                  <span className="text-xs opacity-40" style={{ color: "var(--text-muted)" }}>змінити</span>
-                </button>
-              ) : (
-                /* Dropdown */
-                <div className="te-inset" style={{ borderRadius: "1rem", overflow: "hidden" }}>
-                  <div className="px-4 pt-3 pb-1">
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Пошук виконавця..."
-                      autoFocus
-                      className="w-full bg-transparent outline-none text-sm"
-                      style={{ color: "var(--text)" }}
-                    />
-                  </div>
-                  <div className="overflow-y-auto" style={{ maxHeight: "11rem" }}>
-                    {filtered.map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => { setArtistValue(a.name); setOpen(false); setSearch(""); }}
-                        className="w-full text-left px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
-                        style={{ color: "var(--text)" }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.04)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                      >
-                        {a.photo_url && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.photo_url} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-                        )}
-                        {a.name}
-                      </button>
-                    ))}
-                    {filtered.length === 0 && (
-                      <p className="px-4 py-2 text-xs opacity-50" style={{ color: "var(--text-muted)" }}>
-                        Не знайдено
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => { setArtistValue("__custom__"); setOpen(false); setSearch(""); }}
-                      className="w-full text-left px-4 py-2 text-sm font-medium border-t"
-                      style={{ borderColor: "rgba(0,0,0,0.06)", color: "var(--text-muted)" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.04)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    >
-                      + Інший виконавець
-                    </button>
-                  </div>
-                </div>
+          <div className="relative">
+            <div className="te-inset px-4 py-3 flex items-center gap-2" style={{ borderRadius: "1rem" }}>
+              {selected && artists.find(a => a.name === selected)?.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={artists.find(a => a.name === selected)!.photo_url!}
+                  alt=""
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                />
               )}
-
-              {/* Custom artist text input */}
-              {isCustom && !open && (
-                <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
-                  <input
-                    value={customArtist}
-                    onChange={(e) => setCustomArtist(e.target.value)}
-                    placeholder="Введіть ім'я виконавця"
-                    className="w-full bg-transparent outline-none text-sm font-medium"
-                    style={{ color: "var(--text)" }}
-                    autoFocus
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Fallback: plain text input if no artists in DB */
-            <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
               <input
-                value={finalArtist}
-                onChange={(e) => setArtistValue(e.target.value)}
-                required
+                ref={inputRef}
+                value={input}
+                onChange={(e) => handleInput(e.target.value)}
+                onFocus={() => input.trim() && setShowSuggestions(true)}
+                onBlur={handleBlur}
                 placeholder="Напр. Океан Ельзи"
                 className="w-full bg-transparent outline-none text-sm font-medium"
                 style={{ color: "var(--text)" }}
+                autoComplete="off"
               />
             </div>
-          )}
+
+            {/* Suggestions dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                className="absolute z-10 w-full mt-1 te-surface overflow-hidden"
+                style={{ borderRadius: "1rem", boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}
+              >
+                {suggestions.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onMouseDown={() => pick(a.name)}
+                    className="w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                    style={{ color: "var(--text)" }}
+                  >
+                    {a.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full te-inset flex-shrink-0" />
+                    )}
+                    <span>{a.name}</span>
+                    {a.genre && (
+                      <span className="ml-auto text-xs opacity-40">{a.genre}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
