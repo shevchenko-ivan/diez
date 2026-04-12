@@ -1,8 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "light" | "dark";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 interface ThemeContextValue {
   isDark: boolean;
@@ -15,39 +13,22 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
-function getCurrentIsDark(): boolean {
-  const stored = localStorage.getItem("theme");
-  if (stored === "dark") return true;
-  if (stored === "light") return false;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-function applyTheme(isDark: boolean, manual: boolean) {
-  if (manual) {
-    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
-  } else {
-    // No stored pref — remove attribute and let CSS @media handle it
-    document.documentElement.removeAttribute("data-theme");
-  }
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(false);
+  // Tracks whether the user manually overrode the theme this session.
+  // When true, OS changes are ignored until next page load.
+  const manualRef = useRef(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const dark = getCurrentIsDark();
-    setIsDark(dark);
-    // Only set attribute if there's a manual override; otherwise let CSS @media work
-    if (stored === "dark" || stored === "light") {
-      applyTheme(dark, true);
-    }
-
-    // Sync icon with OS changes when no manual override is stored
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    // Sync icon state with current OS preference on mount
+    setIsDark(mq.matches);
+
     const onOsChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem("theme")) {
+      if (!manualRef.current) {
+        // No manual override — follow OS via CSS @media (no attribute needed)
         setIsDark(e.matches);
+        document.documentElement.removeAttribute("data-theme");
       }
     };
     mq.addEventListener("change", onOsChange);
@@ -57,8 +38,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   function toggle() {
     const next = !isDark;
     setIsDark(next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    applyTheme(next, true);
+    manualRef.current = true;
+    // Set explicit attribute so it overrides the CSS @media rule
+    document.documentElement.setAttribute("data-theme", next ? "dark" : "light");
   }
 
   return (

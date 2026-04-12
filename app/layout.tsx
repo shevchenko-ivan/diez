@@ -11,10 +11,6 @@ export const metadata: Metadata = {
   keywords: ["акорди", "гітара", "табулатури", "пісні", "музика", "guitar chords"],
 };
 
-// Runs before paint — applies stored manual preference so there's no flash.
-// CSS @media (prefers-color-scheme: dark) handles auto without JS.
-const themeInitScript = `(function(){try{var s=localStorage.getItem('theme');if(s==='dark'||s==='light'){document.documentElement.setAttribute('data-theme',s)}}catch(e){}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,10 +18,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" suppressHydrationWarning>
-      <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="antialiased">
         <ThemeProvider>
           {children}
