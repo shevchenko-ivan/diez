@@ -5,6 +5,7 @@ import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { Play, Square } from "lucide-react";
 import { transposeChord, ChordPanel, ChordDiagram, CHORD_DB } from "./ChordDiagram";
+import { SongPlayer } from "./SongPlayer";
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
 
@@ -391,6 +392,15 @@ export function SongViewer({ song }: { song: Song }) {
                   )}
                 </button>
               </ControlBlock>
+            )}
+
+            {/* Audio player */}
+            {song.youtubeId && (
+              <SongPlayer
+                youtubeId={song.youtubeId}
+                title={song.title}
+                artist={song.artist}
+              />
             )}
           </div>
         </aside>
