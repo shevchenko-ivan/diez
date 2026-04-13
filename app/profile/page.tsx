@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import { Navbar } from "@/shared/components/Navbar";
+import { PageShell } from "@/shared/components/PageShell";
+import { EmptyState } from "@/shared/components/EmptyState";
+import { LoadingState } from "@/shared/components/LoadingState";
 import { SongCard } from "@/features/song/components/SongCard";
 import { LogOut, Settings, Heart, Plus, User as UserIcon } from "lucide-react";
 import Link from "next/link";
@@ -103,9 +105,7 @@ async function ProfileDashboard() {
           </div>
 
           {savedSongs.length === 0 ? (
-            <div className="te-inset rounded-2xl p-8 text-center opacity-60" style={{ color: "var(--text-muted)" }}>
-              Збережених пісень ще немає. Знайдіть щось до душі!
-            </div>
+            <EmptyState message="Збережених пісень ще немає. Знайдіть щось до душі!" variant="inset" />
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               {savedSongs.map((song) => (
@@ -133,12 +133,11 @@ async function ProfileDashboard() {
           </div>
 
           {submittedSongs.length === 0 ? (
-            <div className="te-inset rounded-2xl p-8 text-center opacity-60" style={{ color: "var(--text-muted)" }}>
-              Ви ще не додавали пісень.{" "}
-              <Link href="/add" className="font-bold underline" style={{ color: "var(--orange)" }}>
-                Додати зараз →
-              </Link>
-            </div>
+            <EmptyState
+              message="Ви ще не додавали пісень."
+              variant="inset"
+              action={<Link href="/add" className="font-bold underline" style={{ color: "var(--orange)" }}>Додати зараз →</Link>}
+            />
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               {submittedSongs.map((song) => (
@@ -164,17 +163,10 @@ async function ProfileDashboard() {
 
 export default function ProfilePage() {
   return (
-    <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
-      <Navbar />
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <Suspense fallback={
-          <div className="p-12 text-center opacity-60 font-medium" style={{ color: "var(--text)" }}>
-            Завантаження профілю...
-          </div>
-        }>
-          <ProfileDashboard />
-        </Suspense>
-      </main>
-    </div>
+    <PageShell footer={false}>
+      <Suspense fallback={<LoadingState message="Завантаження профілю..." />}>
+        <ProfileDashboard />
+      </Suspense>
+    </PageShell>
   );
 }

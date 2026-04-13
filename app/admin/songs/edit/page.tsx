@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { Navbar } from "@/shared/components/Navbar";
+import { PageShell } from "@/shared/components/PageShell";
+import { FormField } from "@/shared/components/FormField";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -50,121 +51,105 @@ export default async function EditSongPage({
   if (!song) redirect("/admin/songs");
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
-      <Navbar />
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <Link href="/admin/songs" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
-          <ArrowLeft size={14} /> Пісні
-        </Link>
+    <PageShell maxWidth="2xl" footer={false}>
+      <Link href="/admin/songs" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+        <ArrowLeft size={14} /> Пісні
+      </Link>
 
-        <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
-          <h1 className="text-3xl font-bold mb-1 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Редагувати пісню
-          </h1>
-          <p className="text-xs font-mono opacity-40 mb-10" style={{ color: "var(--text-muted)" }}>
-            slug: {song.slug}
-          </p>
+      <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+        <h1 className="text-3xl font-bold mb-1 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+          Редагувати пісню
+        </h1>
+        <p className="text-xs font-mono opacity-40 mb-10" style={{ color: "var(--text-muted)" }}>
+          slug: {song.slug}
+        </p>
 
-          <form action={updateSong} className="space-y-6">
-            <input type="hidden" name="songId" value={song.id} />
+        <form action={updateSong} className="space-y-6">
+          <input type="hidden" name="songId" value={song.id} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Назва *">
-                <input name="title" required defaultValue={song.title} className="field-input" style={{ color: "var(--text)" }} />
-              </Field>
-              <Field label="Виконавець *">
-                <input name="artist" required defaultValue={song.artist} className="field-input" style={{ color: "var(--text)" }} />
-              </Field>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Назва *">
+              <input name="title" required defaultValue={song.title} className="field-input" style={{ color: "var(--text)" }} />
+            </FormField>
+            <FormField label="Виконавець *">
+              <input name="artist" required defaultValue={song.artist} className="field-input" style={{ color: "var(--text)" }} />
+            </FormField>
+          </div>
 
-            <Field label="Альбом">
-              <input name="album" defaultValue={song.album ?? ""} placeholder="Назва альбому" className="field-input" style={{ color: "var(--text)" }} />
-            </Field>
+          <FormField label="Альбом">
+            <input name="album" defaultValue={song.album ?? ""} placeholder="Назва альбому" className="field-input" style={{ color: "var(--text)" }} />
+          </FormField>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Жанр">
-                <select name="genre" defaultValue={song.genre ?? ""} className="field-input" style={{ color: "var(--text)" }}>
-                  <option value="">— Обрати —</option>
-                  {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </Field>
-              <Field label="Тональність">
-                <select name="key" defaultValue={song.key ?? ""} className="field-input" style={{ color: "var(--text)" }}>
-                  <option value="">— Обрати —</option>
-                  {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
-                </select>
-              </Field>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Жанр">
+              <select name="genre" defaultValue={song.genre ?? ""} className="field-input" style={{ color: "var(--text)" }}>
+                <option value="">— Обрати —</option>
+                {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Тональність">
+              <select name="key" defaultValue={song.key ?? ""} className="field-input" style={{ color: "var(--text)" }}>
+                <option value="">— Обрати —</option>
+                {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </FormField>
+          </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Field label="Капо (лад)">
-                <input name="capo" type="number" min={0} max={12} defaultValue={song.capo ?? ""} placeholder="0" className="field-input" style={{ color: "var(--text)" }} />
-              </Field>
-              <Field label="Темп (BPM)">
-                <input name="tempo" type="number" min={40} max={300} defaultValue={song.tempo ?? ""} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
-              </Field>
-              <Field label="Складність">
-                <select name="difficulty" defaultValue={song.difficulty ?? "easy"} className="field-input" style={{ color: "var(--text)" }}>
-                  {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-                </select>
-              </Field>
-              <Field label="Статус">
-                <select name="status" defaultValue={song.status ?? "draft"} className="field-input" style={{ color: "var(--text)" }}>
-                  {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </Field>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <FormField label="Капо (лад)">
+              <input name="capo" type="number" min={0} max={12} defaultValue={song.capo ?? ""} placeholder="0" className="field-input" style={{ color: "var(--text)" }} />
+            </FormField>
+            <FormField label="Темп (BPM)">
+              <input name="tempo" type="number" min={40} max={300} defaultValue={song.tempo ?? ""} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
+            </FormField>
+            <FormField label="Складність">
+              <select name="difficulty" defaultValue={song.difficulty ?? "easy"} className="field-input" style={{ color: "var(--text)" }}>
+                {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Статус">
+              <select name="status" defaultValue={song.status ?? "draft"} className="field-input" style={{ color: "var(--text)" }}>
+                {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </FormField>
+          </div>
 
-            <Field label="URL обкладинки">
-              <input name="cover_image" defaultValue={song.cover_image ?? ""} placeholder="https://..." className="field-input" style={{ color: "var(--text)" }} />
-            </Field>
+          <FormField label="URL обкладинки">
+            <input name="cover_image" defaultValue={song.cover_image ?? ""} placeholder="https://..." className="field-input" style={{ color: "var(--text)" }} />
+          </FormField>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Колір обкладинки (hex)">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    defaultValue={song.cover_color ?? "#888888"}
-                    onChange={undefined}
-                    className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0"
-                    id="cover_color_picker"
-                  />
-                  <input
-                    name="cover_color"
-                    id="cover_color"
-                    defaultValue={song.cover_color ?? ""}
-                    placeholder="#C8D5E8"
-                    className="field-input flex-1"
-                    style={{ color: "var(--text)" }}
-                  />
-                </div>
-              </Field>
-              <Field label="YouTube ID">
-                <input name="youtube_id" defaultValue={song.youtube_id ?? ""} placeholder="dQw4w9WgXcQ" className="field-input" style={{ color: "var(--text)" }} />
-              </Field>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Колір обкладинки (hex)">
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  defaultValue={song.cover_color ?? "#888888"}
+                  onChange={undefined}
+                  className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0"
+                  id="cover_color_picker"
+                />
+                <input
+                  name="cover_color"
+                  id="cover_color"
+                  defaultValue={song.cover_color ?? ""}
+                  placeholder="#C8D5E8"
+                  className="field-input flex-1"
+                  style={{ color: "var(--text)" }}
+                />
+              </div>
+            </FormField>
+            <FormField label="YouTube ID">
+              <input name="youtube_id" defaultValue={song.youtube_id ?? ""} placeholder="dQw4w9WgXcQ" className="field-input" style={{ color: "var(--text)" }} />
+            </FormField>
+          </div>
 
-            <div className="pt-2 flex justify-end">
-              <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-                <Save size={16} /> ЗБЕРЕГТИ
-              </button>
-            </div>
-          </form>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-        {label}
-      </label>
-      <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
-        {children}
+          <div className="pt-2 flex justify-end">
+            <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+              <Save size={16} /> ЗБЕРЕГТИ
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </PageShell>
   );
 }

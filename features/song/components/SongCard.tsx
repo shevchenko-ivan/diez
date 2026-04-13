@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
-import { Heart, Play, Star } from "lucide-react";
+import { Heart } from "lucide-react";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
 
@@ -13,19 +12,16 @@ export interface SongCardProps {
   difficulty: "easy" | "medium" | "hard";
   chords: string[];
   views: number;
-  rating?: number;
   isSaved?: boolean;
-  isNew?: boolean;
-  isTrending?: boolean;
   coverColor?: string;
   coverImage?: string;
   index?: number;
 }
 
 const difficultyConfig = {
-  easy: { label: "Легко", color: "text-[#30D158]", bg: "bg-[#30D158]/10" },
-  medium: { label: "Середньо", color: "text-[#FF9F0A]", bg: "bg-[#FF9F0A]/10" },
-  hard: { label: "Складно", color: "text-[#FF453A]", bg: "bg-[#FF453A]/10" },
+  easy:   { label: "Легка",   color: "text-[#30D158]", bg: "bg-[#30D158]/10" },
+  medium: { label: "Середня", color: "text-[#FF9F0A]", bg: "bg-[#FF9F0A]/10" },
+  hard:   { label: "Складна", color: "text-[#FF453A]", bg: "bg-[#FF453A]/10" },
 };
 
 export function SongCard({ ...props }: SongCardProps) {
@@ -97,20 +93,17 @@ export function SongCard({ ...props }: SongCardProps) {
         
         {/* Badges / Stats Row */}
         <div className="flex items-center gap-1.5 mt-auto flex-wrap">
-          {/* Difficulty Pill */}
           <span className={`px-2 py-[2px] rounded text-[10px] font-bold uppercase tracking-wider ${diff.bg} ${diff.color}`}>
             {diff.label}
           </span>
-          <span className="opacity-30 text-[10px]" style={{ color: "var(--text-muted)" }}>•</span>
-          {/* Chords count */}
-          <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
-            {props.chords.length} ак.
-          </span>
-          {/* Rating */}
-          <div className="flex items-center gap-0.5 ml-auto">
-            <Star size={10} fill="#f59e0b" className="text-[#f59e0b]" />
-            <span className="text-[10px] font-bold" style={{ color: "var(--text)" }}>{props.rating || 4.9}</span>
-          </div>
+          {props.chords.length > 0 && (
+            <>
+              <span className="opacity-30 text-[10px]" style={{ color: "var(--text-muted)" }}>•</span>
+              <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
+                {props.chords.length} ак.
+              </span>
+            </>
+          )}
         </div>
       </div>
     </HapticLink>

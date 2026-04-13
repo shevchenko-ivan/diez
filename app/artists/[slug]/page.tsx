@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { type Metadata } from "next";
-import { Navbar } from "@/shared/components/Navbar";
+import { PageShell } from "@/shared/components/PageShell";
+import { EmptyState } from "@/shared/components/EmptyState";
 import { getAllSongs } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
 import { SongCard } from "@/features/song/components/SongCard";
@@ -10,8 +11,6 @@ import Link from "next/link";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SiteFooter } from "@/shared/components/SiteFooter";
-
 export async function generateMetadata({
   params,
 }: {
@@ -71,16 +70,14 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
+    <PageShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Navbar />
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
-        <Link href="/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
-          <ArrowLeft size={14} /> Виконавці
-        </Link>
+      <Link href="/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+        <ArrowLeft size={14} /> Виконавці
+      </Link>
 
         <div className="te-surface p-8 mb-12" style={{ borderRadius: "2rem" }}>
           <div className="flex flex-col md:flex-row items-center gap-8">
@@ -133,13 +130,11 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
             <SongCard key={s.slug} {...s} />
           ))}
           {songs.length === 0 && (
-            <p className="col-span-full py-12 text-center te-inset rounded-2xl" style={{ color: "var(--text-muted)" }}>
-              Пісень цього виконавця поки немає в базі.
-            </p>
+            <div className="col-span-full">
+              <EmptyState message="Пісень цього виконавця поки немає в базі." variant="inset" />
+            </div>
           )}
         </div>
-      </main>
-      <SiteFooter />
-    </div>
+    </PageShell>
   );
 }

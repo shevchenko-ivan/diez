@@ -1,4 +1,5 @@
-import { Navbar } from "@/shared/components/Navbar";
+import { PageShell } from "@/shared/components/PageShell";
+import { PageHeader } from "@/shared/components/PageHeader";
 import { Music, Users, Eye, EyeOff, Archive } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -46,17 +47,8 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
-      <Navbar />
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold mb-3 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Адмін-панель
-          </h1>
-          <p className="text-sm font-medium tracking-wide border-l-2 pl-3 opacity-60" style={{ color: "var(--text-muted)", borderColor: "var(--orange)" }}>
-            Керування контентом платформи
-          </p>
-        </div>
+    <PageShell maxWidth="5xl" footer={false}>
+      <PageHeader title="Адмін-панель" subtitle="Керування контентом платформи" />
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
@@ -87,8 +79,7 @@ export default async function AdminPage() {
             color="#10b981"
           />
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }
 

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { Navbar } from "@/shared/components/Navbar";
+import { PageShell } from "@/shared/components/PageShell";
+import { FormField } from "@/shared/components/FormField";
 import { ArrowLeft, Save, User } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -38,111 +39,85 @@ export default async function EditArtistPage({
   if (!artist) redirect("/admin/artists");
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
-      <Navbar />
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <Link href="/admin/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
-          <ArrowLeft size={14} /> Артисти
-        </Link>
+    <PageShell maxWidth="2xl" footer={false}>
+      <Link href="/admin/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+        <ArrowLeft size={14} /> Артисти
+      </Link>
 
-        <div className="te-surface p-10" style={{ borderRadius: "2rem" }}>
-          <h1 className="text-3xl font-bold mb-2 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Редагувати артиста
-          </h1>
-          <p className="text-sm opacity-60 mb-10" style={{ color: "var(--text-muted)" }}>
-            slug: <span className="font-mono">{artist.slug}</span>
-          </p>
+      <div className="te-surface p-10" style={{ borderRadius: "2rem" }}>
+        <h1 className="text-3xl font-bold mb-2 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+          Редагувати артиста
+        </h1>
+        <p className="text-sm font-medium opacity-60 mb-10" style={{ color: "var(--text-muted)" }}>
+          slug: <span className="font-mono">{artist.slug}</span>
+        </p>
 
-          <form action={updateArtist} className="space-y-6">
-            <input type="hidden" name="artistId" value={artist.id} />
+        <form action={updateArtist} className="space-y-6">
+          <input type="hidden" name="artistId" value={artist.id} />
 
-            {/* Photo preview + URL */}
-            <div className="flex items-center gap-6 mb-2">
-              <div className="w-24 h-24 rounded-full te-inset flex-shrink-0 flex items-center justify-center overflow-hidden">
-                {artist.photo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={artist.photo_url} alt="preview" className="w-full h-full object-cover" />
-                ) : (
-                  <User size={32} style={{ color: "var(--text-muted)" }} />
-                )}
-              </div>
-              <div className="flex-1 space-y-2">
-                <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-                  URL фото
-                </label>
-                <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
-                  <input
-                    name="photo_url"
-                    defaultValue={artist.photo_url ?? ""}
-                    placeholder="https://..."
-                    className="w-full bg-transparent outline-none text-sm font-medium"
-                    style={{ color: "var(--text)" }}
-                  />
-                </div>
-              </div>
+          {/* Photo preview + URL */}
+          <div className="flex items-center gap-6 mb-2">
+            <div className="w-24 h-24 rounded-full te-inset flex-shrink-0 flex items-center justify-center overflow-hidden">
+              {artist.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={artist.photo_url} alt="preview" className="w-full h-full object-cover" />
+              ) : (
+                <User size={32} style={{ color: "var(--text-muted)" }} />
+              )}
             </div>
+            <FormField label="URL фото">
+              <input
+                name="photo_url"
+                defaultValue={artist.photo_url ?? ""}
+                placeholder="https://..."
+                className="w-full bg-transparent outline-none text-sm font-medium"
+                style={{ color: "var(--text)" }}
+              />
+            </FormField>
+          </div>
 
-            {/* Name */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-                Ім'я / Назва гурту *
-              </label>
-              <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
-                <input
-                  name="name"
-                  required
-                  defaultValue={artist.name}
-                  className="w-full bg-transparent outline-none text-sm font-medium"
-                  style={{ color: "var(--text)" }}
-                />
-              </div>
-            </div>
+          <FormField label="Ім'я / Назва гурту *">
+            <input
+              name="name"
+              required
+              defaultValue={artist.name}
+              className="w-full bg-transparent outline-none text-sm font-medium"
+              style={{ color: "var(--text)" }}
+            />
+          </FormField>
 
-            {/* Genre */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-                Жанр
-              </label>
-              <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
-                <select
-                  name="genre"
-                  defaultValue={artist.genre ?? ""}
-                  className="w-full bg-transparent outline-none text-sm font-medium"
-                  style={{ color: "var(--text)" }}
-                >
-                  <option value="">— Обрати —</option>
-                  {GENRES.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+          <FormField label="Жанр">
+            <select
+              name="genre"
+              defaultValue={artist.genre ?? ""}
+              className="w-full bg-transparent outline-none text-sm font-medium"
+              style={{ color: "var(--text)" }}
+            >
+              <option value="">— Обрати —</option>
+              {GENRES.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </FormField>
 
-            {/* Bio */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-                Коротко про артиста
-              </label>
-              <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
-                <textarea
-                  name="bio"
-                  rows={3}
-                  defaultValue={artist.bio ?? ""}
-                  placeholder="Кілька речень про виконавця..."
-                  className="w-full bg-transparent outline-none text-sm font-medium resize-none"
-                  style={{ color: "var(--text)" }}
-                />
-              </div>
-            </div>
+          <FormField label="Коротко про артиста">
+            <textarea
+              name="bio"
+              rows={3}
+              defaultValue={artist.bio ?? ""}
+              placeholder="Кілька речень про виконавця..."
+              className="w-full bg-transparent outline-none text-sm font-medium resize-none"
+              style={{ color: "var(--text)" }}
+            />
+          </FormField>
 
-            <div className="pt-2 flex justify-end">
-              <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-                <Save size={16} /> ЗБЕРЕГТИ
-              </button>
-            </div>
-          </form>
-        </div>
-      </main>
-    </div>
+          <div className="pt-2 flex justify-end">
+            <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+              <Save size={16} /> ЗБЕРЕГТИ
+            </button>
+          </div>
+        </form>
+      </div>
+    </PageShell>
   );
 }

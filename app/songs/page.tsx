@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { type Metadata } from "next";
 import { getAllSongs } from "@/features/song/services/songs";
 import { SongCard } from "@/features/song/components/SongCard";
-import { Navbar } from "@/shared/components/Navbar";
-import { SiteFooter } from "@/shared/components/SiteFooter";
+import { PageShell } from "@/shared/components/PageShell";
+import { EmptyState } from "@/shared/components/EmptyState";
+import { LoadingState } from "@/shared/components/LoadingState";
 
 export const metadata: Metadata = {
   title: "Каталог пісень — Акорди для гітари | Diez",
@@ -136,10 +137,7 @@ async function SongsContent({ searchParams }: SearchProps) {
       </h2>
 
       {songs.length === 0 ? (
-        <div className="te-surface p-12 text-center flex flex-col items-center justify-center gap-3" style={{ borderRadius: "1.25rem" }}>
-          <span className="text-4xl">😢</span>
-          <p style={{ color: "var(--text)" }} className="font-medium">На жаль, за вашим запитом нічого не знайдено.</p>
-        </div>
+        <EmptyState message="На жаль, за вашим запитом нічого не знайдено." />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {songs.map((song) => (
@@ -163,14 +161,10 @@ async function SongsContent({ searchParams }: SearchProps) {
 
 export default function SongsPage({ searchParams }: SearchProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
-      <Navbar />
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
-        <Suspense fallback={<div className="p-8 text-center" style={{ color: "var(--text-muted)" }}>Завантаження...</div>}>
-          <SongsContent searchParams={searchParams} />
-        </Suspense>
-      </main>
-      <SiteFooter />
-    </div>
+    <PageShell>
+      <Suspense fallback={<LoadingState />}>
+        <SongsContent searchParams={searchParams} />
+      </Suspense>
+    </PageShell>
   );
 }
