@@ -9,7 +9,17 @@ import { SiteFooter } from "@/shared/components/SiteFooter";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
+  title: "Diez — Акорди для гітари",
+  description:
+    "Зручний пошук акордів для тисяч пісень. Українські та зарубіжні виконавці. Створено музикантами для музикантів.",
   alternates: { canonical: "/" },
+  openGraph: {
+    title: "Diez — Акорди для гітари",
+    description:
+      "Зручний пошук акордів для тисяч пісень. Українські та зарубіжні виконавці.",
+    type: "website",
+    url: "/",
+  },
 };
 
 export default async function HomePage() {

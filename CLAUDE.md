@@ -5,7 +5,7 @@ Diez is a Ukrainian web platform for searching, viewing, and later contributing 
 UI language: Ukrainian (buttons, labels, status text — all in Ukrainian).
 
 ## Current priority
-Batch 3 — UI consistency pass. Backend + deploy are done.
+Post-launch polish. Batch 3 complete. Backend + deploy done.
 
 ---
 
@@ -110,15 +110,19 @@ lib/supabase/
 - `is_admin = true` встановлено для власника
 - MVP live: `https://diez-ten.vercel.app`
 
-### ✅ Done (Batch 3 — partial)
+### ✅ Done (Batch 3 — complete)
 - `.te-inset` і `.te-pressable` додані в `globals.css`
 - Всі 4 auth форми переписані з shadcn/ui на TE design system
 - `forgot-password` і `update-password` сторінки отримали Navbar + фон
 - Фікс редіректу `update-password` → `/profile`
+- `PageShell`, `PageHeader` — unified app shell і page headers
+- `AdminTable`, `DifficultyBadge`, `FormField`, `EmptyState`, `LoadingState` — shared компоненти
+- `SongCard` — прибрано фейковий рейтинг, уніфіковано мітки складності
+- `not-found.tsx` — 404 сторінка
+- `/auth/error` — переписано на TE design system, українською
+- Home page metadata — title, description, OpenGraph
 
 ### ⏳ Low priority (post-launch)
-- Profile saved_songs queries (currently mock)
-- Root layout metadata (currently in English)
 - Seed реальних пісень
 
 ---
