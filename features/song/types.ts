@@ -3,6 +3,7 @@ export type Difficulty = "easy" | "medium" | "hard";
 export interface ChordLine {
   chords: string[];   // aligned chord names, empty string = no chord above that word
   lyrics: string;     // the lyric line
+  indent?: number;    // leading spaces count (for visual indentation)
 }
 
 export interface SongSection {

@@ -9,7 +9,7 @@ import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
-import { ChevronLeft, Eye, Music, Pencil } from "lucide-react";
+import { ChevronLeft, Eye, Pencil } from "lucide-react";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
 import { createClient } from "@/lib/supabase/server";
@@ -214,29 +214,6 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
         {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
         <SongViewer song={song} />
 
-        {/* ── Album / author meta ───────────────────────────────────────── */}
-        <div
-          className="te-inset mt-6 flex items-center gap-3"
-          style={{ borderRadius: "1rem", padding: "0.875rem 1.125rem" }}
-        >
-          <div
-            className="te-knob flex items-center justify-center flex-shrink-0"
-            style={{ width: 36, height: 36 }}
-          >
-            <Music size={14} style={{ color: "var(--text-mid)" }} />
-          </div>
-          <div>
-            <p style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text)" }}>
-              {song.artist}{song.album ? ` — ${song.album}` : ""}
-            </p>
-            <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 350 }}>
-              Акорди підібрані спільнотою · Складність:{" "}
-              <span style={{ color: "var(--text-mid)" }}>
-                {song.difficulty === "easy" ? "легка" : song.difficulty === "medium" ? "середня" : "складна"}
-              </span>
-            </p>
-          </div>
-        </div>
 
         {/* ── Other songs by this artist ────────────────────────────────── */}
         {otherSongs.length > 0 && (

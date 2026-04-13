@@ -214,64 +214,98 @@ export function SongViewer({ song }: { song: Song }) {
 
           {/* Song sections */}
           <div className="space-y-6">
-            {song.sections.map((section: SongSection) => (
-              <div key={section.label} className="te-surface rounded-2xl overflow-hidden">
-                <div className="px-4 pt-3 pb-1">
-                  <span
-                    className="text-[9px] font-bold tracking-widest uppercase opacity-40"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {section.label}
-                  </span>
-                </div>
-                <div className="px-4 pb-5 pt-2 space-y-6">
+            {song.sections.map((section: SongSection, sIdx: number) => (
+              <div key={section.label || `s-${sIdx}`} className="te-surface rounded-2xl overflow-hidden">
+                {section.label && (
+                  <div className="px-4 pt-3 pb-1">
+                    <span
+                      className="text-[9px] font-bold tracking-widest uppercase opacity-40"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {section.label}
+                    </span>
+                  </div>
+                )}
+                <div className="px-4 pb-5 pt-2 space-y-4">
                   {section.lines.map((line, i) => {
-                    const words = line.lyrics.split(" ");
-                    return (
-                      <div key={i}>
-                        {/* Chord row */}
-                        <div
-                          className="flex min-h-[1.4rem] mb-0.5"
-                          style={{ flexWrap: "nowrap" }}
-                        >
-                          {words.map((word, j) => {
-                            const chord = line.chords[j] || "";
-                            const trChord = transposeChord(chord, transpose);
-                            return (
-                              <div
-                                key={j}
-                                className="relative"
-                                style={{ marginRight: "0.5rem" }}
-                              >
-                                {trChord && (
-                                  <span
-                                    className="font-mono absolute font-bold whitespace-nowrap"
-                                    style={{
-                                      top: 0,
-                                      left: 0,
-                                      fontSize: `${fontSize * 0.75}px`,
-                                      color: "var(--orange)",
-                                      letterSpacing: "-0.02em",
-                                    }}
-                                  >
-                                    {trChord}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
+                    const words = line.lyrics ? line.lyrics.split(/\s+/) : [];
+                    const hasChords = line.chords.some((c) => c);
+
+                    // Chord-only line (no lyrics)
+                    if (words.length === 0 && hasChords) {
+                      return (
+                        <div key={i} className="flex flex-wrap gap-3">
+                          {line.chords.map((chord, j) => (
+                            <span
+                              key={j}
+                              className="font-mono font-bold whitespace-nowrap"
+                              style={{
+                                fontSize: `${fontSize * 0.75}px`,
+                                color: "var(--orange)",
+                                letterSpacing: "-0.02em",
+                              }}
+                            >
+                              {transposeChord(chord, transpose)}
+                            </span>
+                          ))}
                         </div>
-                        {/* Lyric line */}
-                        <p
-                          style={{
-                            fontSize: `${fontSize}px`,
-                            lineHeight: 1.55,
-                            color: "var(--text)",
-                            fontWeight: 450,
-                          }}
-                        >
-                          {line.lyrics}
-                        </p>
+                      );
+                    }
+
+                    const indent = (line as { indent?: number }).indent ?? 0;
+
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          paddingTop: hasChords ? `${fontSize * 0.9}px` : 0,
+                          paddingLeft: indent > 0 ? `${Math.min(indent, 4) * 0.6}em` : undefined,
+                          lineHeight: hasChords ? 2.4 : 1.55,
+                        }}
+                      >
+                        {Array.from({ length: Math.max(words.length, line.chords.length) }, (_, j) => {
+                          const word = words[j] || "";
+                          const chord = line.chords[j] || "";
+                          const trChord = transposeChord(chord, transpose);
+                          const isSpacer = j >= words.length;
+                          return (
+                            <span
+                              key={j}
+                              style={{
+                                display: "inline-block",
+                                position: "relative",
+                                marginRight: `${fontSize * 0.3}px`,
+                                ...(isSpacer ? { minWidth: `${fontSize * 0.5}px` } : {}),
+                              }}
+                            >
+                              {trChord && (
+                                <span
+                                  className="font-mono font-bold whitespace-nowrap"
+                                  style={{
+                                    position: "absolute",
+                                    top: `-${fontSize * 0.9}px`,
+                                    left: 0,
+                                    fontSize: `${fontSize * 0.75}px`,
+                                    color: "var(--orange)",
+                                    letterSpacing: "-0.02em",
+                                  }}
+                                >
+                                  {trChord}
+                                </span>
+                              )}
+                              <span
+                                style={{
+                                  fontSize: `${fontSize}px`,
+                                  lineHeight: 1.55,
+                                  color: "var(--text)",
+                                  fontWeight: 450,
+                                }}
+                              >
+                                {word || "\u00A0"}
+                              </span>
+                            </span>
+                          );
+                        })}
                       </div>
                     );
                   })}

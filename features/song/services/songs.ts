@@ -27,7 +27,9 @@ function mapRow(row: Record<string, unknown>): Song {
     difficulty: row.difficulty as Difficulty,
     chords: row.chords as string[],
     views: row.views as number,
-    sections: row.sections as SongSection[],
+    sections: Array.isArray(row.sections)
+      ? (row.sections as SongSection[])
+      : ((row.sections as Record<string, unknown>)?.sections as SongSection[]) ?? [],
     strumming: (row.strumming as Song["strumming"] | null) ?? undefined,
     coverImage: (row.cover_image as string | null) ?? undefined,
     coverColor: (row.cover_color as string | null) ?? undefined,
