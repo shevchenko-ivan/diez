@@ -41,7 +41,7 @@ export default async function HomePage() {
               fontWeight: 800,
             }}
           >
-            Акорди для душі. Зіграйте свою першу пісню вже зараз.
+            Грай більше,<br />шукай менше.
           </h1>
           <p
             className="font-medium mb-10 mx-auto"
