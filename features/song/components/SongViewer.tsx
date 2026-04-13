@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { Play, Square } from "lucide-react";
-import { transposeChord, ChordPanel, ChordDiagram, CHORD_DB } from "./ChordDiagram";
+import { transposeChord, ChordPanel, ChordDiagram, lookupChord } from "./ChordDiagram";
 import { SongPlayer } from "./SongPlayer";
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
@@ -170,7 +170,8 @@ export function SongViewer({ song }: { song: Song }) {
           <div className="lg:hidden mb-4 overflow-x-auto scrollbar-none">
             <div className="flex gap-3 pb-2">
               {mobileChordItems.map(({ chord, transposed }) => {
-                const def = CHORD_DB[transposed];
+                const defs = lookupChord(transposed);
+                const def = defs?.[0];
                 if (!def) {
                   return (
                     <div
