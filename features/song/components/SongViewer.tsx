@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { Play, Square } from "lucide-react";
-import { transposeChord, ChordPanel, ChordDiagram, lookupChord } from "./ChordDiagram";
+import { transposeChord, ChordPanel, ChordDiagram, ChordHover, lookupChord, useVoicings } from "./ChordDiagram";
 import { SongPlayer } from "./SongPlayer";
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
@@ -42,6 +42,7 @@ export function SongViewer({ song }: { song: Song }) {
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
   const { trigger } = useHaptics();
+  const voicingState = useVoicings(song.slug);
 
   // Auto-scroll loop
   useEffect(() => {
@@ -160,7 +161,7 @@ export function SongViewer({ song }: { song: Song }) {
             <p className="text-[9px] font-bold tracking-widest uppercase mb-3 opacity-50">
               Акорди
             </p>
-            <ChordPanel chords={song.chords} transpose={transpose} />
+            <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} />
           </div>
         </aside>
 
@@ -236,19 +237,23 @@ export function SongViewer({ song }: { song: Song }) {
                     if (words.length === 0 && hasChords) {
                       return (
                         <div key={i} className="flex flex-wrap gap-3">
-                          {line.chords.map((chord, j) => (
-                            <span
-                              key={j}
-                              className="font-mono font-bold whitespace-nowrap"
-                              style={{
-                                fontSize: `${fontSize * 0.75}px`,
-                                color: "var(--orange)",
-                                letterSpacing: "-0.02em",
-                              }}
-                            >
-                              {transposeChord(chord, transpose)}
-                            </span>
-                          ))}
+                          {line.chords.map((chord, j) => {
+                            const tr = transposeChord(chord, transpose);
+                            return (
+                              <ChordHover key={j} chord={tr} voicingState={voicingState}>
+                                <span
+                                  className="font-mono font-bold whitespace-nowrap"
+                                  style={{
+                                    fontSize: `${fontSize * 0.75}px`,
+                                    color: "var(--orange)",
+                                    letterSpacing: "-0.02em",
+                                  }}
+                                >
+                                  {tr}
+                                </span>
+                              </ChordHover>
+                            );
+                          })}
                         </div>
                       );
                     }
@@ -280,19 +285,21 @@ export function SongViewer({ song }: { song: Song }) {
                               }}
                             >
                               {trChord && (
-                                <span
-                                  className="font-mono font-bold whitespace-nowrap"
-                                  style={{
-                                    position: "absolute",
-                                    top: `-${fontSize * 0.9}px`,
-                                    left: 0,
-                                    fontSize: `${fontSize * 0.75}px`,
-                                    color: "var(--orange)",
-                                    letterSpacing: "-0.02em",
-                                  }}
-                                >
-                                  {trChord}
-                                </span>
+                                <ChordHover chord={trChord} voicingState={voicingState}>
+                                  <span
+                                    className="font-mono font-bold whitespace-nowrap"
+                                    style={{
+                                      position: "absolute",
+                                      top: `-${fontSize * 0.9}px`,
+                                      left: 0,
+                                      fontSize: `${fontSize * 0.75}px`,
+                                      color: "var(--orange)",
+                                      letterSpacing: "-0.02em",
+                                    }}
+                                  >
+                                    {trChord}
+                                  </span>
+                                </ChordHover>
                               )}
                               <span
                                 style={{
