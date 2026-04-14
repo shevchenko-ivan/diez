@@ -32,7 +32,8 @@ function getBars(seed: string, count = 42): number[] {
 
 export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<YT.Player | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const playerRef = useRef<any>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [ready, setReady] = useState(false);
