@@ -86,7 +86,7 @@ const TEMPLATES: Record<string, number[][]> = {
     [8,-1,13,14,13,14],[-1,-1,10,11,10,11],
   ],
   m: [
-    [-1,-1,1,0,1,-1],[-1,3,1,5,4,3],[-1,3,1,0,1,-1],[-1,3,5,5,4,3],
+    [-1,-1,1,0,1,-1],[-1,3,5,5,4,3],[-1,3,1,0,1,-1],[-1,3,1,5,4,3],
     [-1,6,5,5,4,3],[-1,3,5,5,4,-1],[-1,-1,5,5,4,3],[-1,3,10,8,8,8],
     [-1,-1,5,5,4,8],[8,6,5,5,8,8],[-1,-1,5,8,8,8],[8,10,10,8,8,8],
     [-1,-1,10,8,8,8],[8,10,10,8,8,11],[-1,-1,10,12,13,11],[-1,-1,13,12,13,11],
@@ -123,11 +123,13 @@ const TEMPLATES: Record<string, number[][]> = {
     [-1,10,10,9,12,-1],[-1,15,14,9,9,9],[-1,-1,10,12,12,12],[-1,15,14,10,10,10],
   ],
   major: [
-    [-1,3,2,1,1,1],[-1,-1,2,1,1,1],[-1,3,-1,1,1,1],[-1,3,2,0,1,0],
-    [-1,3,2,0,1,3],[-1,3,-1,0,1,0],[-1,-1,2,0,1,0],[-1,3,2,-1,1,-1],
+    // NOTE: [-1,3,2,1,1,1] and variants removed — G string fret 1 = G# (wrong for major)
+    // NOTE: [-1,-1,5,5,5,8] removed — produces sparse 4-string voicing (x,x,D,G,B,e only)
+    [-1,3,2,0,1,0],
+    [-1,3,2,0,1,3],[-1,3,-1,0,1,0],[-1,3,2,-1,1,-1],
+    // NOTE: [-1,-1,2,0,1,0] removed — generates C/E inversion (E bass, not root)
     [-1,3,-1,-1,1,-1],[-1,-1,2,-1,1,-1],[-1,3,5,5,5,3],[-1,3,5,5,5,8],
-    [-1,-1,5,5,5,3],[-1,3,5,-1,5,-1],[8,-1,5,5,5,8],[8,7,5,5,5,-1],
-    [8,7,5,5,5,8],[8,7,5,5,8,8],[-1,-1,5,5,5,8],[8,10,10,9,8,8],
+    [-1,-1,5,5,5,3],[-1,3,5,-1,5,-1],[8,-1,5,5,5,8],[8,7,5,5,5,8],[8,7,5,5,5,-1],[8,7,5,5,8,8],[8,10,10,9,8,8],
     [8,-1,10,9,8,-1],[-1,-1,10,9,8,8],[8,10,10,12,13,12],[8,15,14,12,13,12],
     [8,15,14,12,13,8],[-1,15,14,9,13,9],[-1,15,-1,9,13,9],[-1,-1,14,9,13,9],
     [-1,-1,10,12,13,12],[-1,15,14,10,13,10],[-1,-1,14,10,13,10],[-1,15,-1,10,13,10],
@@ -195,13 +197,18 @@ function makeChordDef(strings: number[]): ChordDef {
 
   let barre: number | undefined;
   if (played.length > 0) {
-    const counts: Record<number, number> = {};
-    for (const f of strings) if (f > 0) counts[f] = (counts[f] || 0) + 1;
-    for (const [fret, count] of Object.entries(counts)) {
-      if (count >= 2 && Number(fret) === baseFret) {
-        barre = Number(fret);
-        break;
-      }
+    // Barre: 2+ strings at baseFret, AND every string in between is fretted (not open/muted).
+    // This correctly handles A-shape barres (index covers strings 1–5 even though middle
+    // strings are fretted higher by other fingers) while rejecting non-adjacent same-fret
+    // placements like [3,x,0,0,0,3] where the gap contains muted/open strings.
+    const barrePositions = strings
+      .map((f, i) => (f === baseFret ? i : -1))
+      .filter(i => i >= 0);
+    if (barrePositions.length >= 2) {
+      const minPos = barrePositions[0];
+      const maxPos = barrePositions[barrePositions.length - 1];
+      const spanAllFretted = strings.slice(minPos, maxPos + 1).every(f => f >= baseFret);
+      if (spanAllFretted) barre = baseFret;
     }
   }
 
@@ -210,8 +217,43 @@ function makeChordDef(strings: number[]): ChordDef {
     : { strings, baseFret };
 }
 
+// Difficulty = finger count + stretch + position penalty + sandwiched-mute penalty.
+// A barre chord counts as 1 finger (index) + extra fingers above it,
+// so a clean barre shape scores lower than 4 independently placed fingers.
+// Position penalty (0.3/fret) keeps low-position voicings preferred over high-position
+// ones with the same finger count (e.g. F at fret 1 over F at fret 8).
+// Sandwiched mutes (+3 each) penalise voicings where a string must be actively muted
+// between two sounding strings — harder to play cleanly.
+function voicingDifficulty(def: ChordDef): number {
+  const { strings, baseFret, barre } = def;
+  const played = strings.filter(f => f > 0);
+  if (played.length === 0) return 0;
+
+  let fingerCount: number;
+  let stretch: number;
+
+  if (barre) {
+    const extraFrets = [...new Set(played.filter(f => f > barre))];
+    fingerCount = 1 + extraFrets.length; // barre finger + individual fingers above
+    stretch = extraFrets.length > 0 ? Math.max(...extraFrets) - barre : 0;
+  } else {
+    fingerCount = new Set(played).size;
+    stretch = Math.max(...played) - Math.min(...played);
+  }
+
+  // Count muted strings sandwiched between sounding strings (require active muting)
+  const firstSounding = strings.findIndex(f => f >= 0);
+  const lastSounding = strings.length - 1 - [...strings].reverse().findIndex(f => f >= 0);
+  let mutedPenalty = 0;
+  for (let i = firstSounding + 1; i < lastSounding; i++) {
+    if (strings[i] === -1) mutedPenalty += 3;
+  }
+
+  return fingerCount * 2 + stretch + baseFret * 1.1 + mutedPenalty;
+}
+
 function selectDiverse(defs: ChordDef[], max = 8): ChordDef[] {
-  if (defs.length <= max) return defs.sort((a, b) => a.baseFret - b.baseFret);
+  if (defs.length <= max) return defs.sort((a, b) => voicingDifficulty(a) - voicingDifficulty(b));
 
   const buckets: Record<string, ChordDef[]> = { open: [], low: [], mid: [], high: [] };
   for (const d of defs) {
@@ -221,8 +263,13 @@ function selectDiverse(defs: ChordDef[], max = 8): ChordDef[] {
     else buckets.high.push(d);
   }
 
-  const result: ChordDef[] = [];
+  // Sort each bucket by difficulty so easiest voicing in each range is picked first
   const order = ["open", "low", "mid", "high"] as const;
+  for (const bucket of order) {
+    buckets[bucket].sort((a, b) => voicingDifficulty(a) - voicingDifficulty(b));
+  }
+
+  const result: ChordDef[] = [];
   let round = 0;
   while (result.length < max) {
     let added = false;
@@ -235,7 +282,7 @@ function selectDiverse(defs: ChordDef[], max = 8): ChordDef[] {
     if (!added) break;
     round++;
   }
-  return result.sort((a, b) => a.baseFret - b.baseFret);
+  return result.sort((a, b) => voicingDifficulty(a) - voicingDifficulty(b));
 }
 
 function generateChordDB(): Record<string, ChordDef[]> {
