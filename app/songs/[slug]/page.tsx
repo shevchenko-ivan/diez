@@ -9,7 +9,8 @@ import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
-import { ChevronLeft, Eye, Pencil } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
+import { BackButton } from "@/shared/components/BackButton";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
 import { createClient } from "@/lib/supabase/server";
@@ -104,110 +105,42 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
 
       <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pb-20">
 
-        {/* ── Back ─────────────────────────────────────────────────────── */}
-        <div className="pt-2 pb-6">
-          <Link
-            href="/"
-            className="te-key inline-flex items-center gap-1.5 px-3 py-2 text-xs"
-            style={{ color: "var(--text-mid)", fontWeight: 400 }}
-          >
-            <ChevronLeft size={13} strokeWidth={2.5} />
-            Назад
-          </Link>
-        </div>
+        {/* ── Header (single row, centered title) ─────────────────────── */}
+        <div className="te-surface mb-4 grid items-center" style={{ borderRadius: "1.25rem", padding: "0.4rem 1rem", gridTemplateColumns: "1fr auto 1fr" }}>
+          {/* Left: Back */}
+          <BackButton fallback="/songs" />
 
-        {/* ── Header ───────────────────────────────────────────────────── */}
-        <div className="te-surface mb-4" style={{ borderRadius: "1.5rem", padding: "1.5rem" }}>
-          <div className="flex items-start justify-between gap-4">
+          {/* Center: Title + meta inline */}
+          <div className="flex items-center justify-center gap-2 px-4 flex-wrap">
+            <Link
+              href={`/artists/${artistSlug}`}
+              className="hover:underline whitespace-nowrap"
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text-muted)", lineHeight: 1.2 }}
+            >
+              {song.artist}
+            </Link>
+            <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>·</span>
+            <h1
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2, whiteSpace: "nowrap" }}
+            >
+              {song.title}
+            </h1>
+            <DifficultyBadge difficulty={song.difficulty} />
+          </div>
 
-            {/* Title block */}
-            <div>
-              <p
-                className="uppercase mb-1"
-                style={{ fontSize: "0.62rem", letterSpacing: "0.1em", color: "var(--text-muted)", fontWeight: 400 }}
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1.5 justify-end">
+            {songId && (
+              <Link
+                href={`/admin/songs/edit?id=${songId}`}
+                className="te-knob flex items-center justify-center"
+                style={{ width: 36, height: 36, color: "var(--orange)" }}
+                title="Редагувати"
               >
-                {song.genre} ·{" "}
-                <Link
-                  href={`/artists/${artistSlug}`}
-                  style={{ color: "var(--text-muted)" }}
-                  className="hover:underline"
-                >
-                  {song.artist}
-                </Link>
-              </p>
-              <h1
-                style={{
-                  fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
-                  letterSpacing: "-0.03em",
-                  fontWeight: 700,
-                  color: "var(--text)",
-                  lineHeight: 1.1,
-                  marginBottom: "1rem",
-                }}
-              >
-                {song.title}
-              </h1>
-
-              {/* Info chips row */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Key */}
-                <div
-                  className="te-lcd font-mono-te px-3 py-1 flex items-center gap-1.5"
-                  style={{ fontSize: "0.72rem" }}
-                >
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.58rem" }}>KEY</span>
-                  <span>{song.key}</span>
-                </div>
-
-                {/* Capo */}
-                {song.capo !== undefined && song.capo > 0 && (
-                  <div
-                    className="te-lcd font-mono-te px-3 py-1 flex items-center gap-1.5"
-                    style={{ fontSize: "0.72rem" }}
-                  >
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.58rem" }}>CAPO</span>
-                    <span>{song.capo}</span>
-                  </div>
-                )}
-
-                {/* Tempo */}
-                {song.tempo && (
-                  <div
-                    className="te-lcd font-mono-te px-3 py-1 flex items-center gap-1.5"
-                    style={{ fontSize: "0.72rem" }}
-                  >
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.58rem" }}>BPM</span>
-                    <span>{song.tempo}</span>
-                  </div>
-                )}
-
-                {/* Difficulty dot */}
-                <DifficultyBadge difficulty={song.difficulty} />
-
-                {/* Views */}
-                <div
-                  className="flex items-center gap-1"
-                  style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}
-                >
-                  <Eye size={11} />
-                  <span className="font-mono-te">{song.views.toLocaleString("uk")}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2">
-              <SongActions />
-              {songId && (
-                <Link
-                  href={`/admin/songs/edit?id=${songId}`}
-                  className="te-key inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold"
-                  style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
-                >
-                  <Pencil size={12} />
-                  Редагувати
-                </Link>
-              )}
-            </div>
+                <Pencil size={14} />
+              </Link>
+            )}
+            <SongActions />
           </div>
         </div>
 

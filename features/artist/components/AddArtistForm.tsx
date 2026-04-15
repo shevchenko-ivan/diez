@@ -91,7 +91,7 @@ export function AddArtistForm() {
       {/* Bio */}
       <div className="space-y-2">
         <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-          Коротко про артиста
+          Коротко про виконавця
         </label>
         <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
           <textarea

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Play, Square } from "lucide-react";
+import { Play, Square, Music } from "lucide-react";
 import { transposeChord, ChordPanel, ChordDiagram, ChordHover, lookupChord, useVoicings } from "./ChordDiagram";
+import { suggestCapo } from "@/features/song/data/chord-templates";
 import { SongPlayer } from "./SongPlayer";
+import { TunerWidget } from "@/features/tuner/components/TunerWidget";
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
 
@@ -39,10 +41,20 @@ function SmallBtn({ onClick, children }: { onClick: () => void; children: React.
 
 export function SongViewer({ song }: { song: Song }) {
   const [transpose, setTranspose] = useState(0);
+  const [capo, setCapo] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
   const { trigger } = useHaptics();
   const voicingState = useVoicings(song.slug);
+
+  const bestCapo = useMemo(() => {
+    const ranked = suggestCapo(song.chords, transpose);
+    const best = ranked.find((r) => r.fret > 0);
+    if (!best) return null;
+    // Only recommend if it's meaningfully easier than no capo
+    const noCapoScore = ranked.find((r) => r.fret === 0)?.score ?? Infinity;
+    return best.score < noCapoScore - 1 ? best.fret : null;
+  }, [song.chords, transpose]);
 
   // Auto-scroll loop
   useEffect(() => {
@@ -67,6 +79,7 @@ export function SongViewer({ song }: { song: Song }) {
   };
 
   // ─── Strumming Player ────────────────────────────────────────────────────────
+  const [showTuner, setShowTuner] = useState(false);
   const [activeStrumIndex, setActiveStrumIndex] = useState(-1);
   const [isPlayingStrum, setIsPlayingStrum] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -144,7 +157,7 @@ export function SongViewer({ song }: { song: Song }) {
 
   // Mobile chord panel — deduplicated chords
   const mobileChordItems = song.chords.map((chord) => {
-    const transposed = transposeChord(chord, transpose);
+    const transposed = transposeChord(chord, transpose - capo);
     return { chord, transposed };
   });
 
@@ -161,7 +174,7 @@ export function SongViewer({ song }: { song: Song }) {
             <p className="text-[9px] font-bold tracking-widest uppercase mb-3 opacity-50">
               Акорди
             </p>
-            <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} />
+            <ChordPanel chords={song.chords} transpose={transpose - capo} voicingState={voicingState} />
           </div>
         </aside>
 
@@ -217,7 +230,7 @@ export function SongViewer({ song }: { song: Song }) {
           {/* Song sections */}
           <div className="space-y-6">
             {song.sections.map((section: SongSection, sIdx: number) => (
-              <div key={section.label || `s-${sIdx}`} className="te-surface rounded-2xl overflow-hidden">
+              <div key={sIdx} className="te-surface rounded-2xl overflow-hidden">
                 {section.label && (
                   <div className="px-4 pt-3 pb-1">
                     <span
@@ -229,6 +242,38 @@ export function SongViewer({ song }: { song: Song }) {
                   </div>
                 )}
                 <div className="px-4 pb-5 pt-2 space-y-4">
+                  {/* Tab block (collapsible) */}
+                  {section.tab && (
+                    <details className="group">
+                      <summary
+                        className="cursor-pointer select-none text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 py-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        <span
+                          className="inline-block transition-transform group-open:rotate-90"
+                          style={{ fontSize: "8px" }}
+                        >
+                          ▶
+                        </span>
+                        Табулатура
+                      </summary>
+                      <div
+                        className="mt-2 te-inset rounded-xl overflow-x-auto scrollbar-none"
+                        style={{ WebkitOverflowScrolling: "touch" }}
+                      >
+                        <pre
+                          className="px-3 py-2.5 font-mono leading-[1.15] whitespace-pre"
+                          style={{
+                            fontSize: `${Math.max(11, fontSize * 0.7)}px`,
+                            color: "var(--text)",
+                            opacity: 0.85,
+                          }}
+                        >
+                          {section.tab}
+                        </pre>
+                      </div>
+                    </details>
+                  )}
                   {section.lines.map((line, i) => {
                     const words = line.lyrics ? line.lyrics.split(/\s+/) : [];
                     const hasChords = line.chords.some((c) => c);
@@ -238,7 +283,7 @@ export function SongViewer({ song }: { song: Song }) {
                       return (
                         <div key={i} className="flex flex-wrap gap-3">
                           {line.chords.map((chord, j) => {
-                            const tr = transposeChord(chord, transpose);
+                            const tr = transposeChord(chord, transpose - capo);
                             return (
                               <ChordHover key={j} chord={tr} voicingState={voicingState}>
                                 <span
@@ -272,7 +317,7 @@ export function SongViewer({ song }: { song: Song }) {
                         {Array.from({ length: Math.max(words.length, line.chords.length) }, (_, j) => {
                           const word = words[j] || "";
                           const chord = line.chords[j] || "";
-                          const trChord = transposeChord(chord, transpose);
+                          const trChord = transposeChord(chord, transpose - capo);
                           const isSpacer = j >= words.length;
                           return (
                             <span
@@ -338,6 +383,29 @@ export function SongViewer({ song }: { song: Song }) {
                 </span>
                 <SmallBtn onClick={() => setTranspose((p) => p + 1)}>+</SmallBtn>
               </div>
+            </ControlBlock>
+
+            {/* Capo */}
+            <ControlBlock label="Каподастр">
+              <div className="flex items-center justify-between">
+                <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</SmallBtn>
+                <span
+                  className="font-mono font-bold text-sm"
+                  style={{ color: "var(--text)" }}
+                >
+                  {capo > 0 ? `${capo} лад` : "—"}
+                </span>
+                <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</SmallBtn>
+              </div>
+              {bestCapo !== null && bestCapo !== capo && (
+                <button
+                  onClick={() => { trigger("light"); setCapo(bestCapo); }}
+                  className="w-full mt-2 text-[10px] font-bold py-1 rounded-lg transition-colors"
+                  style={{ color: "var(--orange)", background: "rgba(255,136,0,0.08)" }}
+                >
+                  Рекоменд.: {bestCapo} лад
+                </button>
+              )}
             </ControlBlock>
 
             {/* Font size */}
@@ -436,6 +504,20 @@ export function SongViewer({ song }: { song: Song }) {
               </ControlBlock>
             )}
 
+            {/* Tuner */}
+            {showTuner ? (
+              <TunerWidget onClose={() => setShowTuner(false)} />
+            ) : (
+              <button
+                onClick={() => { trigger("light"); setShowTuner(true); }}
+                className="w-full te-key py-2.5 text-xs font-bold flex items-center justify-center gap-2"
+                style={{ borderRadius: "1rem", color: "var(--text-muted)" }}
+              >
+                <Music size={14} />
+                Тюнер
+              </button>
+            )}
+
             {/* Audio player */}
             {song.youtubeId && (
               <SongPlayer
@@ -448,8 +530,15 @@ export function SongViewer({ song }: { song: Song }) {
         </aside>
       </div>
 
+      {/* ── Mobile tuner ──────────────────────────────────────────────────────── */}
+      {showTuner && (
+        <div className="lg:hidden mt-4 max-w-sm mx-auto">
+          <TunerWidget onClose={() => setShowTuner(false)} />
+        </div>
+      )}
+
       {/* ── Mobile controls bar ──────────────────────────────────────────────── */}
-      <div className="lg:hidden mt-6 grid grid-cols-3 gap-3">
+      <div className="lg:hidden mt-6 grid grid-cols-2 gap-3">
         <ControlBlock label="Транспоз">
           <div className="flex items-center justify-between">
             <SmallBtn onClick={() => setTranspose((p) => p - 1)}>−</SmallBtn>
@@ -458,6 +547,25 @@ export function SongViewer({ song }: { song: Song }) {
             </span>
             <SmallBtn onClick={() => setTranspose((p) => p + 1)}>+</SmallBtn>
           </div>
+        </ControlBlock>
+
+        <ControlBlock label="Каподастр">
+          <div className="flex items-center justify-between">
+            <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</SmallBtn>
+            <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
+              {capo > 0 ? capo : "—"}
+            </span>
+            <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</SmallBtn>
+          </div>
+          {bestCapo !== null && bestCapo !== capo && (
+            <button
+              onClick={() => { trigger("light"); setCapo(bestCapo); }}
+              className="w-full mt-1 text-[9px] font-bold py-0.5 rounded-md"
+              style={{ color: "var(--orange)", background: "rgba(255,136,0,0.08)" }}
+            >
+              Рек.: {bestCapo} лад
+            </button>
+          )}
         </ControlBlock>
 
         <ControlBlock label="Розмір">
@@ -490,6 +598,20 @@ export function SongViewer({ song }: { song: Song }) {
           </button>
         </ControlBlock>
       </div>
+
+      {/* Mobile tuner button */}
+      {!showTuner && (
+        <div className="lg:hidden mt-3">
+          <button
+            onClick={() => { trigger("light"); setShowTuner(true); }}
+            className="w-full te-key py-2.5 text-xs font-bold flex items-center justify-center gap-2"
+            style={{ borderRadius: "1rem", color: "var(--text-muted)" }}
+          >
+            <Music size={14} />
+            Тюнер
+          </button>
+        </div>
+      )}
     </div>
   );
 }

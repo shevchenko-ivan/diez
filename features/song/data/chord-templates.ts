@@ -224,7 +224,7 @@ function makeChordDef(strings: number[]): ChordDef {
 // ones with the same finger count (e.g. F at fret 1 over F at fret 8).
 // Sandwiched mutes (+3 each) penalise voicings where a string must be actively muted
 // between two sounding strings — harder to play cleanly.
-function voicingDifficulty(def: ChordDef): number {
+export function voicingDifficulty(def: ChordDef): number {
   const { strings, baseFret, barre } = def;
   const played = strings.filter(f => f > 0);
   if (played.length === 0) return 0;
@@ -396,6 +396,31 @@ export function lookupChord(chord: string): ChordDef[] | undefined {
   const lookupKey = normalizeForDB(chord);
   const defs = CHORD_DB[lookupKey] ?? CHORD_DB[chord];
   return defs?.length ? defs : undefined;
+}
+
+// ─── Capo suggestion ────────────────────────────────────────────────────────
+
+export function suggestCapo(
+  chords: string[],
+  transpose = 0,
+): { fret: number; score: number }[] {
+  const results: { fret: number; score: number }[] = [];
+
+  for (let capo = 0; capo <= 11; capo++) {
+    let total = 0;
+    for (const chord of chords) {
+      const transposed = transposeChord(chord, transpose - capo);
+      const defs = lookupChord(transposed);
+      if (defs && defs.length > 0) {
+        total += voicingDifficulty(defs[0]); // easiest voicing
+      } else {
+        total += 100; // unknown chord penalty
+      }
+    }
+    results.push({ fret: capo, score: total });
+  }
+
+  return results.sort((a, b) => a.score - b.score);
 }
 
 // ─── Chord Identifier (reverse lookup by intervals) ─────────────────────────

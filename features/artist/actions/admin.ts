@@ -112,14 +112,103 @@ export async function updateArtist(formData: FormData) {
   redirect("/admin/artists");
 }
 
+export async function archiveArtist(formData: FormData) {
+  await requireAdmin();
+
+  const artistId = assertUuid(formData.get("artistId") as string, "ID артиста");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", artistId);
+  if (error) throw new Error(`Помилка архівування: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
+export async function restoreArtist(formData: FormData) {
+  await requireAdmin();
+
+  const artistId = assertUuid(formData.get("artistId") as string, "ID артиста");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ archived_at: null })
+    .eq("id", artistId);
+  if (error) throw new Error(`Помилка відновлення: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
 export async function deleteArtist(formData: FormData) {
   await requireAdmin();
 
   const artistId = assertUuid(formData.get("artistId") as string, "ID артиста");
 
   const admin = createAdminClient();
+  // Only allow deleting archived artists
+  const { data: artist } = await admin.from("artists").select("archived_at").eq("id", artistId).single();
+  if (!artist?.archived_at) throw new Error("Спочатку заархівуйте артиста");
+
   const { error } = await admin.from("artists").delete().eq("id", artistId);
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
+export async function bulkArchiveArtists(formData: FormData) {
+  await requireAdmin();
+
+  const ids = (formData.get("ids") as string)?.split(",").filter(id => UUID_RE.test(id));
+  if (!ids?.length) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ archived_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
+export async function bulkRestoreArtists(formData: FormData) {
+  await requireAdmin();
+
+  const ids = (formData.get("ids") as string)?.split(",").filter(id => UUID_RE.test(id));
+  if (!ids?.length) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ archived_at: null })
+    .in("id", ids);
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
+export async function bulkDeleteArtists(formData: FormData) {
+  await requireAdmin();
+
+  const ids = (formData.get("ids") as string)?.split(",").filter(id => UUID_RE.test(id));
+  if (!ids?.length) return;
+
+  const admin = createAdminClient();
+  // Only delete artists that are archived
+  const { error } = await admin
+    .from("artists")
+    .delete()
+    .in("id", ids)
+    .not("archived_at", "is", null);
+  if (error) throw new Error(`Помилка: ${error.message}`);
 
   revalidatePath("/artists");
   revalidatePath("/admin/artists");

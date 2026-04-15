@@ -9,6 +9,7 @@ export interface ChordLine {
 export interface SongSection {
   label: string;      // "Куплет 1", "Приспів", "Бридж"
   lines: ChordLine[];
+  tab?: string;       // raw ASCII tablature (6 string lines)
 }
 
 export interface Song {

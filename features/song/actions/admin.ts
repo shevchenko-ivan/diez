@@ -149,6 +149,9 @@ function mergeChordAndLyricLines(
 const HEADER_COLON_RE = /^([^[\]]+):\s*$/;
 const HEADER_PIPE_RE = /^\|([^|]+)\|\s*$/;
 
+// Detect tab lines: e|--0--, B|--1--, etc. (standard 6-string tuning labels)
+const TAB_LINE_RE = /^[eEBGDA]\|[-0-9h p/\\~x().^sbt\s|]+$/;
+
 function parseLyricsWithChords(raw: string): {
   sections: { label: string; lines: { chords: string[]; lyrics: string }[] }[];
   chords: string[];
@@ -197,9 +200,38 @@ function parseLyricsWithChords(raw: string): {
   const sections = sectionGroups.map((group) => {
     const dataLines = group.dataLines.filter((l) => l.trim());
 
+    // Step 0: extract tab blocks (consecutive TAB_LINE_RE matches → joined into tab string)
+    const tabBlocks: string[] = [];
+    const nonTabLines: string[] = [];
+    let tabAccum: string[] = [];
+
+    for (const line of dataLines) {
+      if (TAB_LINE_RE.test(line.trim())) {
+        tabAccum.push(line.trimEnd());
+      } else {
+        if (tabAccum.length >= 4) {
+          // Valid tab block (at least 4 of 6 strings)
+          tabBlocks.push(tabAccum.join("\n"));
+        } else {
+          // Not enough lines for a tab — treat as regular text
+          nonTabLines.push(...tabAccum);
+        }
+        tabAccum = [];
+        nonTabLines.push(line);
+      }
+    }
+    // Flush remaining
+    if (tabAccum.length >= 4) {
+      tabBlocks.push(tabAccum.join("\n"));
+    } else {
+      nonTabLines.push(...tabAccum);
+    }
+
+    const tab = tabBlocks.length > 0 ? tabBlocks.join("\n\n") : undefined;
+
     // Step 1: parse each line individually
     type ParsedLine = { chords: string[]; lyrics: string; raw: string; chordOnly: boolean };
-    const parsed: ParsedLine[] = dataLines.map((line) => {
+    const parsed: ParsedLine[] = nonTabLines.map((line) => {
       // Chord-only line (bare or bracketed)
       if (isChordLine(line)) {
         const positions = extractChordPositions(line);
@@ -262,7 +294,7 @@ function parseLyricsWithChords(raw: string): {
       }
     }
 
-    return { label: group.label, lines };
+    return { label: group.label, lines, ...(tab ? { tab } : {}) };
   });
 
   return { sections, chords: Array.from(allChords) };
@@ -365,7 +397,7 @@ export async function updateSong(formData: FormData) {
   const artist = (formData.get("artist") as string)?.trim();
   const album = (formData.get("album") as string)?.trim() || null;
   const genre = (formData.get("genre") as string)?.trim() || null;
-  const key = (formData.get("key") as string)?.trim() || null;
+  const key = (formData.get("key") as string)?.trim() || undefined;
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
   const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
   const difficulty = (formData.get("difficulty") as string) || null;
@@ -385,7 +417,7 @@ export async function updateSong(formData: FormData) {
   const { error } = await admin
     .from("songs")
     .update({
-      title, artist, album, genre, key, capo, tempo,
+      title, artist, album, genre, ...(key ? { key } : {}), capo, tempo,
       difficulty, status, cover_image, cover_color, youtube_id,
       ...(parsed ? {
         sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -404,7 +436,7 @@ export async function updateSong(formData: FormData) {
   redirect("/admin/songs");
 }
 
-// ─── Delete song ──────────────────────────────────────────────────────────────
+// ─── Delete song (only from archive) ─────────────────────────────────────────
 
 export async function deleteSong(formData: FormData) {
   await requireAdmin();
@@ -412,6 +444,10 @@ export async function deleteSong(formData: FormData) {
   const songId = assertUuid(formData.get("songId") as string, "ID пісні");
 
   const admin = createAdminClient();
+  // Only allow deleting archived songs
+  const { data: song } = await admin.from("songs").select("status").eq("id", songId).single();
+  if (song?.status !== "archived") throw new Error("Спочатку заархівуйте пісню");
+
   const { error } = await admin.from("songs").delete().eq("id", songId);
 
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
@@ -420,5 +456,49 @@ export async function deleteSong(formData: FormData) {
   revalidatePath("/artists");
   revalidatePath("/admin");
   revalidatePath("/");
-  redirect("/admin/songs");
+}
+
+// ─── Bulk song operations ─────────────────────────────────────────────────────
+
+export async function bulkUpdateSongStatus(formData: FormData) {
+  await requireAdmin();
+
+  const ids = (formData.get("ids") as string)?.split(",").filter(id => UUID_RE.test(id));
+  const status = formData.get("status") as string;
+
+  if (!ids?.length) return;
+  if (!["published", "archived", "draft"].includes(status)) throw new Error("Невалідний статус");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("songs")
+    .update({ status, updated_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  revalidatePath("/songs");
+  revalidatePath("/admin/songs");
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+export async function bulkDeleteSongs(formData: FormData) {
+  await requireAdmin();
+
+  const ids = (formData.get("ids") as string)?.split(",").filter(id => UUID_RE.test(id));
+  if (!ids?.length) return;
+
+  const admin = createAdminClient();
+  // Only delete archived songs
+  const { error } = await admin
+    .from("songs")
+    .delete()
+    .in("id", ids)
+    .eq("status", "archived");
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  revalidatePath("/songs");
+  revalidatePath("/admin/songs");
+  revalidatePath("/admin");
+  revalidatePath("/");
 }

@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/songs",             label: "Акорди" },
   { href: "/artists",           label: "Виконавці" },
   { href: "/chords",            label: "Визначити акорд" },
+  { href: "/tuner",             label: "Тюнер" },
   { href: "/songs?sort=new",    label: "Новинки" },
   { href: "/songs?sort=popular",label: "Топ популярних" },
 ];

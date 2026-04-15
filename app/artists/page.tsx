@@ -10,11 +10,11 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",
   description:
-    "Усі виконавці в каталозі Diez. Знаходьте акорди улюблених українських та зарубіжних артистів.",
+    "Усі виконавці в каталозі Diez. Знаходьте акорди улюблених українських та зарубіжних виконавців.",
   alternates: { canonical: "/artists" },
   openGraph: {
     title: "Виконавці — Diez",
-    description: "Усі виконавці в каталозі Diez. Знаходьте акорди улюблених артистів.",
+    description: "Усі виконавці в каталозі Diez. Знаходьте акорди улюблених виконавців.",
     type: "website",
     url: "/artists",
   },

@@ -55,7 +55,7 @@ export default async function AdminPage() {
           <StatCard icon={<Eye size={18} />} label="Опубліковано" value={stats.published} color="var(--orange)" />
           <StatCard icon={<EyeOff size={18} />} label="Чернетки" value={stats.drafts} color="#6366f1" />
           <StatCard icon={<Archive size={18} />} label="В архіві" value={stats.archived} color="var(--text-muted)" />
-          <StatCard icon={<Users size={18} />} label="Артисти" value={stats.artists} color="#10b981" />
+          <StatCard icon={<Users size={18} />} label="Виконавці" value={stats.artists} color="#10b981" />
         </div>
 
         {/* Entity cards */}
@@ -72,7 +72,7 @@ export default async function AdminPage() {
           <EntityCard
             href="/admin/artists"
             icon={<Users size={32} />}
-            title="Артисти"
+            title="Виконавці"
             description="Фото, жанр, біографія та керування виконавцями"
             count={stats.artists}
             countLabel="виконавців"

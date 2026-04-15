@@ -6,7 +6,7 @@ import { createSong } from "@/features/song/actions/admin";
 import { slugify } from "@/lib/slugify";
 import type { Artist } from "@/features/artist/services/artists";
 
-const KEYS = ["C","Cm","C#","C#m","D","Dm","Eb","Ebm","E","Em","F","Fm","F#","F#m","G","Gm","Ab","Abm","A","Am","Bb","Bbm","B","Bm"];
+const KEYS = ["C","Cm","C#","C#m","D","Dm","D#","D#m","E","Em","F","Fm","F#","F#m","G","Gm","G#","G#m","A","Am","A#","A#m","B","Bm"];
 
 interface Props {
   artists?: Artist[];

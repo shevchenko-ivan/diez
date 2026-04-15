@@ -53,8 +53,8 @@ export function AdminTh({
   );
 }
 
-export function AdminTr({ children }: { children: React.ReactNode }) {
+export function AdminTr({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <tr className="hover:bg-[rgba(0,0,0,0.02)] transition-colors">{children}</tr>
+    <tr className={`hover:bg-[rgba(0,0,0,0.02)] transition-colors ${className ?? ""}`}>{children}</tr>
   );
 }

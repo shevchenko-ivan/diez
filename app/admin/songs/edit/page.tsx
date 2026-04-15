@@ -2,8 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { PageShell } from "@/shared/components/PageShell";
 import { FormField } from "@/shared/components/FormField";
-import { ArrowLeft, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/shared/components/BackButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -132,9 +133,9 @@ export default async function EditSongPage({
 
   return (
     <PageShell maxWidth="2xl" footer={false}>
-      <Link href="/admin/songs" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
-        <ArrowLeft size={14} /> Пісні
-      </Link>
+      <div className="mb-8">
+        <BackButton fallback="/admin/songs" />
+      </div>
 
       <form action={updateSong} className="space-y-6">
         <input type="hidden" name="songId" value={song.id} />
