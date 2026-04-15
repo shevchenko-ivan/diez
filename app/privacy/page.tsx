@@ -4,6 +4,7 @@ import { SiteFooter } from "@/shared/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Політика конфіденційності — Diez",
+  description: "Політика конфіденційності Diez. Як ми збираємо, використовуємо та захищаємо ваші персональні дані.",
   alternates: { canonical: "/privacy" },
 };
 

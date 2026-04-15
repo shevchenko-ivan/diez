@@ -87,7 +87,7 @@ export function SongViewer({ song }: { song: Song }) {
   const initAudio = () => {
     if (!audioContextRef.current) {
       const AudioContextClass =
-        window.AudioContext || (window as any).webkitAudioContext;
+        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       audioContextRef.current = new AudioContextClass();
     }
     if (audioContextRef.current.state === "suspended") {

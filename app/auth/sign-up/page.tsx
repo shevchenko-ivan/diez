@@ -3,6 +3,8 @@ import { SignUpForm } from "@/components/sign-up-form";
 
 export const metadata = {
   title: "Реєстрація — Diez",
+  description: "Зареєструйтесь на Diez — безкоштовній платформі акордів для гітари. Зберігайте пісні та діліться акордами.",
+  robots: { index: false, follow: true },
 };
 
 export default function Page() {

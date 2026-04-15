@@ -3,6 +3,8 @@ import { LoginForm } from "@/components/login-form";
 
 export const metadata = {
   title: "Вхід — Diez",
+  description: "Увійдіть до Diez — платформи гітарних акордів. Зберігайте улюблені пісні та додавайте акорди.",
+  robots: { index: false, follow: true },
 };
 
 export default function Page() {

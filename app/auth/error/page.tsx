@@ -1,15 +1,30 @@
 import { Suspense } from "react";
 import { Navbar } from "@/shared/components/Navbar";
 
+const ERROR_MESSAGES: Record<string, string> = {
+  access_denied: "Доступ заборонено",
+  server_error: "Помилка сервера",
+  invalid_request: "Невірний запит",
+  unauthorized_client: "Неавторизований клієнт",
+  unsupported_response_type: "Непідтримуваний тип відповіді",
+  invalid_scope: "Невірна область доступу",
+  temporarily_unavailable: "Сервіс тимчасово недоступний",
+  otp_expired: "Код підтвердження закінчився",
+  email_not_confirmed: "Електронну пошту не підтверджено",
+};
+
 async function ErrorContent({
   searchParams,
 }: {
   searchParams: Promise<{ error: string }>;
 }) {
   const params = await searchParams;
+  const message = params?.error
+    ? ERROR_MESSAGES[params.error] ?? "Сталася помилка автентифікації"
+    : "Сталася невідома помилка.";
   return (
     <p className="text-sm font-medium opacity-60" style={{ color: "var(--text-muted)" }}>
-      {params?.error ? `Код помилки: ${params.error}` : "Сталася невідома помилка."}
+      {message}
     </p>
   );
 }

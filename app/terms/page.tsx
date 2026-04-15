@@ -4,6 +4,7 @@ import { SiteFooter } from "@/shared/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Умови використання — Diez",
+  description: "Умови використання платформи Diez. Правила користування сервісом акордів для гітари.",
   alternates: { canonical: "/terms" },
 };
 

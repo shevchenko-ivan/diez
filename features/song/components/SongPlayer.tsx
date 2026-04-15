@@ -32,8 +32,7 @@ function getBars(seed: string, count = 42): number[] {
 
 export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YT.Player | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [ready, setReady] = useState(false);
@@ -110,7 +109,11 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
     setPlayBtnAnim("press");
     setTimeout(() => setPlayBtnAnim("launch"), 100);
     setTimeout(() => setPlayBtnAnim("idle"), 400);
-    playing ? playerRef.current?.pauseVideo() : playerRef.current?.playVideo();
+    if (playing) {
+      playerRef.current?.pauseVideo();
+    } else {
+      playerRef.current?.playVideo();
+    }
   };
 
   const skip = (secs: number) => {

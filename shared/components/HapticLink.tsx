@@ -14,7 +14,7 @@ interface HapticLinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElem
 export function HapticLink({ children, hapticType = "light", onClick, ...props }: HapticLinkProps) {
   const { trigger, strum } = useHaptics();
 
-  const handleHaptic = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleHaptic = () => {
     // We do NOT call e.preventDefault() here
     if (hapticType === "strum") {
       strum();
@@ -27,8 +27,8 @@ export function HapticLink({ children, hapticType = "light", onClick, ...props }
     <Link
       {...props}
       onClick={(e) => {
-        handleHaptic(e);
-        onClick?.(e as any);
+        handleHaptic();
+        onClick?.(e as React.MouseEvent<HTMLAnchorElement>);
       }}
       onPointerDown={() => {
         // Trigger on pointer down for snappier feel, still doesn't block click

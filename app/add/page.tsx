@@ -7,6 +7,8 @@ import { getAllArtists } from "@/features/artist/services/artists";
 
 export const metadata = {
   title: "Додати пісню — Diez",
+  description: "Додайте нову пісню з акордами до каталогу Diez. Діліться гітарними акордами з українською спільнотою музикантів.",
+  robots: { index: false, follow: false },
 };
 
 export default async function AddSongPage() {
