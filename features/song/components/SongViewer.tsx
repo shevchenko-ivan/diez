@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Play, Square, Music } from "lucide-react";
-import { transposeChord, ChordPanel, ChordDiagram, ChordHover, lookupChord, useVoicings } from "./ChordDiagram";
+import { Play, Square, Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp } from "lucide-react";
+import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { suggestCapo } from "@/features/song/data/chord-templates";
 import { SongPlayer } from "./SongPlayer";
 import { TunerWidget } from "@/features/tuner/components/TunerWidget";
@@ -130,12 +130,6 @@ export function SongViewer({ song }: { song: Song }) {
     return () => clearInterval(timer);
   }, [isPlayingStrum, song.strumming, song.tempo, trigger]);
 
-  // Mobile chord panel — deduplicated chords
-  const mobileChordItems = song.chords.map((chord) => {
-    const transposed = transposeChord(chord, transpose - capo);
-    return { chord, transposed };
-  });
-
   return (
     <div className="relative">
       {/* ── 3-column grid (desktop) ───────────────────────────────────────── */}
@@ -155,55 +149,34 @@ export function SongViewer({ song }: { song: Song }) {
 
         {/* ── CENTER: Lyrics ───────────────────────────────────────────────── */}
         <div>
-          {/* Mobile: horizontal chord scroll */}
-          <div className="lg:hidden mb-4 overflow-x-auto scrollbar-none">
-            <div className="flex gap-3 pb-2">
-              {mobileChordItems.map(({ chord, transposed }) => {
-                const defs = lookupChord(transposed);
-                const def = defs?.[0];
-                if (!def) {
-                  return (
-                    <div
-                      key={chord}
-                      className="flex-shrink-0 flex flex-col items-center"
-                    >
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: "bold",
-                          color: "var(--text)",
-                        }}
-                      >
-                        {transposed}
-                      </span>
-                      <div
-                        style={{
-                          width: 52,
-                          height: 62,
-                          border: "1px dashed currentColor",
-                          borderRadius: 6,
-                          opacity: 0.2,
-                        }}
-                      />
-                    </div>
-                  );
-                }
-                return (
-                  <div key={chord} className="flex-shrink-0">
-                    <ChordDiagram
-                      name={transposed}
-                      def={def}
-                      width={52}
-                      height={70}
-                    />
-                  </div>
-                );
-              })}
+          {/* Mobile: collapsible chord panel */}
+          <details className="lg:hidden mb-4 te-surface rounded-2xl group">
+            <summary className="cursor-pointer select-none list-none px-4 py-3 flex items-center justify-between">
+              <span
+                className="text-[10px] font-bold tracking-widest uppercase"
+                style={{ color: "var(--text-muted)", opacity: 0.6 }}
+              >
+                Акорди ({song.chords.length})
+              </span>
+              <ChevronDown
+                size={14}
+                className="transition-transform group-open:rotate-180"
+                style={{ color: "var(--text-muted)" }}
+              />
+            </summary>
+            <div className="px-4 pb-4">
+              <ChordPanel
+                chords={song.chords}
+                transpose={transpose - capo}
+                voicingState={voicingState}
+                diagramWidth={140}
+                diagramHeight={175}
+              />
             </div>
-          </div>
+          </details>
 
           {/* Song sections */}
-          <div className="space-y-6">
+          <div className="space-y-2">
             {song.sections.map((section: SongSection, sIdx: number) => (
               <div key={sIdx} className="te-surface rounded-2xl overflow-hidden">
                 {section.label && (
@@ -264,7 +237,7 @@ export function SongViewer({ song }: { song: Song }) {
                                 <span
                                   className="font-mono font-bold whitespace-nowrap"
                                   style={{
-                                    fontSize: `${fontSize * 0.75}px`,
+                                    fontSize: `${fontSize * 0.95}px`,
                                     color: "var(--orange)",
                                     letterSpacing: "-0.02em",
                                   }}
@@ -286,7 +259,7 @@ export function SongViewer({ song }: { song: Song }) {
                         style={{
                           paddingTop: hasChords ? `${fontSize * 0.9}px` : 0,
                           paddingLeft: indent > 0 ? `${Math.min(indent, 4) * 0.6}em` : undefined,
-                          lineHeight: hasChords ? 2.4 : 1.55,
+                          lineHeight: hasChords ? 1.7 : 1.55,
                         }}
                       >
                         {Array.from({ length: Math.max(words.length, line.chords.length) }, (_, j) => {
@@ -312,7 +285,7 @@ export function SongViewer({ song }: { song: Song }) {
                                       position: "absolute",
                                       top: `-${fontSize * 0.9}px`,
                                       left: 0,
-                                      fontSize: `${fontSize * 0.75}px`,
+                                      fontSize: `${fontSize * 0.95}px`,
                                       color: "var(--orange)",
                                       letterSpacing: "-0.02em",
                                     }}
@@ -349,28 +322,28 @@ export function SongViewer({ song }: { song: Song }) {
             {/* Transpose */}
             <ControlBlock label="Транспоз">
               <div className="flex items-center justify-between">
-                <AdjusterButton onClick={() => setTranspose((p) => p - 1)}>−</AdjusterButton>
+                <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><ChevronDown size={16} strokeWidth={2} /></AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {transpose > 0 ? `+${transpose}` : transpose}
                 </span>
-                <AdjusterButton onClick={() => setTranspose((p) => p + 1)}>+</AdjusterButton>
+                <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><ChevronUp size={16} strokeWidth={2} /></AdjusterButton>
               </div>
             </ControlBlock>
 
             {/* Capo */}
             <ControlBlock label="Каподастр">
               <div className="flex items-center justify-between">
-                <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</AdjusterButton>
+                <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }} aria-label="Менше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {capo > 0 ? `${capo} лад` : "—"}
                 </span>
-                <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</AdjusterButton>
+                <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }} aria-label="Більше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
               </div>
               {bestCapo !== null && bestCapo !== capo && (
                 <button
@@ -388,8 +361,9 @@ export function SongViewer({ song }: { song: Song }) {
               <div className="flex items-center justify-between">
                 <AdjusterButton
                   onClick={() => setFontSize((p) => Math.max(12, p - 2))}
+                  aria-label="Менший текст"
                 >
-                  −
+                  <AArrowDown size={16} strokeWidth={2} />
                 </AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
@@ -399,8 +373,9 @@ export function SongViewer({ song }: { song: Song }) {
                 </span>
                 <AdjusterButton
                   onClick={() => setFontSize((p) => Math.min(28, p + 2))}
+                  aria-label="Більший текст"
                 >
-                  +
+                  <AArrowUp size={16} strokeWidth={2} />
                 </AdjusterButton>
               </div>
             </ControlBlock>
@@ -408,14 +383,14 @@ export function SongViewer({ song }: { song: Song }) {
             {/* Auto scroll */}
             <ControlBlock label="Прокрутка">
               <div className="flex items-center justify-between mb-2">
-                <AdjusterButton onClick={() => handleScrollSpeed(-1)}>−</AdjusterButton>
+                <AdjusterButton onClick={() => handleScrollSpeed(-1)} aria-label="Повільніше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {scrollSpeed}
                 </span>
-                <AdjusterButton onClick={() => handleScrollSpeed(1)}>+</AdjusterButton>
+                <AdjusterButton onClick={() => handleScrollSpeed(1)} aria-label="Швидше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
               </div>
               <TeButton
                 shape="pill"
@@ -520,21 +495,21 @@ export function SongViewer({ song }: { song: Song }) {
       <div className="lg:hidden mt-6 grid grid-cols-2 gap-3">
         <ControlBlock label="Транспоз">
           <div className="flex items-center justify-between">
-            <AdjusterButton onClick={() => setTranspose((p) => p - 1)}>−</AdjusterButton>
+            <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><ChevronDown size={16} strokeWidth={2} /></AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {transpose > 0 ? `+${transpose}` : transpose}
             </span>
-            <AdjusterButton onClick={() => setTranspose((p) => p + 1)}>+</AdjusterButton>
+            <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><ChevronUp size={16} strokeWidth={2} /></AdjusterButton>
           </div>
         </ControlBlock>
 
         <ControlBlock label="Каподастр">
           <div className="flex items-center justify-between">
-            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</AdjusterButton>
+            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }} aria-label="Менше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {capo > 0 ? capo : "—"}
             </span>
-            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</AdjusterButton>
+            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }} aria-label="Більше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
           </div>
           {bestCapo !== null && bestCapo !== capo && (
             <button
@@ -549,21 +524,21 @@ export function SongViewer({ song }: { song: Song }) {
 
         <ControlBlock label="Розмір">
           <div className="flex items-center justify-between">
-            <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))}>−</AdjusterButton>
+            <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))} aria-label="Менший текст"><AArrowDown size={16} strokeWidth={2} /></AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {fontSize}
             </span>
-            <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))}>+</AdjusterButton>
+            <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))} aria-label="Більший текст"><AArrowUp size={16} strokeWidth={2} /></AdjusterButton>
           </div>
         </ControlBlock>
 
         <ControlBlock label="Прокрутка">
           <div className="flex items-center justify-between mb-2">
-            <AdjusterButton onClick={() => handleScrollSpeed(-1)}>−</AdjusterButton>
+            <AdjusterButton onClick={() => handleScrollSpeed(-1)} aria-label="Повільніше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {scrollSpeed}
             </span>
-            <AdjusterButton onClick={() => handleScrollSpeed(1)}>+</AdjusterButton>
+            <AdjusterButton onClick={() => handleScrollSpeed(1)} aria-label="Швидше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
           </div>
           <TeButton
             shape="pill"

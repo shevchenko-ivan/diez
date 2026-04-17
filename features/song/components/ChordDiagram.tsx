@@ -45,6 +45,34 @@ interface ChordDiagramProps {
   height?: number;
 }
 
+// Compute finger assignments (1=index, 2=middle, 3=ring, 4=pinky).
+// Barre notes all get finger 1; remaining fretted notes are sorted by
+// (fret asc, string index asc) and assigned 2→3→4 in order.
+function computeFingers(strings: number[], barre?: number): (number | null)[] {
+  const fingers: (number | null)[] = strings.map((f) => (f > 0 ? 0 : null));
+  let next = 1;
+
+  if (barre !== undefined) {
+    const positions = strings.map((f, i) => (f === barre ? i : -1)).filter((i) => i >= 0);
+    if (positions.length >= 2) {
+      const [min, max] = [positions[0], positions[positions.length - 1]];
+      for (let i = min; i <= max; i++) {
+        if (strings[i] === barre) fingers[i] = 1;
+      }
+      next = 2;
+    }
+  }
+
+  const remaining: { idx: number; fret: number }[] = [];
+  strings.forEach((f, i) => {
+    if (fingers[i] === 0) remaining.push({ idx: i, fret: f });
+  });
+  remaining.sort((a, b) => a.fret - b.fret || a.idx - b.idx);
+  for (const { idx } of remaining) fingers[idx] = Math.min(next++, 4);
+
+  return fingers;
+}
+
 export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiagramProps) {
   const { strings, baseFret, barre } = def;
 
@@ -61,6 +89,8 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
   const barreRowIndex = barre !== undefined ? barre - baseFret : -1;
   const barreY = barre !== undefined ? fretY(barreRowIndex) : 0;
 
+  const fingers = computeFingers(strings, barre);
+
   return (
     <svg
       viewBox={`0 0 ${VB_W} ${VB_H}`}
@@ -72,7 +102,7 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
       {/* Chord name */}
       <text
         x={(STRING_LEFT + STRING_RIGHT) / 2}
-        y="12"
+        y="10"
         textAnchor="middle"
         fontSize="11"
         fontWeight="bold"
@@ -147,11 +177,12 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
             <circle
               key={`open-${i}`}
               cx={cx}
-              cy={21}
-              r={3.5}
+              cy={17}
+              r={3}
               fill="none"
               stroke="currentColor"
               strokeWidth="1.2"
+              opacity="0.7"
             />
           );
         }
@@ -160,11 +191,12 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
             <text
               key={`mute-${i}`}
               x={cx}
-              y={23}
+              y={20}
               textAnchor="middle"
-              fontSize="8"
+              fontSize="10"
+              fontWeight="bold"
               fill="currentColor"
-              opacity="0.5"
+              opacity="0.7"
               fontFamily="inherit"
             >
               ×
@@ -176,15 +208,28 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
 
       {/* Barre rectangle */}
       {barre !== undefined && barreMin !== -1 && (
-        <rect
-          x={stringX(barreMin) - 4}
-          y={barreY - FRET_GAP * 0.25}
-          width={stringX(barreMax) - stringX(barreMin) + 8}
-          height={FRET_GAP * 0.5}
-          rx={FRET_GAP * 0.25}
-          fill="currentColor"
-          opacity="0.85"
-        />
+        <>
+          <rect
+            x={stringX(barreMin) - 4}
+            y={barreY - FRET_GAP * 0.25}
+            width={stringX(barreMax) - stringX(barreMin) + 8}
+            height={FRET_GAP * 0.5}
+            rx={FRET_GAP * 0.25}
+            fill="currentColor"
+            opacity="0.85"
+          />
+          <text
+            x={(stringX(barreMin) + stringX(barreMax)) / 2}
+            y={barreY + 2}
+            textAnchor="middle"
+            fontSize="5.5"
+            fontWeight="bold"
+            fill="white"
+            fontFamily="inherit"
+          >
+            1
+          </text>
+        </>
       )}
 
       {/* Individual dots for fretted notes */}
@@ -203,13 +248,22 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
         const cy = fretY(rowIndex);
         const cx = stringX(i);
         return (
-          <circle
-            key={`dot-${i}`}
-            cx={cx}
-            cy={cy}
-            r={4.5}
-            fill="var(--orange)"
-          />
+          <g key={`dot-${i}`}>
+            <circle cx={cx} cy={cy} r={4.5} fill="var(--orange)" />
+            {fingers[i] !== null && (
+              <text
+                x={cx}
+                y={cy + 2}
+                textAnchor="middle"
+                fontSize="5.5"
+                fontWeight="bold"
+                fill="white"
+                fontFamily="inherit"
+              >
+                {fingers[i]}
+              </text>
+            )}
+          </g>
         );
       })}
     </svg>
@@ -270,7 +324,7 @@ function VoicingSwitcher({
   total,
   idx,
   setVoicingIdx,
-  fontSize = 10,
+  fontSize = 14,
 }: {
   chordName: string;
   total: number;
@@ -280,7 +334,7 @@ function VoicingSwitcher({
 }) {
   if (total <= 1) return null;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: -4, width: "100%", paddingLeft: 12 }}>
       <button
         onClick={() =>
           setVoicingIdx((prev) => ({
@@ -417,7 +471,7 @@ export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramW
   const { voicingIdx, setVoicingIdx } = voicingState || localState;
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-x-3 gap-y-6">
       {chords.map((chord) => {
         const transposed = transposeChord(chord, transpose);
         const defs = lookupChord(transposed);

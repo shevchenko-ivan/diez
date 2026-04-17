@@ -1,8 +1,9 @@
 "use client";
 
 import { HapticLink } from "@/shared/components/HapticLink";
-import { Heart } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
+import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
+import { SaveHeartButton } from "./SaveHeartButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
 
@@ -19,22 +20,7 @@ export interface SongCardProps {
   index?: number;
 }
 
-const difficultyConfig = {
-  easy:   { label: "Легка",   color: "text-[#30D158]", bg: "bg-[#30D158]/10" },
-  medium: { label: "Середня", color: "text-[#FF9F0A]", bg: "bg-[#FF9F0A]/10" },
-  hard:   { label: "Складна", color: "text-[#FF453A]", bg: "bg-[#FF453A]/10" },
-};
-
 export function SongCard({ ...props }: SongCardProps) {
-  const diff = difficultyConfig[props.difficulty];
-
-  // Функція збереження, що не пускає лінк далі
-  const handleSave = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Виклик хука мутації або попапа
-  };
-
   const href = props.slug
     ? `/songs/${props.slug}`
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
@@ -50,14 +36,14 @@ export function SongCard({ ...props }: SongCardProps) {
       <div className="w-full aspect-[4/3] relative overflow-hidden bg-[var(--surface)] border-b border-[rgba(0,0,0,0.05)]">
         {/* Cover */}
         {props.coverImage ? (
-          <img 
-            src={props.coverImage} 
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-            alt={props.title} 
+          <img
+            src={props.coverImage}
+            className="w-full h-full object-cover"
+            alt={props.title}
           />
         ) : (
           <div
-            className="w-full h-full transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full"
             style={{
               background: `linear-gradient(145deg, ${props.coverColor || '#C8D5E8'}CC, ${props.coverColor || '#C8D5E8'}66)`,
             }}
@@ -65,13 +51,10 @@ export function SongCard({ ...props }: SongCardProps) {
         )}
         
 
-        {/* Save/Favorite Button */}
-        <button 
-          onClick={handleSave}
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/20 backdrop-blur-md text-white/80 hover:text-white hover:bg-[#f43f5e] transition-colors z-10"
-        >
-          <Heart size={14} fill={props.isSaved ? "currentColor" : "none"} />
-        </button>
+        {/* Save to favorites (вибране) */}
+        {props.slug && (
+          <SaveHeartButton slug={props.slug} initialSaved={props.isSaved} />
+        )}
 
         {/* Chords Preview */}
         <div className="absolute bottom-2 left-2 flex gap-1 z-10">
@@ -94,9 +77,7 @@ export function SongCard({ ...props }: SongCardProps) {
         
         {/* Badges / Stats Row */}
         <div className="flex items-center gap-1.5 mt-auto flex-wrap">
-          <span className={`px-2 py-[2px] rounded text-[10px] font-bold uppercase tracking-wider ${diff.bg} ${diff.color}`}>
-            {diff.label}
-          </span>
+          <DifficultyBadge difficulty={props.difficulty} />
           {props.chords.length > 0 && (
             <>
               <span className="opacity-30 text-[10px]" style={{ color: "var(--text-muted)" }}>•</span>

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { type Metadata } from "next";
 import { getAllSongs } from "@/features/song/services/songs";
+import { getSavedSlugs } from "@/features/song/actions/saved";
 import { SongCard } from "@/features/song/components/SongCard";
 import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";
@@ -38,6 +39,7 @@ async function SongsContent({ searchParams }: SearchProps) {
   const difficulty = typeof resolvedParams.difficulty === "string" ? resolvedParams.difficulty : "";
 
   let songs = await getAllSongs({ sortBy: sort === "new" ? "created_at" : "views" });
+  const savedSlugs = await getSavedSlugs();
 
   // Search filter
   if (q) {
@@ -152,6 +154,7 @@ async function SongsContent({ searchParams }: SearchProps) {
               views={song.views}
               coverImage={song.coverImage}
               coverColor={song.coverColor}
+              isSaved={savedSlugs.has(song.slug)}
             />
           ))}
         </div>

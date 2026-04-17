@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { TeButton } from "@/shared/components/TeButton";
+import { SkipBack, SkipForward } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -247,12 +248,13 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
 
           {/* Skip back −10s */}
           <TeButton
-            shape="pill"
+            shape="circle"
+            size="sm"
             onClick={() => skip(-10)}
             disabled={!ready}
-            className="flex items-center justify-center"
+            aria-label="Назад 10с"
             style={{
-              width: 36, height: 36, borderRadius: "50%",
+              width: 36, height: 36,
               opacity: ready ? 1 : 0.35,
               cursor: ready ? "pointer" : "default",
               ...skipBackStyle,
@@ -287,12 +289,13 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
 
           {/* Skip forward +10s */}
           <TeButton
-            shape="pill"
+            shape="circle"
+            size="sm"
             onClick={() => skip(10)}
             disabled={!ready}
-            className="flex items-center justify-center"
+            aria-label="Вперед 10с"
             style={{
-              width: 36, height: 36, borderRadius: "50%",
+              width: 36, height: 36,
               opacity: ready ? 1 : 0.35,
               cursor: ready ? "pointer" : "default",
               ...skipFwdStyle,
@@ -323,18 +326,8 @@ function PauseIcon() {
   );
 }
 function SkipBackIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }}>
-      <polygon points="19 20 9 12 19 4 19 20" fill="currentColor" />
-      <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
+  return <SkipBack size={16} strokeWidth={2} fill="currentColor" style={{ color: "var(--text-mid)" }} />;
 }
 function SkipForwardIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }}>
-      <polygon points="5 4 15 12 5 20 5 4" fill="currentColor" />
-      <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
+  return <SkipForward size={16} strokeWidth={2} fill="currentColor" style={{ color: "var(--text-mid)" }} />;
 }

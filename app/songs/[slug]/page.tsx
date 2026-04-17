@@ -4,6 +4,7 @@ import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSongBySlug, getAllSongs } from "@/features/song/services/songs";
+import { getSavedSlugs } from "@/features/song/actions/saved";
 import { type Song } from "@/features/song/types";
 import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
@@ -17,6 +18,7 @@ import { slugify } from "@/lib/slugify";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteFooter } from "@/shared/components/SiteFooter";
+import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -61,6 +63,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
 
   const artistSlug = slugify(song.artist);
   const allSongs = await getAllSongs();
+  const savedSlugs = await getSavedSlugs();
   const otherSongs = allSongs
     .filter((s) => s.artist === song.artist && s.slug !== slug)
     .slice(0, 4);
@@ -140,7 +143,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
                 <Pencil size={14} />
               </TeButton>
             )}
-            <SongActions />
+            <SongActions slug={song.slug} isSaved={savedSlugs.has(song.slug)} />
           </div>
         </div>
 
@@ -181,37 +184,3 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
-function DifficultyBadge({ difficulty }: { difficulty: Song["difficulty"] }) {
-  const map = {
-    easy:   { label: "Easy",   color: "#10b981" },
-    medium: { label: "Medium", color: "#f59e0b" },
-    hard:   { label: "Hard",   color: "#ef4444" },
-  };
-  const { label, color } = map[difficulty];
-
-  return (
-    <div
-      className="flex items-center gap-1.5 px-2.5 py-1 te-inset"
-      style={{ borderRadius: "999px" }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          background: color,
-          display: "inline-block",
-          flexShrink: 0,
-        }}
-      />
-      <span
-        className="font-mono-te uppercase"
-        style={{ fontSize: "0.6rem", letterSpacing: "0.08em", color: "var(--text-muted)" }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}

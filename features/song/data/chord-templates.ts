@@ -208,7 +208,11 @@ function makeChordDef(strings: number[]): ChordDef {
       const minPos = barrePositions[0];
       const maxPos = barrePositions[barrePositions.length - 1];
       const spanAllFretted = strings.slice(minPos, maxPos + 1).every(f => f >= baseFret);
-      if (spanAllFretted) barre = baseFret;
+      // A barre implies the index finger covers strings from the low-E side,
+      // so open strings below the barre break the shape (e.g. A x02220, D xx0232
+      // are three separate dots, not a barre even though strings at baseFret are adjacent).
+      const noOpenBelow = strings.slice(0, minPos).every(f => f === -1);
+      if (spanAllFretted && noOpenBelow) barre = baseFret;
     }
   }
 
