@@ -13,10 +13,16 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
+  try {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
+    }
+  } catch (e) {
+    // redirect() throws NEXT_REDIRECT — re-throw so Next can handle it.
+    if (e && typeof e === "object" && "digest" in e) throw e;
+    const msg = e instanceof Error ? e.message : "OAuth exchange failed";
+    redirect(`/auth/error?error=${encodeURIComponent(msg)}`);
   }
 
   redirect(next);

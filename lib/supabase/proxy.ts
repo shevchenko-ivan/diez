@@ -44,8 +44,15 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  // Wrap in try/catch: a stale/missing refresh token otherwise throws and
+  // surfaces as a 500 (e.g. after failed OAuth attempts on mobile Safari).
+  let user: unknown = null;
+  try {
+    const { data } = await supabase.auth.getClaims();
+    user = data?.claims ?? null;
+  } catch {
+    user = null;
+  }
 
   // Public routes — accessible without login.
   // Must match the approved routing in CLAUDE.md exactly.
