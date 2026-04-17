@@ -101,11 +101,10 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
                   <TeButton
                     shape="pill"
                     href={`/admin/artists/edit?id=${artist.id}`}
-                    icon={Pencil}
-                    iconSize={12}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold shrink-0"
                     style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
                   >
+                    <Pencil size={12} />
                     Редагувати
                   </TeButton>
                 )}

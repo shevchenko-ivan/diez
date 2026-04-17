@@ -79,7 +79,8 @@ async function ProfileDashboard() {
         </div>
 
         <div className="te-surface flex flex-col p-4" style={{ borderRadius: "1.5rem" }}>
-          <TeButton shape="pill" href="/add" icon={Plus} iconSize={16} className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+          <TeButton shape="pill" href="/add" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+            <Plus size={16} strokeWidth={1.8} />
             Додати нову пісню
           </TeButton>
           <button disabled className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1 hover:bg-[var(--surface-active)]" style={{ color: "var(--text)", transition: "background 0.2s" }}>

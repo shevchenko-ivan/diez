@@ -113,7 +113,8 @@ export default async function EditArtistPage({
           </FormField>
 
           <div className="pt-2 flex justify-end">
-            <TeButton shape="pill" type="submit" icon={Save} iconSize={16} className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+            <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+              <Save size={16} />
               ЗБЕРЕГТИ
             </TeButton>
           </div>
