@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { slugify } from "@/lib/slugify";
+import { parseLyricsWithChords } from "../lib/parseLyrics";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -15,10 +16,43 @@ function assertUuid(value: string | null | undefined, label = "ID"): string {
   return value;
 }
 
+const STRUM_VALUES = new Set(["D", "U", "Dx", "Ux"]);
+
+function parseStrumming(value: string | null | undefined): string[] | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return null;
+    const clean = parsed.filter((s): s is string => typeof s === "string" && STRUM_VALUES.has(s));
+    return clean.length > 0 ? clean : null;
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!value.startsWith("https://") && !value.startsWith("http://")) return null;
   return value;
+}
+
+// Extract an 11-char YouTube video ID from any of:
+// - bare ID                               (LIqeDVeWeHY)
+// - https://youtu.be/LIqeDVeWeHY?si=...
+// - https://www.youtube.com/watch?v=LIqeDVeWeHY&...
+// - https://www.youtube.com/embed/LIqeDVeWeHY
+// - https://www.youtube.com/shorts/LIqeDVeWeHY
+// Returns null if nothing looks like a YouTube ID.
+function extractYoutubeId(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const v = value.trim();
+  if (!v) return null;
+  // Bare ID — 11 chars of [A-Za-z0-9_-]
+  if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+  // Try to pull from a URL
+  const m =
+    v.match(/(?:youtu\.be\/|v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
 }
 
 async function requireAdmin(): Promise<string> {
@@ -37,268 +71,6 @@ async function requireAdmin(): Promise<string> {
   return user.id;
 }
 
-// Matches a single chord token: Am, C#m7, Bbmaj7, F/C, Gsus4, etc.
-const CHORD_TOKEN_RE = /^[A-G][b#]?(m|maj|min|dim|aug|sus|add)?[0-9]?(\/[A-G][b#]?)?$/;
-
-function isChordOnlyLine(text: string): boolean {
-  const tokens = text.trim().split(/\s+/);
-  return tokens.length > 0 && tokens.every((t) => CHORD_TOKEN_RE.test(t));
-}
-
-// Check if a line is chord-only (bare tokens or all in [brackets] with no lyrics)
-function isChordLine(text: string): boolean {
-  const trimmed = text.trim();
-  // Bare: "Am  Dm  F"
-  if (!trimmed.includes("[") && isChordOnlyLine(trimmed)) return true;
-  // Bracketed: "[Am] [Dm] [F]" — remove all [X] and check if only whitespace remains
-  const withoutBrackets = trimmed.replace(/\[[^\]]+\]/g, "").trim();
-  if (trimmed.includes("[") && withoutBrackets === "") return true;
-  return false;
-}
-
-// Extract chord names and their column positions from a chord-only line
-function extractChordPositions(text: string): { chord: string; col: number }[] {
-  const results: { chord: string; col: number }[] = [];
-  if (text.includes("[")) {
-    const re = /\[([^\]]+)\]/g;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      results.push({ chord: m[1], col: m.index });
-    }
-  } else {
-    const re = /\S+/g;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      results.push({ chord: m[0], col: m.index });
-    }
-  }
-  return results;
-}
-
-// Merge a chord-only line with the lyrics line below it.
-// Uses column positions to align chords above the correct words.
-function mergeChordAndLyricLines(
-  rawChordLine: string,
-  rawLyricLine: string,
-  allChords: Set<string>,
-): { chords: string[]; lyrics: string } {
-  const chordPositions = extractChordPositions(rawChordLine);
-  const indentMatch = rawLyricLine.match(/^(\s*)/);
-  const indent = indentMatch ? indentMatch[1].length : 0;
-  const words = rawLyricLine.trim().split(/\s+/);
-  const lyrics = words.join(" ");
-  const alignedChords: string[] = new Array(words.length).fill("");
-
-  // Find column of each word in the raw lyric line
-  const wordCols: number[] = [];
-  let searchFrom = 0;
-  for (const word of words) {
-    const idx = rawLyricLine.indexOf(word, searchFrom);
-    wordCols.push(idx >= 0 ? idx : searchFrom);
-    searchFrom = (idx >= 0 ? idx : searchFrom) + word.length;
-  }
-
-  const lastWordEnd = words.length > 0
-    ? wordCols[words.length - 1] + words[words.length - 1].length
-    : 0;
-
-  // Assign each chord to the word it's positioned above.
-  // If chord column is within a word's span → that word.
-  // If in a gap between words → the next word.
-  // If beyond all lyrics → add trailing spacer slots.
-  for (const { chord, col } of chordPositions) {
-    allChords.add(chord);
-
-    // Chord is beyond all lyrics text — add trailing spacers
-    if (words.length > 0 && col >= lastWordEnd) {
-      const gap = col - lastWordEnd;
-      const targetIdx = words.length + Math.max(0, Math.round(gap / 3));
-      while (alignedChords.length <= targetIdx) alignedChords.push("");
-      alignedChords[targetIdx] = chord;
-      continue;
-    }
-
-    let targetWord = 0;
-    for (let w = 0; w < words.length; w++) {
-      const wordStart = wordCols[w];
-      const wordEnd = wordStart + words[w].length;
-      if (col >= wordStart && col < wordEnd) {
-        targetWord = w;
-        break;
-      }
-      if (col < wordStart) {
-        targetWord = w;
-        break;
-      }
-      targetWord = w;
-    }
-    if (!alignedChords[targetWord]) {
-      alignedChords[targetWord] = chord;
-    }
-  }
-
-  return { chords: alignedChords, lyrics, ...(indent > 0 ? { indent } : {}) };
-}
-
-// Parse lyrics+chords text into sections format.
-// Supports: [Am]text notation, bare chord lines (Am Dm F),
-// and UG-style chord line + lyric line pairs with column alignment.
-// Chords are word-aligned: chords[j] corresponds to word j in lyrics.
-// Detect explicit section header: "Куплет 1:", "|Приспів|", etc.
-// Only these create new sections — empty lines do NOT split sections.
-const HEADER_COLON_RE = /^([^[\]]+):\s*$/;
-const HEADER_PIPE_RE = /^\|([^|]+)\|\s*$/;
-
-// Detect tab lines: e|--0--, B|--1--, etc. (standard 6-string tuning labels)
-const TAB_LINE_RE = /^[eEBGDA]\|[-0-9h p/\\~x().^sbt\s|]+$/;
-
-function parseLyricsWithChords(raw: string): {
-  sections: { label: string; lines: { chords: string[]; lyrics: string }[] }[];
-  chords: string[];
-} {
-  const allChords = new Set<string>();
-  const allLines = raw.split("\n");
-
-  // Group lines into sections based on explicit headers only
-  const sectionGroups: { label: string; dataLines: string[] }[] = [];
-  let currentGroup: { label: string; dataLines: string[] } | null = null;
-
-  for (const line of allLines) {
-    const trimmed = line.trim();
-
-    // Check for explicit section header
-    const colonMatch = trimmed.match(HEADER_COLON_RE);
-    const pipeMatch = trimmed.match(HEADER_PIPE_RE);
-
-    if (colonMatch || pipeMatch) {
-      // Save previous group
-      if (currentGroup) sectionGroups.push(currentGroup);
-      const label = (colonMatch ? colonMatch[1] : pipeMatch![1]).trim();
-      currentGroup = { label, dataLines: [] };
-      continue;
-    }
-
-    // Skip empty lines (visual break, not a section split)
-    if (!trimmed) {
-      // Preserve empty lines as markers for spacing
-      if (currentGroup && currentGroup.dataLines.length > 0) {
-        currentGroup.dataLines.push("");
-      }
-      continue;
-    }
-
-    // Start default section if none exists
-    if (!currentGroup) {
-      currentGroup = { label: "", dataLines: [] };
-    }
-    currentGroup.dataLines.push(line);
-  }
-  if (currentGroup) sectionGroups.push(currentGroup);
-
-  // If no explicit headers, label as empty (no header shown)
-  // If only one section with no label, keep it unlabeled
-  const sections = sectionGroups.map((group) => {
-    const dataLines = group.dataLines.filter((l) => l.trim());
-
-    // Step 0: extract tab blocks (consecutive TAB_LINE_RE matches → joined into tab string)
-    const tabBlocks: string[] = [];
-    const nonTabLines: string[] = [];
-    let tabAccum: string[] = [];
-
-    for (const line of dataLines) {
-      if (TAB_LINE_RE.test(line.trim())) {
-        tabAccum.push(line.trimEnd());
-      } else {
-        if (tabAccum.length >= 4) {
-          // Valid tab block (at least 4 of 6 strings)
-          tabBlocks.push(tabAccum.join("\n"));
-        } else {
-          // Not enough lines for a tab — treat as regular text
-          nonTabLines.push(...tabAccum);
-        }
-        tabAccum = [];
-        nonTabLines.push(line);
-      }
-    }
-    // Flush remaining
-    if (tabAccum.length >= 4) {
-      tabBlocks.push(tabAccum.join("\n"));
-    } else {
-      nonTabLines.push(...tabAccum);
-    }
-
-    const tab = tabBlocks.length > 0 ? tabBlocks.join("\n\n") : undefined;
-
-    // Step 1: parse each line individually
-    type ParsedLine = { chords: string[]; lyrics: string; raw: string; chordOnly: boolean };
-    const parsed: ParsedLine[] = nonTabLines.map((line) => {
-      // Chord-only line (bare or bracketed)
-      if (isChordLine(line)) {
-        const positions = extractChordPositions(line);
-        const chords = positions.map((p) => p.chord);
-        chords.forEach((c) => allChords.add(c));
-        return { chords, lyrics: "", raw: line, chordOnly: true };
-      }
-
-      // [Am]text notation — word-aligned output
-      const lineIndentMatch = line.match(/^(\s*)/);
-      const lineIndent = lineIndentMatch ? lineIndentMatch[1].length : 0;
-      const parts = line.split(/\[([^\]]+)\]/);
-      let pendingChord = "";
-      const wordChords: { word: string; chord: string }[] = [];
-
-      for (let i = 0; i < parts.length; i++) {
-        if (i % 2 === 1) {
-          pendingChord = parts[i];
-          allChords.add(parts[i]);
-        } else {
-          const textWords = parts[i].split(/\s+/).filter(Boolean);
-          textWords.forEach((word, wIdx) => {
-            if (wIdx === 0 && pendingChord) {
-              wordChords.push({ word, chord: pendingChord });
-              pendingChord = "";
-            } else {
-              wordChords.push({ word, chord: "" });
-            }
-          });
-        }
-      }
-
-      if (pendingChord && wordChords.length > 0) {
-        wordChords[wordChords.length - 1].chord = pendingChord;
-      }
-
-      const lyrics = wordChords.map((wc) => wc.word).join(" ");
-      const chords = wordChords.map((wc) => wc.chord);
-      return { chords, lyrics, ...(lineIndent > 0 ? { indent: lineIndent } : {}), raw: line, chordOnly: false };
-    });
-
-    // Step 2: merge chord-only + lyrics-only pairs (UG-style)
-    const lines: { chords: string[]; lyrics: string }[] = [];
-    for (let i = 0; i < parsed.length; i++) {
-      const curr = parsed[i];
-      const next = parsed[i + 1];
-
-      if (
-        curr.chordOnly &&
-        next &&
-        !next.chordOnly &&
-        next.lyrics &&
-        next.chords.every((c) => !c)
-      ) {
-        // Chord line followed by lyrics-only line → merge by column alignment
-        lines.push(mergeChordAndLyricLines(curr.raw, next.raw, allChords));
-        i++; // skip next line (already merged)
-      } else {
-        lines.push({ chords: curr.chords, lyrics: curr.lyrics });
-      }
-    }
-
-    return { label: group.label, lines, ...(tab ? { tab } : {}) };
-  });
-
-  return { sections, chords: Array.from(allChords) };
-}
 
 // ─── Create song ──────────────────────────────────────────────────────────────
 
@@ -310,6 +82,9 @@ export async function createSong(formData: FormData) {
   const genre = (formData.get("genre") as string)?.trim() || "Інше";
   const key = (formData.get("key") as string)?.trim() || "Am";
   const difficulty = (formData.get("difficulty") as string) || "easy";
+  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const time_signature = (formData.get("time_signature") as string)?.trim() || null;
+  const strumming = parseStrumming(formData.get("strumming") as string);
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   if (!title || !artist || !lyricsRaw) {
@@ -337,6 +112,9 @@ export async function createSong(formData: FormData) {
     genre,
     key,
     difficulty,
+    tempo,
+    time_signature,
+    strumming,
     chords: parsed.chords,
     sections: { raw: lyricsRaw, sections: parsed.sections },
     status: "published", // Admin-created songs are published immediately in MVP
@@ -400,11 +178,14 @@ export async function updateSong(formData: FormData) {
   const key = (formData.get("key") as string)?.trim() || undefined;
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
   const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const time_signature = (formData.get("time_signature") as string)?.trim() || null;
   const difficulty = (formData.get("difficulty") as string) || null;
   const status = (formData.get("status") as string) || null;
   const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
   const cover_color = (formData.get("cover_color") as string)?.trim() || null;
-  const youtube_id = (formData.get("youtube_id") as string)?.trim() || null;
+  const youtube_id = extractYoutubeId(formData.get("youtube_id") as string);
+  const strummingRaw = formData.get("strumming");
+  const strumming = strummingRaw === null ? undefined : parseStrumming(strummingRaw as string);
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   if (!title || !artist) throw new Error("Назва та виконавець обов'язкові");
@@ -417,8 +198,9 @@ export async function updateSong(formData: FormData) {
   const { error } = await admin
     .from("songs")
     .update({
-      title, artist, album, genre, ...(key ? { key } : {}), capo, tempo,
+      title, artist, album, genre, ...(key ? { key } : {}), capo, tempo, time_signature,
       difficulty, status, cover_image, cover_color, youtube_id,
+      ...(strumming !== undefined ? { strumming } : {}),
       ...(parsed ? {
         sections: { raw: lyricsRaw, sections: parsed.sections },
         chords: parsed.chords,
@@ -433,7 +215,10 @@ export async function updateSong(formData: FormData) {
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
-  redirect("/admin/songs");
+
+  const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
+  const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
+  redirect(safeReturn);
 }
 
 // ─── Delete song (only from archive) ─────────────────────────────────────────

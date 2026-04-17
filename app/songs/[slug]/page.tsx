@@ -136,7 +136,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
           <div className="flex items-center gap-1.5 justify-end">
             {songId && (
               <TeButton
-                href={`/admin/songs/edit?id=${songId}`}
+                href={`/admin/songs/edit?id=${songId}&from=song`}
                 title="Редагувати"
                 style={{ width: 36, height: 36, color: "var(--orange)" }}
               >

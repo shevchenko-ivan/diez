@@ -1,9 +1,14 @@
 export type Difficulty = "easy" | "medium" | "hard";
 
+export interface ChordPlacement {
+  chord: string;
+  col: number;        // exact character column where the chord sits
+}
+
 export interface ChordLine {
-  chords: string[];   // aligned chord names, empty string = no chord above that word
-  lyrics: string;     // the lyric line
-  indent?: number;    // leading spaces count (for visual indentation)
+  chords: ChordPlacement[]; // chords with their exact column positions
+  lyrics: string;           // lyric text without leading whitespace
+  lyricsCol: number;        // column where lyrics start (preserves indent)
 }
 
 export interface SongSection {
@@ -21,6 +26,7 @@ export interface Song {
   key: string;
   capo?: number;
   tempo?: number;
+  timeSignature?: string;
   difficulty: Difficulty;
   chords: string[];
   views: number;

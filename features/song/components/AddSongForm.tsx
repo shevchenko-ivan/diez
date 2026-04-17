@@ -6,6 +6,7 @@ import { createSong } from "@/features/song/actions/admin";
 import { slugify } from "@/lib/slugify";
 import type { Artist } from "@/features/artist/services/artists";
 import { TeButton } from "@/shared/components/TeButton";
+import { StrummingEditor } from "@/features/song/components/StrummingEditor";
 
 const KEYS = ["C","Cm","C#","C#m","D","Dm","D#","D#m","E","Em","F","Fm","F#","F#m","G","Gm","G#","G#m","A","Am","A#","A#m","B","Bm"];
 
@@ -167,6 +168,44 @@ export function AddSongForm({ artists = [] }: Props) {
                 <option key={k} value={k}>{k}</option>
               ))}
             </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[auto_auto_1fr] gap-6 items-start">
+        <div className="space-y-2">
+          <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Темп (BPM)</label>
+          <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem", width: "120px" }}>
+            <input
+              name="tempo"
+              type="number"
+              min={40}
+              max={240}
+              defaultValue={90}
+              className="w-full bg-transparent outline-none text-sm font-medium font-mono"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Розмір</label>
+          <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem", width: "110px" }}>
+            <select
+              name="time_signature"
+              defaultValue="4/4"
+              className="w-full bg-transparent outline-none text-sm font-medium font-mono"
+              style={{ color: "var(--text)" }}
+            >
+              {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Бій / ритмічний малюнок</label>
+          <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
+            <StrummingEditor name="strumming" />
           </div>
         </div>
       </div>

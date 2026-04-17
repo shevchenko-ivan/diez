@@ -118,6 +118,24 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
     }
   };
 
+  // Global spacebar → toggle playback. Ignored when typing in input/textarea/select/contenteditable.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      const t = e.target as HTMLElement | null;
+      if (t) {
+        const tag = t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable) return;
+      }
+      if (!ready) return;
+      e.preventDefault();
+      togglePlay();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, playing]);
+
   const skip = (secs: number) => {
     if (!ready) return;
     setSkipAnim(secs < 0 ? "back" : "fwd");

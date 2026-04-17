@@ -253,7 +253,13 @@ export function voicingDifficulty(def: ChordDef): number {
     if (strings[i] === -1) mutedPenalty += 3;
   }
 
-  return fingerCount * 2 + stretch + baseFret * 1.1 + mutedPenalty;
+  // Wide stretches without a barre are awkward (e.g. first-position shapes
+  // spanning frets 1–4 with four independent fingers). Penalise more sharply
+  // than the usual +stretch so a full barre is preferred when a "low-position"
+  // non-barre shape has a big span.
+  const stretchPenalty = !barre && stretch >= 3 ? stretch * 1.5 : 0;
+
+  return fingerCount * 2 + stretch + stretchPenalty + baseFret * 1.1 + mutedPenalty;
 }
 
 function selectDiverse(defs: ChordDef[], max = 8): ChordDef[] {
@@ -261,7 +267,10 @@ function selectDiverse(defs: ChordDef[], max = 8): ChordDef[] {
 
   const buckets: Record<string, ChordDef[]> = { open: [], low: [], mid: [], high: [] };
   for (const d of defs) {
-    if (d.baseFret <= 2) buckets.open.push(d);
+    // Only true open-string voicings (with at least one open string) belong
+    // in the "open" bucket. Non-open first-position shapes go to "low".
+    const hasOpen = d.strings.some(f => f === 0);
+    if (hasOpen && d.baseFret <= 2) buckets.open.push(d);
     else if (d.baseFret <= 5) buckets.low.push(d);
     else if (d.baseFret <= 9) buckets.mid.push(d);
     else buckets.high.push(d);

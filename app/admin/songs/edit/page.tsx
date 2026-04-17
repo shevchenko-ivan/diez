@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { updateSong } from "@/features/song/actions/admin";
 import { AutoResizeTextarea } from "./AutoResizeTextarea";
 import { TeButton } from "@/shared/components/TeButton";
+import { StrummingEditor } from "@/features/song/components/StrummingEditor";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
@@ -109,7 +110,7 @@ const STATUSES = [
 export default async function EditSongPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<{ id?: string; from?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -120,13 +121,13 @@ export default async function EditSongPage({
     .from("profiles").select("is_admin").eq("id", user.id).single();
   if (!profile?.is_admin) redirect("/");
 
-  const { id } = await searchParams;
+  const { id, from } = await searchParams;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!id || !UUID_RE.test(id)) redirect("/admin/songs");
 
   const { data: song } = await admin
     .from("songs")
-    .select("id, slug, title, artist, album, genre, key, capo, tempo, difficulty, status, cover_image, cover_color, youtube_id, sections")
+    .select("id, slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, status, cover_image, cover_color, youtube_id, sections, strumming")
     .eq("id", id)
     .single();
 
@@ -140,6 +141,7 @@ export default async function EditSongPage({
 
       <form action={updateSong} className="space-y-6">
         <input type="hidden" name="songId" value={song.id} />
+        {from === "song" && <input type="hidden" name="returnTo" value={`/songs/${song.slug}`} />}
 
         <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
           <h1 className="text-3xl font-bold mb-1 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
@@ -178,12 +180,17 @@ export default async function EditSongPage({
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <FormField label="Капо (лад)">
                 <input name="capo" type="number" min={0} max={12} defaultValue={song.capo ?? ""} placeholder="0" className="field-input" style={{ color: "var(--text)" }} />
               </FormField>
               <FormField label="Темп (BPM)">
                 <input name="tempo" type="number" min={40} max={300} defaultValue={song.tempo ?? ""} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
+              </FormField>
+              <FormField label="Розмір">
+                <select name="time_signature" defaultValue={song.time_signature ?? "4/4"} className="field-input" style={{ color: "var(--text)" }}>
+                  {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
+                </select>
               </FormField>
               <FormField label="Складність">
                 <select name="difficulty" defaultValue={song.difficulty ?? "easy"} className="field-input" style={{ color: "var(--text)" }}>
@@ -221,10 +228,28 @@ export default async function EditSongPage({
                   />
                 </div>
               </FormField>
-              <FormField label="YouTube ID">
-                <input name="youtube_id" defaultValue={song.youtube_id ?? ""} placeholder="dQw4w9WgXcQ" className="field-input" style={{ color: "var(--text)" }} />
+              <FormField label="YouTube (ID або посилання)">
+                <input
+                  name="youtube_id"
+                  defaultValue={song.youtube_id ?? ""}
+                  placeholder="https://youtu.be/... або dQw4w9WgXcQ"
+                  className="field-input"
+                  style={{ color: "var(--text)" }}
+                />
               </FormField>
             </div>
+          </div>
+        </div>
+
+        <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+          <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+            Бій / ритмічний малюнок
+          </h2>
+          <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
+            <StrummingEditor
+              name="strumming"
+              defaultValue={(song.strumming as string[] | null) ?? undefined}
+            />
           </div>
         </div>
 

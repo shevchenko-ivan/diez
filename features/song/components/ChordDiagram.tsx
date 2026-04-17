@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   type ChordDef,
   CHORD_DB,
@@ -36,6 +36,110 @@ function fretY(rowIndex: number) {
   return FRET_TOP + (rowIndex + 0.5) * FRET_GAP;
 }
 
+// ─── Audio: play a chord strum ────────────────────────────────────────────────
+// Standard tuning frequencies for open strings (E2, A2, D3, G3, B3, E4 in Hz).
+const OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
+
+let sharedAudioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const Ctx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+  if (!Ctx) return null;
+  if (!sharedAudioCtx) sharedAudioCtx = new Ctx();
+  if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+  return sharedAudioCtx;
+}
+
+// Karplus–Strong plucked-string synthesis. Starts with a short noise burst,
+// runs it through a delay line with a one-pole low-pass in the feedback —
+// simulating the decay and harmonic behaviour of a real plucked string.
+// Buffers are cached per frequency (rounded) to avoid re-synthesis.
+const bufferCache = new Map<string, AudioBuffer>();
+
+function buildPluckBuffer(ctx: AudioContext, freq: number, seconds = 2.2): AudioBuffer {
+  const sr = ctx.sampleRate;
+  const key = `${sr}:${Math.round(freq * 100)}`;
+  const cached = bufferCache.get(key);
+  if (cached) return cached;
+
+  const N = Math.max(2, Math.floor(sr / freq)); // delay length in samples
+  const total = Math.floor(sr * seconds);
+  const buf = ctx.createBuffer(1, total, sr);
+  const out = buf.getChannelData(0);
+
+  // Initial noise burst (one period of white noise, slightly low-passed).
+  const delay = new Float32Array(N);
+  let prev = 0;
+  for (let i = 0; i < N; i++) {
+    const n = Math.random() * 2 - 1;
+    prev = prev * 0.5 + n * 0.5; // soften the attack a touch
+    delay[i] = prev;
+  }
+
+  // Damping: closer to 0.5 = brighter/longer; 0.495–0.499 sounds natural for guitar.
+  const damp = 0.498;
+  let idx = 0;
+  for (let i = 0; i < total; i++) {
+    const cur = delay[idx];
+    const next = delay[(idx + 1) % N];
+    const avg = (cur + next) * damp; // low-pass average → harmonic decay
+    out[i] = cur;
+    delay[idx] = avg;
+    idx = (idx + 1) % N;
+  }
+
+  // Normalise and apply gentle amplitude envelope (attack click softened,
+  // long natural release).
+  let peak = 0;
+  for (let i = 0; i < total; i++) if (Math.abs(out[i]) > peak) peak = Math.abs(out[i]);
+  const norm = peak > 0 ? 0.85 / peak : 1;
+  const attackSamples = Math.min(total, Math.floor(sr * 0.004));
+  for (let i = 0; i < total; i++) {
+    let env = 1;
+    if (i < attackSamples) env = i / attackSamples;
+    out[i] *= norm * env;
+  }
+
+  bufferCache.set(key, buf);
+  return buf;
+}
+
+function playChordStrum(strings: number[]) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const strumGap = 0.03; // seconds between successive strings
+
+  let voice = 0;
+  strings.forEach((fret, i) => {
+    if (fret < 0) return; // muted
+    const freq = OPEN_FREQS[i] * Math.pow(2, fret / 12);
+    const start = now + voice * strumGap;
+    voice++;
+
+    const src = ctx.createBufferSource();
+    src.buffer = buildPluckBuffer(ctx, freq);
+
+    // Slight low-pass softens harshness; stronger cutoff on bass strings
+    // because they excite more upper partials when modelled.
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = Math.max(2500, Math.min(6500, freq * 10));
+    lp.Q.value = 0.4;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.42, start);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + 2.1);
+
+    src.connect(lp).connect(g).connect(ctx.destination);
+    src.start(start);
+    src.stop(start + 2.2);
+  });
+}
+
 // ─── ChordDiagram ─────────────────────────────────────────────────────────────
 
 interface ChordDiagramProps {
@@ -52,23 +156,42 @@ function computeFingers(strings: number[], barre?: number): (number | null)[] {
   const fingers: (number | null)[] = strings.map((f) => (f > 0 ? 0 : null));
   let next = 1;
 
-  if (barre !== undefined) {
-    const positions = strings.map((f, i) => (f === barre ? i : -1)).filter((i) => i >= 0);
+  // Explicit barre from the chord template → finger 1 for the whole span.
+  let barreFret: number | undefined = barre;
+
+  // Auto-detect: if no barre but lowest fret has ≥2 strings and nothing open
+  // sits below it, treat that row as a natural barre played with finger 1.
+  if (barreFret === undefined) {
+    const fretted = strings.filter((f) => f > 0);
+    const minFret = fretted.length > 0 ? Math.min(...fretted) : 0;
+    const sameCount = fretted.filter((f) => f === minFret).length;
+    const firstFrettedIdx = strings.findIndex((f) => f > 0);
+    const noOpenBelow = strings.slice(0, firstFrettedIdx).every((f) => f === -1);
+    if (sameCount >= 2 && noOpenBelow && fretted.length >= 5) {
+      barreFret = minFret;
+    }
+  }
+
+  if (barreFret !== undefined) {
+    const positions = strings
+      .map((f, i) => (f === barreFret ? i : -1))
+      .filter((i) => i >= 0);
     if (positions.length >= 2) {
-      const [min, max] = [positions[0], positions[positions.length - 1]];
-      for (let i = min; i <= max; i++) {
-        if (strings[i] === barre) fingers[i] = 1;
-      }
+      for (const i of positions) fingers[i] = 1;
       next = 2;
     }
   }
 
-  const remaining: { idx: number; fret: number }[] = [];
-  strings.forEach((f, i) => {
-    if (fingers[i] === 0) remaining.push({ idx: i, fret: f });
-  });
-  remaining.sort((a, b) => a.fret - b.fret || a.idx - b.idx);
-  for (const { idx } of remaining) fingers[idx] = Math.min(next++, 4);
+  // Remaining strings get individual finger numbers, sorted by fret asc
+  // then by string index. Each string gets its own finger (up to 4).
+  const remaining = strings
+    .map((fret, idx) => ({ idx, fret }))
+    .filter(({ idx, fret }) => fret > 0 && fingers[idx] === 0)
+    .sort((a, b) => a.fret - b.fret || a.idx - b.idx);
+
+  for (const { idx } of remaining) {
+    fingers[idx] = Math.min(next++, 4);
+  }
 
   return fingers;
 }
@@ -97,9 +220,14 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
       width={width}
       height={height}
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", overflow: "visible" }}
+      style={{ display: "block", overflow: "visible", cursor: "pointer" }}
+      onClick={(e) => {
+        e.stopPropagation();
+        playChordStrum(strings);
+      }}
     >
-      {/* Chord name */}
+      <title>Програти {name}</title>
+      {/* Chord name + play icon (icon sits right next to the name) */}
       <text
         x={(STRING_LEFT + STRING_RIGHT) / 2}
         y="10"
@@ -110,6 +238,15 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
         fontFamily="inherit"
       >
         {name}
+        <tspan
+          dx="3"
+          fontSize="7"
+          fontWeight="normal"
+          fill="var(--orange)"
+          style={{ pointerEvents: "none" }}
+        >
+          ▶
+        </tspan>
       </text>
 
       {/* Nut (thick rect at top when baseFret === 1) */}
@@ -295,14 +432,16 @@ export type VoicingState = {
 };
 
 export function useVoicings(songSlug?: string): VoicingState {
-  const [voicingIdx, setVoicingIdxRaw] = useState<Record<string, number>>(() => {
-    if (!songSlug || typeof window === "undefined") return {};
+  // Always start empty to match SSR output; hydrate from localStorage after mount.
+  const [voicingIdx, setVoicingIdxRaw] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!songSlug) return;
     try {
-      return JSON.parse(localStorage.getItem(storageKey(songSlug)) || "{}");
-    } catch {
-      return {};
-    }
-  });
+      const saved = JSON.parse(localStorage.getItem(storageKey(songSlug)) || "{}");
+      if (saved && typeof saved === "object") setVoicingIdxRaw(saved);
+    } catch {}
+  }, [songSlug]);
 
   const setVoicingIdx = useCallback((updater: (prev: Record<string, number>) => Record<string, number>) => {
     setVoicingIdxRaw((prev) => {

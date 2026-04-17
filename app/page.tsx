@@ -25,12 +25,13 @@ export const metadata: Metadata = {
 const TOPICS = [
   { slug: "campfire",    icon: "🔥", label: "Біля вогнища",       description: "Класика для посиденьок" },
   { slug: "ukrainian",   icon: "🇺🇦", label: "Українська класика",  description: "Пісні, які знає кожен" },
-  { slug: "movies",      icon: "🎬", label: "З фільмів",           description: "Саундтреки з кіно" },
+  { slug: "screen",      icon: "🎬", label: "З кіно та серіалів",  description: "Саундтреки, що запамʼяталися" },
   { slug: "games",       icon: "🎮", label: "З відеоігор",          description: "Stalker, Відьмак, інші" },
   { slug: "beginner",    icon: "🎸", label: "Для початківців",      description: "Прості акорди" },
   { slug: "rock",        icon: "🤘", label: "Рок-хіти",            description: "Найкращі рок-пісні" },
   { slug: "romantic",    icon: "💕", label: "Романтичні",           description: "Для настрою" },
-  { slug: "series",      icon: "📺", label: "З серіалів",           description: "Пісні з серіалів" },
+  { slug: "acoustic",    icon: "🎧", label: "Акустика",             description: "Тихо і по-домашньому" },
+  { slug: "summer",      icon: "🌻", label: "Літні вайби",          description: "Для сонячних днів" },
 ];
 
 export default async function HomePage() {
@@ -99,7 +100,7 @@ export default async function HomePage() {
         {/* ── 2. Популярні пісні ───────────────────────────────────────────── */}
         {trending.length > 0 && (
           <section className="mb-16">
-            <SectionHeader title="Зараз грають найчастіше" href="/songs?sort=popular" />
+            <SectionHeader title="Топ популярних" href="/songs?sort=popular" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {trending.map((s, i) => (
                 <SongCard

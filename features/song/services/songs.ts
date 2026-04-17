@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type Difficulty } from "../types";
 import { hasEnvVars } from "@/lib/utils";
+import { parseLyricsWithChords } from "../lib/parseLyrics";
 
 // Public read-only client — no auth needed for published song reads.
 function getClient() {
@@ -12,7 +13,21 @@ function getClient() {
 }
 
 const SONG_COLUMNS =
-  "slug, title, artist, album, genre, key, capo, tempo, difficulty, chords, views, sections, strumming, cover_image, cover_color, youtube_id";
+  "slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, chords, views, sections, strumming, cover_image, cover_color, youtube_id";
+
+// Re-parse sections from the stored `raw` text so old rows (saved in the
+// previous word-aligned format) render with the new column-preserving parser.
+function resolveSections(value: unknown): SongSection[] {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.raw === "string") {
+      return parseLyricsWithChords(obj.raw).sections;
+    }
+    if (Array.isArray(obj.sections)) return obj.sections as SongSection[];
+  }
+  if (Array.isArray(value)) return value as SongSection[];
+  return [];
+}
 
 function mapRow(row: Record<string, unknown>): Song {
   return {
@@ -24,12 +39,11 @@ function mapRow(row: Record<string, unknown>): Song {
     key: row.key as string,
     capo: (row.capo as number | null) ?? undefined,
     tempo: (row.tempo as number | null) ?? undefined,
+    timeSignature: (row.time_signature as string | null) ?? undefined,
     difficulty: row.difficulty as Difficulty,
     chords: row.chords as string[],
     views: row.views as number,
-    sections: Array.isArray(row.sections)
-      ? (row.sections as SongSection[])
-      : ((row.sections as Record<string, unknown>)?.sections as SongSection[]) ?? [],
+    sections: resolveSections(row.sections),
     strumming: (row.strumming as Song["strumming"] | null) ?? undefined,
     coverImage: (row.cover_image as string | null) ?? undefined,
     coverColor: (row.cover_color as string | null) ?? undefined,
