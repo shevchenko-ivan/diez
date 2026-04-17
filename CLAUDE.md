@@ -116,7 +116,7 @@ lib/supabase/
 - `forgot-password` і `update-password` сторінки отримали Navbar + фон
 - Фікс редіректу `update-password` → `/profile`
 - `PageShell`, `PageHeader` — unified app shell і page headers
-- `AdminTable`, `DifficultyBadge`, `FormField`, `EmptyState`, `LoadingState` — shared компоненти
+- `AdminTable`, `DifficultyBadge`, `FormField`, `EmptyState`, `LoadingState`, `ErrorState`, `StatusBadge` — shared компоненти
 - `SongCard` — прибрано фейковий рейтинг, уніфіковано мітки складності
 - `not-found.tsx` — 404 сторінка
 - `/auth/error` — переписано на TE design system, українською
@@ -131,14 +131,14 @@ lib/supabase/
 
 Goal: make existing UI minimal but coherent. No redesign — align patterns across pages.
 
-1. App shell + page headers
+1. ✅ App shell + page headers
 2. ✅ Button variants — `te-btn-orange` уніфікований в auth формах
 3. ✅ Form patterns — auth форми на TE design system
-4. Status chips/badges (published / draft / archived)
-5. Table/list row patterns
-6. Card/detail patterns
-7. Loading / empty / error states
-8. Admin UI consistency
+4. ✅ Status chips/badges — `StatusBadge` (5 станів) + `DifficultyBadge`
+5. ✅ Table/list row patterns — `AdminTable`, `AdminTh`, `AdminTr`
+6. ✅ Card/detail patterns — `SongCard`, `ArtistCard`
+7. ✅ Loading / empty / error states — `LoadingState`, `EmptyState`, `ErrorState`
+8. ✅ Admin UI consistency — dashboard, таблиці, форми уніфіковані
 
 ---
 

@@ -6,6 +6,7 @@ import { LoadingState } from "@/shared/components/LoadingState";
 import { SongCard } from "@/features/song/components/SongCard";
 import { LogOut, Settings, Heart, Plus, User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import { TeButton } from "@/shared/components/TeButton";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Suspense } from "react";
@@ -78,9 +79,9 @@ async function ProfileDashboard() {
         </div>
 
         <div className="te-surface flex flex-col p-4" style={{ borderRadius: "1.5rem" }}>
-          <Link href="/add" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1 te-btn-orange">
-            <Plus size={16} /> Додати нову пісню
-          </Link>
+          <TeButton shape="pill" href="/add" icon={Plus} iconSize={16} className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+            Додати нову пісню
+          </TeButton>
           <button disabled className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1 hover:bg-[var(--surface-active)]" style={{ color: "var(--text)", transition: "background 0.2s" }}>
             <Settings size={16} style={{ color: "var(--text-muted)" }} /> Налаштування
           </button>

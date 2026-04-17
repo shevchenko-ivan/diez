@@ -8,34 +8,9 @@ import { transposeChord, ChordPanel, ChordDiagram, ChordHover, lookupChord, useV
 import { suggestCapo } from "@/features/song/data/chord-templates";
 import { SongPlayer } from "./SongPlayer";
 import { TunerWidget } from "@/features/tuner/components/TunerWidget";
-
-// ─── Helper sub-components ────────────────────────────────────────────────────
-
-function ControlBlock({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="te-surface p-3 rounded-2xl">
-      <p
-        className="text-[9px] font-bold tracking-widest uppercase mb-2 opacity-50"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {label}
-      </p>
-      {children}
-    </div>
-  );
-}
-
-function SmallBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="te-knob w-7 h-7 flex items-center justify-center text-sm font-bold active:scale-90 transition-transform"
-      style={{ borderRadius: "50%" }}
-    >
-      {children}
-    </button>
-  );
-}
+import { ControlBlock } from "@/shared/components/ControlBlock";
+import { AdjusterButton } from "@/shared/components/AdjusterButton";
+import { TeButton } from "@/shared/components/TeButton";
 
 // ─── SongViewer ───────────────────────────────────────────────────────────────
 
@@ -374,28 +349,28 @@ export function SongViewer({ song }: { song: Song }) {
             {/* Transpose */}
             <ControlBlock label="Транспоз">
               <div className="flex items-center justify-between">
-                <SmallBtn onClick={() => setTranspose((p) => p - 1)}>−</SmallBtn>
+                <AdjusterButton onClick={() => setTranspose((p) => p - 1)}>−</AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {transpose > 0 ? `+${transpose}` : transpose}
                 </span>
-                <SmallBtn onClick={() => setTranspose((p) => p + 1)}>+</SmallBtn>
+                <AdjusterButton onClick={() => setTranspose((p) => p + 1)}>+</AdjusterButton>
               </div>
             </ControlBlock>
 
             {/* Capo */}
             <ControlBlock label="Каподастр">
               <div className="flex items-center justify-between">
-                <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</SmallBtn>
+                <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {capo > 0 ? `${capo} лад` : "—"}
                 </span>
-                <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</SmallBtn>
+                <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</AdjusterButton>
               </div>
               {bestCapo !== null && bestCapo !== capo && (
                 <button
@@ -411,47 +386,48 @@ export function SongViewer({ song }: { song: Song }) {
             {/* Font size */}
             <ControlBlock label="Розмір">
               <div className="flex items-center justify-between">
-                <SmallBtn
+                <AdjusterButton
                   onClick={() => setFontSize((p) => Math.max(12, p - 2))}
                 >
                   −
-                </SmallBtn>
+                </AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {fontSize}
                 </span>
-                <SmallBtn
+                <AdjusterButton
                   onClick={() => setFontSize((p) => Math.min(28, p + 2))}
                 >
                   +
-                </SmallBtn>
+                </AdjusterButton>
               </div>
             </ControlBlock>
 
             {/* Auto scroll */}
             <ControlBlock label="Прокрутка">
               <div className="flex items-center justify-between mb-2">
-                <SmallBtn onClick={() => handleScrollSpeed(-1)}>−</SmallBtn>
+                <AdjusterButton onClick={() => handleScrollSpeed(-1)}>−</AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
                   style={{ color: "var(--text)" }}
                 >
                   {scrollSpeed}
                 </span>
-                <SmallBtn onClick={() => handleScrollSpeed(1)}>+</SmallBtn>
+                <AdjusterButton onClick={() => handleScrollSpeed(1)}>+</AdjusterButton>
               </div>
-              <button
+              <TeButton
+                shape="pill"
                 onClick={handleScrollToggle}
-                className="w-full te-key py-1.5 text-xs font-bold"
+                className="w-full py-1.5 text-xs font-bold"
                 style={{
                   borderRadius: "0.5rem",
                   color: scrollSpeed > 0 ? "var(--orange)" : "var(--text-muted)",
                 }}
               >
                 {scrollSpeed > 0 ? "■ Стоп" : "▶ Старт"}
-              </button>
+              </TeButton>
             </ControlBlock>
 
             {/* Strumming */}
@@ -461,7 +437,7 @@ export function SongViewer({ song }: { song: Song }) {
                   {song.strumming.map((hit, i) => (
                     <span
                       key={i}
-                      className="te-key text-xs w-6 h-6 flex items-center justify-center"
+                      className="te-pill-btn text-xs w-6 h-6 flex items-center justify-center"
                       style={{
                         fontSize: "10px",
                         color: hit.startsWith("D")
@@ -477,13 +453,14 @@ export function SongViewer({ song }: { song: Song }) {
                     </span>
                   ))}
                 </div>
-                <button
+                <TeButton
+                  shape="pill"
                   onClick={() => {
                     trigger("medium");
                     initAudio();
                     setIsPlayingStrum(!isPlayingStrum);
                   }}
-                  className="w-full te-key py-1.5 text-xs font-bold"
+                  className="w-full py-1.5 text-xs font-bold"
                   style={{
                     borderRadius: "0.5rem",
                     color: isPlayingStrum ? "var(--orange)" : "var(--text-muted)",
@@ -500,7 +477,7 @@ export function SongViewer({ song }: { song: Song }) {
                       Ритм
                     </>
                   )}
-                </button>
+                </TeButton>
               </ControlBlock>
             )}
 
@@ -508,14 +485,16 @@ export function SongViewer({ song }: { song: Song }) {
             {showTuner ? (
               <TunerWidget onClose={() => setShowTuner(false)} />
             ) : (
-              <button
+              <TeButton
+                shape="pill"
                 onClick={() => { trigger("light"); setShowTuner(true); }}
-                className="w-full te-key py-2.5 text-xs font-bold flex items-center justify-center gap-2"
+                icon={Music}
+                iconSize={14}
+                className="w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2"
                 style={{ borderRadius: "1rem", color: "var(--text-muted)" }}
               >
-                <Music size={14} />
                 Тюнер
-              </button>
+              </TeButton>
             )}
 
             {/* Audio player */}
@@ -541,21 +520,21 @@ export function SongViewer({ song }: { song: Song }) {
       <div className="lg:hidden mt-6 grid grid-cols-2 gap-3">
         <ControlBlock label="Транспоз">
           <div className="flex items-center justify-between">
-            <SmallBtn onClick={() => setTranspose((p) => p - 1)}>−</SmallBtn>
+            <AdjusterButton onClick={() => setTranspose((p) => p - 1)}>−</AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {transpose > 0 ? `+${transpose}` : transpose}
             </span>
-            <SmallBtn onClick={() => setTranspose((p) => p + 1)}>+</SmallBtn>
+            <AdjusterButton onClick={() => setTranspose((p) => p + 1)}>+</AdjusterButton>
           </div>
         </ControlBlock>
 
         <ControlBlock label="Каподастр">
           <div className="flex items-center justify-between">
-            <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</SmallBtn>
+            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }}>−</AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {capo > 0 ? capo : "—"}
             </span>
-            <SmallBtn onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</SmallBtn>
+            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }}>+</AdjusterButton>
           </div>
           {bestCapo !== null && bestCapo !== capo && (
             <button
@@ -570,46 +549,49 @@ export function SongViewer({ song }: { song: Song }) {
 
         <ControlBlock label="Розмір">
           <div className="flex items-center justify-between">
-            <SmallBtn onClick={() => setFontSize((p) => Math.max(12, p - 2))}>−</SmallBtn>
+            <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))}>−</AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {fontSize}
             </span>
-            <SmallBtn onClick={() => setFontSize((p) => Math.min(28, p + 2))}>+</SmallBtn>
+            <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))}>+</AdjusterButton>
           </div>
         </ControlBlock>
 
         <ControlBlock label="Прокрутка">
           <div className="flex items-center justify-between mb-2">
-            <SmallBtn onClick={() => handleScrollSpeed(-1)}>−</SmallBtn>
+            <AdjusterButton onClick={() => handleScrollSpeed(-1)}>−</AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {scrollSpeed}
             </span>
-            <SmallBtn onClick={() => handleScrollSpeed(1)}>+</SmallBtn>
+            <AdjusterButton onClick={() => handleScrollSpeed(1)}>+</AdjusterButton>
           </div>
-          <button
+          <TeButton
+            shape="pill"
             onClick={handleScrollToggle}
-            className="w-full te-key py-1.5 text-xs font-bold"
+            className="w-full py-1.5 text-xs font-bold"
             style={{
               borderRadius: "0.5rem",
               color: scrollSpeed > 0 ? "var(--orange)" : "var(--text-muted)",
             }}
           >
             {scrollSpeed > 0 ? "■ Стоп" : "▶ Старт"}
-          </button>
+          </TeButton>
         </ControlBlock>
       </div>
 
       {/* Mobile tuner button */}
       {!showTuner && (
         <div className="lg:hidden mt-3">
-          <button
+          <TeButton
+            shape="pill"
             onClick={() => { trigger("light"); setShowTuner(true); }}
-            className="w-full te-key py-2.5 text-xs font-bold flex items-center justify-center gap-2"
+            icon={Music}
+            iconSize={14}
+            className="w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2"
             style={{ borderRadius: "1rem", color: "var(--text-muted)" }}
           >
-            <Music size={14} />
             Тюнер
-          </button>
+          </TeButton>
         </div>
       )}
     </div>

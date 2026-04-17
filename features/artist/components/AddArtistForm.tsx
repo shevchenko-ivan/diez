@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Save, User } from "lucide-react";
 import { createArtist } from "@/features/artist/actions/admin";
 import { slugify } from "@/lib/slugify";
+import { TeButton } from "@/shared/components/TeButton";
 
 const GENRES = ["Рок", "Поп-рок", "Поп", "Інді", "Фолк", "Реп", "Електронна", "Шансон", "Народна", "Інше"];
 
@@ -105,9 +106,9 @@ export function AddArtistForm() {
       </div>
 
       <div className="pt-2 flex justify-end">
-        <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-          <Save size={16} /> ЗБЕРЕГТИ
-        </button>
+        <TeButton shape="pill" type="submit" icon={Save} iconSize={16} className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+          ЗБЕРЕГТИ
+        </TeButton>
       </div>
     </form>
   );

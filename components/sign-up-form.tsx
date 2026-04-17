@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { TeButton } from "@/shared/components/TeButton";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
@@ -93,13 +94,14 @@ export function SignUpForm() {
           </div>
         </div>
         {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
-        <button
+        <TeButton
+          shape="pill"
           type="submit"
           disabled={isLoading}
-          className="te-btn-orange w-full py-4 text-xs font-bold tracking-widest"
+          className="w-full py-4 text-xs font-bold tracking-widest"
         >
           {isLoading ? "Реєстрація..." : "ЗАРЕЄСТРУВАТИСЬ"}
-        </button>
+        </TeButton>
         <p className="text-center text-sm" style={{ color: "var(--text-muted)" }}>
           Вже є акаунт?{" "}
           <Link href="/auth/login" className="font-bold hover:underline" style={{ color: "var(--text)" }}>

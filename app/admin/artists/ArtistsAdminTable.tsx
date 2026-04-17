@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Pencil, Archive, Trash2, RotateCcw, User } from "lucide-react";
 import { AdminTable, AdminTh, AdminTr } from "@/shared/components/AdminTable";
+import { TeButton } from "@/shared/components/TeButton";
 import {
   archiveArtist,
   restoreArtist,
@@ -68,36 +69,45 @@ export function ArtistsAdminTable({ artists, tab }: Props) {
           </span>
           <div className="flex items-center gap-2 ml-auto">
             {tab === "active" ? (
-              <button
+              <TeButton
+                shape="pill"
+                icon={Archive}
+                iconSize={13}
                 onClick={() => bulkAction(bulkArchiveArtists)}
                 disabled={isPending}
-                className="te-key px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
                 style={{ borderRadius: "0.75rem", color: "var(--text-muted)" }}
               >
-                <Archive size={13} /> В архів
-              </button>
+                В архів
+              </TeButton>
             ) : (
               <>
-                <button
+                <TeButton
+                  shape="pill"
+                  icon={RotateCcw}
+                  iconSize={13}
                   onClick={() => bulkAction(bulkRestoreArtists)}
                   disabled={isPending}
-                  className="te-key px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
                   style={{ borderRadius: "0.75rem", color: "var(--text-muted)" }}
                 >
-                  <RotateCcw size={13} /> Відновити
-                </button>
-                <button
+                  Відновити
+                </TeButton>
+                <TeButton
+                  shape="pill"
+                  icon={Trash2}
+                  iconSize={13}
                   onClick={() => {
                     if (confirm(`Видалити ${selected.size} виконавців назавжди?`)) {
                       bulkAction(bulkDeleteArtists);
                     }
                   }}
                   disabled={isPending}
-                  className="te-key px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
                   style={{ borderRadius: "0.75rem", color: "var(--text-red, #ef4444)" }}
                 >
-                  <Trash2 size={13} /> Видалити
-                </button>
+                  Видалити
+                </TeButton>
               </>
             )}
           </div>
@@ -159,52 +169,65 @@ export function ArtistsAdminTable({ artists, tab }: Props) {
                     style={{ color: "var(--text)", minWidth: 0 }}
                   />
                 </div>
-                <button
+                <TeButton
+                  shape="pill"
                   type="submit"
-                  className="te-key px-3 py-1.5 text-xs font-bold tracking-widest shrink-0"
+                  className="px-3 py-1.5 text-xs font-bold tracking-widest shrink-0"
                   style={{ borderRadius: "0.75rem", color: "var(--orange)" }}
                 >
                   ОК
-                </button>
+                </TeButton>
               </form>
             </td>
             <td className="px-4 py-3 opacity-60 text-xs">{artist.genre ?? "—"}</td>
             <td className="px-4 py-3">
               <div className="flex items-center justify-end gap-1">
-                <Link
+                <TeButton
+                  shape="pill"
                   href={`/admin/artists/edit?id=${artist.id}`}
+                  icon={Pencil}
+                  iconSize={14}
                   title="Редагувати"
-                  className="p-2 te-key rounded-lg opacity-50 hover:opacity-100"
-                >
-                  <Pencil size={14} />
-                </Link>
+                  className="p-2 rounded-lg opacity-50 hover:opacity-100"
+                />
 
                 {tab === "active" ? (
                   <form action={archiveArtist}>
                     <input type="hidden" name="artistId" value={artist.id} />
-                    <button
+                    <TeButton
+                      shape="pill"
                       type="submit"
+                      icon={Archive}
+                      iconSize={14}
                       title="В архів"
-                      className="p-2 te-key rounded-lg opacity-50 hover:opacity-100"
-                    >
-                      <Archive size={14} />
-                    </button>
+                      className="p-2 rounded-lg opacity-50 hover:opacity-100"
+                    />
                   </form>
                 ) : (
                   <>
                     <form action={restoreArtist}>
                       <input type="hidden" name="artistId" value={artist.id} />
-                      <button type="submit" title="Відновити" className="p-2 te-key rounded-lg opacity-50 hover:opacity-100">
-                        <RotateCcw size={14} />
-                      </button>
+                      <TeButton
+                        shape="pill"
+                        type="submit"
+                        icon={RotateCcw}
+                        iconSize={14}
+                        title="Відновити"
+                        className="p-2 rounded-lg opacity-50 hover:opacity-100"
+                      />
                     </form>
                     <form action={deleteArtist} onSubmit={(e) => {
                       if (!confirm("Видалити назавжди?")) e.preventDefault();
                     }}>
                       <input type="hidden" name="artistId" value={artist.id} />
-                      <button type="submit" title="Видалити назавжди" className="p-2 te-key rounded-lg opacity-50 hover:opacity-100 hover:text-red-500">
-                        <Trash2 size={14} />
-                      </button>
+                      <TeButton
+                        shape="pill"
+                        type="submit"
+                        icon={Trash2}
+                        iconSize={14}
+                        title="Видалити назавжди"
+                        className="p-2 rounded-lg opacity-50 hover:opacity-100 hover:text-red-500"
+                      />
                     </form>
                   </>
                 )}

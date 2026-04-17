@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun } from "lucide-react";
+import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
+import { TeButton } from "@/shared/components/TeButton";
 
 const NAV_LINKS = [
-  { href: "/songs",             label: "Акорди" },
-  { href: "/artists",           label: "Виконавці" },
-  { href: "/chords",            label: "Визначити акорд" },
-  { href: "/tuner",             label: "Тюнер" },
-  { href: "/songs?sort=new",    label: "Новинки" },
   { href: "/songs?sort=popular",label: "Топ популярних" },
+  { href: "/artists",           label: "Виконавці" },
+  { href: "/tuner",             label: "Тюнер" },
+  { href: "/songs",             label: "Акорди" },
+  { href: "/songs?sort=new",    label: "Новинки" },
+  { href: "/chords",            label: "Визначити акорд" },
 ];
 
 interface NavUser {
@@ -86,7 +87,7 @@ export function Navbar() {
 
   return (
     <header className="px-6 py-4">
-      <nav className="max-w-6xl mx-auto flex items-center justify-between">
+      <nav className="max-w-6xl mx-auto flex items-center justify-between gap-4">
 
         {/* Logo */}
         <Link href="/" className="flex items-center flex-shrink-0">
@@ -97,31 +98,31 @@ export function Navbar() {
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-1">
           {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={item.href} className="te-key px-4 py-2 text-sm" style={{ color: "var(--text-mid)", fontWeight: 400 }}>
+            <Link key={item.href} href={item.href} className="px-3 py-2 text-sm transition-colors hover:opacity-70" style={{ color: "var(--text-mid)", fontWeight: 400 }}>
               {item.label}
             </Link>
           ))}
         </div>
 
         {/* Desktop right area */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-3">
 
-          {/* Theme toggle */}
-          <button
+          {/* Primary action — Створити */}
+          <TeButton shape="pill" href="/add" className="px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--orange)" }}>
+            <Plus size={13} /> Створити
+          </TeButton>
+
+          <TeButton
+            shape="pill"
             onClick={toggle}
-            className="te-key p-2.5"
+            className="p-2.5"
             title={isDark ? "Світла тема" : "Темна тема"}
           >
             {isDark
               ? <Sun size={15} style={{ color: "var(--text-muted)" }} />
               : <Moon size={15} style={{ color: "var(--text-muted)" }} />
             }
-          </button>
-
-          {/* Create button — always visible */}
-          <Link href="/add" className="te-key px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--orange)" }}>
-            <Plus size={13} /> Створити
-          </Link>
+          </TeButton>
 
           {navUser === "loading" ? (
             /* Skeleton */
@@ -129,19 +130,20 @@ export function Navbar() {
           ) : !isLoggedIn ? (
             /* Guest */
             <>
-              <Link href="/auth/login" className="te-key px-4 py-2 text-sm" style={{ color: "var(--text-mid)", fontWeight: 400 }}>
+              <TeButton shape="pill" href="/auth/login" className="px-4 py-2 text-sm" style={{ color: "var(--text-mid)", fontWeight: 400 }}>
                 Увійти
-              </Link>
-              <Link href="/auth/sign-up" className="te-btn-orange px-5 py-2 text-sm font-bold">
+              </TeButton>
+              <TeButton shape="pill" href="/auth/sign-up" className="px-5 py-2 text-sm font-bold">
                 Реєстрація
-              </Link>
+              </TeButton>
             </>
           ) : (
             /* Logged-in user dropdown */
             <div className="relative" ref={dropdownRef}>
-              <button
+              <TeButton
+                shape="pill"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="te-key flex items-center gap-2 pl-1.5 pr-3 py-1.5"
+                className="flex items-center gap-2 pl-1.5 pr-3 py-1.5"
                 style={{ borderRadius: "3rem" }}
               >
                 {/* Avatar */}
@@ -155,7 +157,7 @@ export function Navbar() {
                   {userEmail.split("@")[0]}
                 </span>
                 <ChevronDown size={13} style={{ color: "var(--text-muted)", transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
-              </button>
+              </TeButton>
 
               {/* Dropdown */}
               {dropdownOpen && (
@@ -185,6 +187,16 @@ export function Navbar() {
                         <span>Адмін-панель</span>
                       </Link>
                     )}
+
+                    {isAdmin && (
+                      <Link href="/ui-kit" onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                        style={{ color: "var(--text)" }}
+                      >
+                        <Palette size={15} style={{ color: "var(--text-muted)" }} />
+                        <span>UI Kit</span>
+                      </Link>
+                    )}
                   </div>
 
                   <div className="border-t py-1" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
@@ -203,15 +215,15 @@ export function Navbar() {
 
         {/* Mobile right: theme + hamburger */}
         <div className="md:hidden flex items-center gap-2">
-          <button onClick={toggle} className="te-key p-2.5" title={isDark ? "Світла тема" : "Темна тема"}>
+          <TeButton shape="pill" onClick={toggle} className="p-2.5" title={isDark ? "Світла тема" : "Темна тема"}>
             {isDark
               ? <Sun size={15} style={{ color: "var(--text-muted)" }} />
               : <Moon size={15} style={{ color: "var(--text-muted)" }} />
             }
-          </button>
-          <button className="te-key p-2.5" onClick={() => setMobileOpen(!mobileOpen)}>
+          </TeButton>
+          <TeButton shape="pill" className="p-2.5" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X size={16} /> : <Menu size={16} />}
-          </button>
+          </TeButton>
         </div>
       </nav>
 
@@ -229,27 +241,30 @@ export function Navbar() {
           ))}
 
           <div className="flex flex-col gap-1 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-            <Link href="/add" className="te-key flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>
+            <TeButton shape="pill" href="/add" className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>
               <Plus size={14} /> Створити пісню
-            </Link>
+            </TeButton>
 
             {isLoggedIn ? (
               <>
-                <Link href="/profile" className="te-key px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Профіль</Link>
+                <TeButton shape="pill" href="/profile" className="px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Профіль</TeButton>
                 {isAdmin && (
-                  <Link href="/admin" className="te-key px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Адмін-панель</Link>
+                  <TeButton shape="pill" href="/admin" className="px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Адмін-панель</TeButton>
                 )}
-                <button onClick={() => { signOut(); setMobileOpen(false); }}
-                  className="te-key text-left px-4 py-2.5 text-sm font-medium"
+                {isAdmin && (
+                  <TeButton shape="pill" href="/ui-kit" className="px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>UI Kit</TeButton>
+                )}
+                <TeButton shape="pill" onClick={() => { signOut(); setMobileOpen(false); }}
+                  className="text-left px-4 py-2.5 text-sm font-medium"
                   style={{ color: "var(--text-muted)" }}
                 >
                   Вийти
-                </button>
+                </TeButton>
               </>
             ) : (
               <div className="flex gap-2 pt-1">
-                <Link href="/auth/login" className="te-key flex-1 text-center py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Увійти</Link>
-                <Link href="/auth/sign-up" className="te-btn-orange flex-1 text-center py-2.5 text-sm font-bold" onClick={() => setMobileOpen(false)}>Реєстрація</Link>
+                <TeButton shape="pill" href="/auth/login" className="flex-1 text-center py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Увійти</TeButton>
+                <TeButton shape="pill" href="/auth/sign-up" className="flex-1 text-center py-2.5 text-sm font-bold" onClick={() => setMobileOpen(false)}>Реєстрація</TeButton>
               </div>
             )}
           </div>

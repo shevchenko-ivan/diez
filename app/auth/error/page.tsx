@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Navbar } from "@/shared/components/Navbar";
+import { TeButton } from "@/shared/components/TeButton";
 
 const ERROR_MESSAGES: Record<string, string> = {
   access_denied: "Доступ заборонено",
@@ -45,12 +46,13 @@ export default function AuthErrorPage({
         <Suspense>
           <ErrorContent searchParams={searchParams} />
         </Suspense>
-        <a
+        <TeButton
+          shape="pill"
           href="/auth/login"
-          className="te-btn-orange mt-6 inline-block px-6 py-3 text-xs font-bold tracking-widest"
+          className="mt-6 inline-block px-6 py-3 text-xs font-bold tracking-widest"
         >
           ПОВЕРНУТИСЬ
-        </a>
+        </TeButton>
       </div>
     </div>
   );

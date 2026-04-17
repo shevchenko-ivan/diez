@@ -8,6 +8,7 @@ import {
   type ChordMatch,
 } from "../data/chord-templates";
 import { ChordDiagram, lookupChord } from "./ChordDiagram";
+import { TeButton } from "@/shared/components/TeButton";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -357,13 +358,14 @@ export function ChordIdentifier() {
 
       {/* ── Controls ── */}
       <div className="flex items-center gap-3">
-        <button
+        <TeButton
+          shape="pill"
           onClick={clearAll}
-          className="te-key rounded-lg px-4 py-2 text-sm"
+          className="rounded-lg px-4 py-2 text-sm"
           disabled={!hasDots && frets.every(f => f === -2)}
         >
           Очистити
-        </button>
+        </TeButton>
         {hasDots && (
           <span className="text-sm" style={{ color: "var(--text-muted)" }}>
             {matches.length > 0

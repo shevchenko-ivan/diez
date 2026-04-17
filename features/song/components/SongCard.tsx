@@ -2,6 +2,7 @@
 
 import { HapticLink } from "@/shared/components/HapticLink";
 import { Heart } from "lucide-react";
+import { TeButton } from "@/shared/components/TeButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
 
@@ -134,13 +135,13 @@ export function HeroSearch() {
       </div>
 
       {/* Search button — raised pill */}
-      <button
+      <TeButton
+        shape="pill"
         type="submit"
-        id="hero-search-submit"
-        className="te-btn-orange px-5 py-3 text-xs font-bold tracking-widest shrink-0"
+        className="px-5 py-3 text-xs font-bold tracking-widest shrink-0"
       >
         ЗНАЙТИ
-      </button>
+      </TeButton>
     </form>
   );
 }

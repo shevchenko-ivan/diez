@@ -5,6 +5,7 @@ import { Save } from "lucide-react";
 import { createSong } from "@/features/song/actions/admin";
 import { slugify } from "@/lib/slugify";
 import type { Artist } from "@/features/artist/services/artists";
+import { TeButton } from "@/shared/components/TeButton";
 
 const KEYS = ["C","Cm","C#","C#m","D","Dm","D#","D#m","E","Em","F","Fm","F#","F#m","G","Gm","G#","G#m","A","Am","A#","A#m","B","Bm"];
 
@@ -173,15 +174,15 @@ export function AddSongForm({ artists = [] }: Props) {
       <div className="space-y-2">
         <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>Складність</label>
         <div className="flex gap-4 flex-wrap">
-          <label className="te-key flex-1 flex items-center justify-center gap-2 px-6 py-4 cursor-pointer min-w-[120px]">
+          <label className="te-pill-btn flex-1 flex items-center justify-center gap-2 px-6 py-4 cursor-pointer min-w-[120px]">
             <input type="radio" name="difficulty" value="easy" defaultChecked className="accent-orange-500" />
             <span className="text-sm font-bold">Легка</span>
           </label>
-          <label className="te-key flex-1 flex items-center justify-center gap-2 px-6 py-4 cursor-pointer min-w-[120px]">
+          <label className="te-pill-btn flex-1 flex items-center justify-center gap-2 px-6 py-4 cursor-pointer min-w-[120px]">
             <input type="radio" name="difficulty" value="medium" className="accent-orange-500" />
             <span className="text-sm font-bold">Середня</span>
           </label>
-          <label className="te-key flex-1 flex items-center justify-center gap-2 px-6 py-4 cursor-pointer min-w-[120px]">
+          <label className="te-pill-btn flex-1 flex items-center justify-center gap-2 px-6 py-4 cursor-pointer min-w-[120px]">
             <input type="radio" name="difficulty" value="hard" className="accent-orange-500" />
             <span className="text-sm font-bold">Складна</span>
           </label>
@@ -211,13 +212,16 @@ export function AddSongForm({ artists = [] }: Props) {
       </div>
 
       <div className="pt-4 flex justify-end">
-        <button
+        <TeButton
+          shape="pill"
           type="submit"
           disabled={!finalArtist.trim()}
-          className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+          icon={Save}
+          iconSize={16}
+          className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <Save size={16} /> ОПУБЛІКУВАТИ
-        </button>
+          ОПУБЛІКУВАТИ
+        </TeButton>
       </div>
     </form>
   );

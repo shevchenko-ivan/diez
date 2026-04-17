@@ -10,7 +10,7 @@ export const metadata = { title: "Додати виконавця — Diez" };
 export default function NewArtistPage() {
   return (
     <PageShell maxWidth="2xl" footer={false}>
-      <Link href="/admin/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+      <Link href="/admin/artists" className="inline-flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
         <ArrowLeft size={14} /> Виконавці
       </Link>
 

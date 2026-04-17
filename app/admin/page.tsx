@@ -52,10 +52,10 @@ export default async function AdminPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
-          <StatCard icon={<Eye size={18} />} label="Опубліковано" value={stats.published} color="var(--orange)" />
-          <StatCard icon={<EyeOff size={18} />} label="Чернетки" value={stats.drafts} color="#6366f1" />
-          <StatCard icon={<Archive size={18} />} label="В архіві" value={stats.archived} color="var(--text-muted)" />
-          <StatCard icon={<Users size={18} />} label="Виконавці" value={stats.artists} color="#10b981" />
+          <StatCard icon={<Eye size={18} />} label="Опубліковано" value={stats.published} color="var(--orange)" href="/admin/songs" />
+          <StatCard icon={<EyeOff size={18} />} label="Чернетки" value={stats.drafts} color="#6366f1" href="/admin/songs" />
+          <StatCard icon={<Archive size={18} />} label="В архіві" value={stats.archived} color="var(--text-muted)" href="/admin/songs?tab=archived" />
+          <StatCard icon={<Users size={18} />} label="Виконавці" value={stats.artists} color="#10b981" href="/admin/artists" />
         </div>
 
         {/* Entity cards */}
@@ -84,20 +84,35 @@ export default async function AdminPage() {
 }
 
 function StatCard({
-  icon, label, value, color,
+  icon, label, value, color, href,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   color: string;
+  href?: string;
 }) {
-  return (
-    <div className="te-surface p-5 flex flex-col gap-3" style={{ borderRadius: "1.25rem" }}>
+  const content = (
+    <>
       <div style={{ color }}>{icon}</div>
       <div>
         <div className="text-3xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{value}</div>
         <div className="text-xs font-bold tracking-widest uppercase mt-0.5" style={{ color: "var(--text-muted)", opacity: 0.7 }}>{label}</div>
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className="te-surface te-pressable p-5 flex flex-col gap-3" style={{ borderRadius: "1.25rem" }}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="te-surface p-5 flex flex-col gap-3" style={{ borderRadius: "1.25rem" }}>
+      {content}
     </div>
   );
 }

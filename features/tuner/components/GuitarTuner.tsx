@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, MicOff, Check } from "lucide-react";
+import { TeButton } from "@/shared/components/TeButton";
 import dynamic from "next/dynamic";
 
 const GuitarHeadstock3D = dynamic(
@@ -598,9 +599,11 @@ export function GuitarTuner() {
       </div>
 
       {/* ── Mic button ─────────────────────────────────────────── */}
-      <button
+      <TeButton
+        shape="pill"
         onClick={active ? stop : start}
-        className={active ? "te-btn-orange" : "te-key"}
+        icon={active ? MicOff : Mic}
+        iconSize={15}
         style={{
           display: "flex",
           alignItems: "center",
@@ -614,9 +617,8 @@ export function GuitarTuner() {
           ...(!active ? { color: "var(--text)" } : {}),
         }}
       >
-        {active ? <MicOff size={15} /> : <Mic size={15} />}
         {active ? "Вимкнути" : "Увімкнути мікрофон"}
-      </button>
+      </TeButton>
 
       {error && (
         <p

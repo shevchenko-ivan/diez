@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { updateArtist } from "@/features/artist/actions/admin";
+import { TeButton } from "@/shared/components/TeButton";
 
 export const metadata = { title: "Редагувати виконавця — Diez" };
 
@@ -40,7 +41,7 @@ export default async function EditArtistPage({
 
   return (
     <PageShell maxWidth="2xl" footer={false}>
-      <Link href="/admin/artists" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+      <Link href="/admin/artists" className="inline-flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
         <ArrowLeft size={14} /> Виконавці
       </Link>
 
@@ -112,9 +113,9 @@ export default async function EditArtistPage({
           </FormField>
 
           <div className="pt-2 flex justify-end">
-            <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-              <Save size={16} /> ЗБЕРЕГТИ
-            </button>
+            <TeButton shape="pill" type="submit" icon={Save} iconSize={16} className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+              ЗБЕРЕГТИ
+            </TeButton>
           </div>
         </form>
       </div>

@@ -1,5 +1,5 @@
 import { PageShell } from "@/shared/components/PageShell";
-import Link from "next/link";
+import { TeButton } from "@/shared/components/TeButton";
 
 export default function NotFound() {
   return (
@@ -23,9 +23,9 @@ export default function NotFound() {
         >
           Можливо, посилання застаріло або сторінки більше не існує.
         </p>
-        <Link href="/" className="te-btn-orange px-6 py-3 text-xs font-bold tracking-widest">
+        <TeButton shape="pill" href="/" className="px-6 py-3 text-xs font-bold tracking-widest">
           НА ГОЛОВНУ
-        </Link>
+        </TeButton>
       </div>
     </PageShell>
   );

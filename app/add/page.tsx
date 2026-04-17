@@ -16,7 +16,7 @@ export default async function AddSongPage() {
 
   return (
     <PageShell maxWidth="4xl" footer={false}>
-      <Link href="/songs" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+      <Link href="/songs" className="inline-flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
         <ArrowLeft size={14} /> Каталог
       </Link>
 

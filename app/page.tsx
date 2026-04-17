@@ -22,6 +22,17 @@ export const metadata: Metadata = {
   },
 };
 
+const TOPICS = [
+  { slug: "campfire",    icon: "🔥", label: "Біля вогнища",       description: "Класика для посиденьок" },
+  { slug: "ukrainian",   icon: "🇺🇦", label: "Українська класика",  description: "Пісні, які знає кожен" },
+  { slug: "movies",      icon: "🎬", label: "З фільмів",           description: "Саундтреки з кіно" },
+  { slug: "games",       icon: "🎮", label: "З відеоігор",          description: "Stalker, Відьмак, інші" },
+  { slug: "beginner",    icon: "🎸", label: "Для початківців",      description: "Прості акорди" },
+  { slug: "rock",        icon: "🤘", label: "Рок-хіти",            description: "Найкращі рок-пісні" },
+  { slug: "romantic",    icon: "💕", label: "Романтичні",           description: "Для настрою" },
+  { slug: "series",      icon: "📺", label: "З серіалів",           description: "Пісні з серіалів" },
+];
+
 export default async function HomePage() {
   const [trendingSongs, freshSongs, artists] = await Promise.all([
     getAllSongs(),
@@ -76,7 +87,7 @@ export default async function HomePage() {
               <HapticLink
                 key={tag}
                 href={`/songs?q=${tag}`}
-                className="te-key px-3 py-1 rounded-full text-xs font-semibold"
+                className="te-pill-btn px-3 py-1 rounded-full text-xs font-semibold"
                 style={{ color: "var(--text)" }}
               >
                 {tag}
@@ -174,7 +185,32 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* ── 4. Останні додані ────────────────────────────────────────────── */}
+        {/* ── 4. Тематики ────────────────────────────────────────────────── */}
+        <section className="mb-16">
+          <SectionHeader title="Підбірки за тематикою" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {TOPICS.map((t) => (
+              <HapticLink
+                key={t.slug}
+                href={`/songs?topic=${t.slug}`}
+                className="te-surface te-pressable p-5 flex flex-col justify-between"
+                style={{ borderRadius: "1.25rem", minHeight: 100 }}
+              >
+                <span style={{ fontSize: "1.5rem" }}>{t.icon}</span>
+                <div>
+                  <p className="font-bold text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
+                    {t.label}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                    {t.description}
+                  </p>
+                </div>
+              </HapticLink>
+            ))}
+          </div>
+        </section>
+
+        {/* ── 5. Останні додані ────────────────────────────────────────────── */}
         {freshSongs.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Щойно на струнах" href="/songs?sort=new" />

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useState } from "react";
+import { TeButton } from "@/shared/components/TeButton";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -41,7 +42,7 @@ export function ForgotPasswordForm() {
         </p>
         <Link
           href="/auth/login"
-          className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs font-bold tracking-widest"
+          className="inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}
         >
           Повернутись до входу
         </Link>
@@ -72,13 +73,14 @@ export function ForgotPasswordForm() {
           </div>
         </div>
         {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
-        <button
+        <TeButton
+          shape="pill"
           type="submit"
           disabled={isLoading}
-          className="te-btn-orange w-full py-4 text-xs font-bold tracking-widest"
+          className="w-full py-4 text-xs font-bold tracking-widest"
         >
           {isLoading ? "Надсилаємо..." : "НАДІСЛАТИ ЛИСТА"}
-        </button>
+        </TeButton>
         <p className="text-center text-sm" style={{ color: "var(--text-muted)" }}>
           Згадали пароль?{" "}
           <Link href="/auth/login" className="font-bold hover:underline" style={{ color: "var(--text)" }}>

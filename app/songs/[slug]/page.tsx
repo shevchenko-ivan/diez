@@ -11,6 +11,7 @@ import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Eye, Pencil } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
+import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
 import { createClient } from "@/lib/supabase/server";
@@ -131,14 +132,13 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5 justify-end">
             {songId && (
-              <Link
+              <TeButton
                 href={`/admin/songs/edit?id=${songId}`}
-                className="te-knob flex items-center justify-center"
-                style={{ width: 36, height: 36, color: "var(--orange)" }}
                 title="Редагувати"
+                style={{ width: 36, height: 36, color: "var(--orange)" }}
               >
                 <Pencil size={14} />
-              </Link>
+              </TeButton>
             )}
             <SongActions />
           </div>
@@ -158,13 +158,14 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
               >
                 Ще від {song.artist}
               </h2>
-              <Link
+              <TeButton
+                shape="pill"
                 href={`/artists/${artistSlug}`}
-                className="te-key px-3 py-1.5"
+                className="px-3 py-1.5"
                 style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}
               >
                 Всі пісні →
-              </Link>
+              </TeButton>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {otherSongs.map(({ key: _k, ...s }) => (

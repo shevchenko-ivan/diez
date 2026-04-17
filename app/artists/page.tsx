@@ -55,7 +55,7 @@ export default async function ArtistsPage() {
 
   return (
     <PageShell>
-      <Link href="/" className="te-key inline-flex items-center gap-2 px-4 py-2 text-xs mb-8">
+      <Link href="/" className="inline-flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
         <ArrowLeft size={14} /> Назад
       </Link>
 

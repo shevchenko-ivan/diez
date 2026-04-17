@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { updateSong } from "@/features/song/actions/admin";
 import { AutoResizeTextarea } from "./AutoResizeTextarea";
+import { TeButton } from "@/shared/components/TeButton";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
@@ -242,9 +243,9 @@ export default async function EditSongPage({
           </div>
 
           <div className="pt-6 flex justify-end">
-            <button type="submit" className="te-btn-orange px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-              <Save size={16} /> ЗБЕРЕГТИ
-            </button>
+            <TeButton shape="pill" type="submit" icon={Save} iconSize={16} className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+              ЗБЕРЕГТИ
+            </TeButton>
           </div>
         </div>
       </form>

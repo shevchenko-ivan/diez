@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { PageShell } from "@/shared/components/PageShell";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Plus } from "lucide-react";
-import Link from "next/link";
+import { TeButton } from "@/shared/components/TeButton";
 import { BackButton } from "@/shared/components/BackButton";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -46,37 +46,36 @@ export default async function AdminArtistsPage({
         title="Виконавці"
         subtitle={`${artists?.length ?? 0} виконавців`}
         action={
-          <Link
+          <TeButton
+            shape="pill"
             href="/admin/artists/new"
-            className="te-btn-orange px-5 py-3 flex items-center gap-2 text-xs font-bold tracking-widest shrink-0"
+            className="px-5 py-3 flex items-center gap-2 text-xs font-bold tracking-widest shrink-0"
           >
             <Plus size={14} /> ДОДАТИ ВИКОНАВЦЯ
-          </Link>
+          </TeButton>
         }
       />
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4">
-        <Link
+        <TeButton
+          shape="pill"
           href="/admin/artists"
           className={`px-4 py-2 text-xs font-bold tracking-widest rounded-xl transition-colors ${
-            tab === "active"
-              ? "te-btn-orange"
-              : "te-key opacity-60 hover:opacity-100"
+            tab === "active" ? "" : "opacity-60 hover:opacity-100"
           }`}
         >
           АКТИВНІ
-        </Link>
-        <Link
+        </TeButton>
+        <TeButton
+          shape="pill"
           href="/admin/artists?tab=archived"
           className={`px-4 py-2 text-xs font-bold tracking-widest rounded-xl transition-colors ${
-            tab === "archived"
-              ? "te-btn-orange"
-              : "te-key opacity-60 hover:opacity-100"
+            tab === "archived" ? "" : "opacity-60 hover:opacity-100"
           }`}
         >
           АРХІВ
-        </Link>
+        </TeButton>
       </div>
 
       <ArtistsAdminTable artists={artists ?? []} tab={tab} />

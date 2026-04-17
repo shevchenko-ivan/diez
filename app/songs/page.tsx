@@ -5,6 +5,7 @@ import { SongCard } from "@/features/song/components/SongCard";
 import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { LoadingState } from "@/shared/components/LoadingState";
+import { TeButton } from "@/shared/components/TeButton";
 
 export const metadata: Metadata = {
   title: "Каталог пісень — Акорди для гітари | Diez",
@@ -88,9 +89,9 @@ async function SongsContent({ searchParams }: SearchProps) {
                 style={{ color: "var(--text)" }}
               />
             </div>
-            <button type="submit" className="te-btn-orange px-5 py-3 text-xs font-bold tracking-widest shrink-0">
+            <TeButton shape="pill" type="submit" className="px-5 py-3 text-xs font-bold tracking-widest shrink-0">
               ЗНАЙТИ
-            </button>
+            </TeButton>
           </form>
         </div>
 

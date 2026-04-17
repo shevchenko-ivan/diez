@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { TeButton } from "@/shared/components/TeButton";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -245,10 +246,11 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
         <div className="flex items-center gap-2">
 
           {/* Skip back −10s */}
-          <button
+          <TeButton
+            shape="pill"
             onClick={() => skip(-10)}
             disabled={!ready}
-            className="te-key flex items-center justify-center"
+            className="flex items-center justify-center"
             style={{
               width: 36, height: 36, borderRadius: "50%",
               opacity: ready ? 1 : 0.35,
@@ -257,15 +259,15 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
             }}
           >
             <SkipBackIcon />
-          </button>
+          </TeButton>
 
           {/* Play / Pause */}
-          <button
+          <TeButton
             onClick={togglePlay}
             disabled={!ready}
-            className="te-knob flex items-center justify-center"
+            aria-label={playing ? "Пауза" : "Грати"}
             style={{
-              width: 56, height: 56, borderRadius: "50%",
+              width: 56, height: 56,
               color: "var(--orange)",
               opacity: ready ? 1 : 0.35,
               cursor: ready ? "pointer" : "default",
@@ -281,13 +283,14 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
             >
               {playing ? <PauseIcon /> : <PlayIcon />}
             </span>
-          </button>
+          </TeButton>
 
           {/* Skip forward +10s */}
-          <button
+          <TeButton
+            shape="pill"
             onClick={() => skip(10)}
             disabled={!ready}
-            className="te-key flex items-center justify-center"
+            className="flex items-center justify-center"
             style={{
               width: 36, height: 36, borderRadius: "50%",
               opacity: ready ? 1 : 0.35,
@@ -296,7 +299,7 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
             }}
           >
             <SkipForwardIcon />
-          </button>
+          </TeButton>
         </div>
       </div>
     </div>

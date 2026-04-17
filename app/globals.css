@@ -119,33 +119,15 @@
     box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical);
   }
 
+  /* Inside cards/insets, drop the outer button ring (ring is for site bg only) */
+  .te-surface,
+  .te-inset {
+    --btn-edge: transparent;
+  }
+
   .te-socket {
     background: var(--surface-dk);
     box-shadow: var(--sh-socket);
-  }
-
-  /* The Keys / Small Buttons in the new style */
-  .te-key {
-    background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%);
-    box-shadow: var(--sh-physical);
-    border-radius: 6px;
-    cursor: pointer;
-    border: 1px solid rgba(0,0,0,0.03);
-    transition: all var(--t-release);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .te-key:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transform: translateY(0.5px);
-  }
-
-  .te-key:active {
-    box-shadow: var(--sh-physical-pressed);
-    transform: translateY(1.5px);
-    transition: all var(--t-press);
   }
 
   /* LED indicator dot */
@@ -210,45 +192,6 @@
   }
 
   /*
-    ── te-btn-orange ─────────────────────────────────────────────────────────
-    The accent orange button
-  */
-  .te-btn-orange {
-    background: linear-gradient(160deg, #ff5520 0%, #e03800 100%);
-    box-shadow:
-       4px  4px  9px rgba(160, 40, 0, 0.40),
-      -3px -3px  8px rgba(255, 190, 150, 0.50),
-      inset  1px  1px 2px rgba(255, 170, 120, 0.40),
-      inset -1px -1px 2px rgba(120, 20, 0, 0.30);
-    border-radius: 999px;
-    color: white;
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      box-shadow var(--t-release),
-      transform  var(--t-release);
-  }
-
-  .te-btn-orange:hover {
-    box-shadow:
-       3px  3px  7px rgba(160, 40, 0, 0.35),
-      -2px -2px  6px rgba(255, 190, 150, 0.44),
-      inset  2px  2px 5px rgba(120, 20, 0, 0.22),
-      inset -1px -1px 4px rgba(255, 140, 80, 0.28);
-    transform: translateY(1px);
-    transition: box-shadow 120ms ease, transform 120ms ease;
-  }
-
-  .te-btn-orange:active {
-    box-shadow:
-      inset  4px  4px 10px rgba(120, 20, 0, 0.50),
-      inset -3px -3px  7px rgba(255, 130, 70, 0.38);
-    background: linear-gradient(160deg, #d93200 0%, #ff5520 100%);
-    transform: translateY(2px);
-    transition: box-shadow var(--t-press), transform var(--t-press);
-  }
-
-  /*
     ── te-control-pill ────────────────────────────────────────────────────────
     Embossed segmented control (as in reference image)
   */
@@ -272,8 +215,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 56px;
+    min-width: 56px;
     height: 42px;
+    padding: 0 14px;
+    white-space: nowrap;
     transition: all 0.15s var(--t-ease);
     color: var(--text);
     position: relative;
@@ -395,6 +340,287 @@
   }
 
   /*
+    ── te-icon-btn ───────────────────────────────────────────────────────────
+    Circular physical icon button (flash / rotate / lock style from camera apps).
+    White/light surface with embossed rim, soft drop shadow, pressed inset on :active.
+  */
+  .te-icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%,
+      #ffffff 0%,
+      #fafafa 55%,
+      #ededed 100%
+    );
+    color: var(--text-mid);
+    cursor: pointer;
+    border: none;
+    box-shadow:
+       0 1px 1px rgba(0,0,0,0.06),
+       0 2px 4px rgba(0,0,0,0.06),
+      -1px -1px 2px rgba(255,255,255,0.9),
+      inset 0 0 0 1px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.9),
+       0 0 0 1px var(--btn-edge, rgba(0,0,0,0.05));
+    transition:
+      box-shadow var(--t-release),
+      transform  var(--t-release);
+  }
+
+  .te-icon-btn::before {
+    /* Inner embossed ring — the hairline groove that separates the cap */
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow:
+      inset 0 1px 1.5px rgba(0,0,0,0.06),
+      inset 0 -1px 1px rgba(255,255,255,0.9);
+  }
+
+  .te-icon-btn:hover {
+    transform: translateY(-0.5px);
+    box-shadow:
+       0 2px 2px rgba(0,0,0,0.07),
+       0 4px 6px rgba(0,0,0,0.06),
+      -1px -1px 2px rgba(255,255,255,0.9),
+      inset 0 0 0 1px rgba(0,0,0,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.9),
+       0 0 0 1px var(--btn-edge, rgba(0,0,0,0.05));
+    transition: box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  .te-icon-btn:active {
+    transform: translateY(1.5px);
+    box-shadow:
+      inset  3px  3px 6px rgba(0,0,0,0.10),
+      inset -2px -2px 5px rgba(255,255,255,0.85),
+      inset 0 0 0 1px rgba(0,0,0,0.05);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+
+  .te-icon-btn-sm { width: 34px; height: 34px; }
+  .te-icon-btn-lg { width: 56px; height: 56px; }
+
+  .te-icon-btn[data-active="true"] {
+    color: var(--orange);
+  }
+
+  /* Red record-style icon button */
+  .te-icon-btn-red {
+    background: radial-gradient(circle at 35% 30%,
+      #ff5a5a 0%,
+      #ff2b2b 55%,
+      #c81a1a 100%
+    );
+    color: #fff;
+    box-shadow:
+       0 1px 1px rgba(120, 0, 0, 0.30),
+       0 2px 4px rgba(180, 20, 20, 0.30),
+      -1px -1px 2px rgba(255, 170, 170, 0.50),
+      inset 0 0 0 1px rgba(120, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 180, 180, 0.50);
+  }
+  .te-icon-btn-red:hover {
+    box-shadow:
+       0 2px 2px rgba(120, 0, 0, 0.35),
+       0 4px 6px rgba(180, 20, 20, 0.35),
+      -1px -1px 2px rgba(255, 170, 170, 0.55),
+      inset 0 0 0 1px rgba(120, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 180, 180, 0.55);
+  }
+  .te-icon-btn-red:active {
+    box-shadow:
+      inset  3px  3px 8px rgba(120, 0, 0, 0.55),
+      inset -2px -2px 6px rgba(255, 150, 150, 0.35),
+      inset 0 0 0 1px rgba(120, 0, 0, 0.40);
+  }
+
+  /*
+    ── te-dial ───────────────────────────────────────────────────────────────
+    Large oval dial (P / A / T mode selector on camera apps).
+    Tall pill-shape, subtle silver gradient, heavy physical lift.
+  */
+  .te-dial {
+    position: relative;
+    width: 88px;
+    height: 128px;
+    border-radius: 999px;
+    background: linear-gradient(180deg,
+      #ffffff 0%,
+      #f4f4f4 50%,
+      #e4e4e4 100%
+    );
+    cursor: pointer;
+    border: none;
+    box-shadow:
+       0 10px 18px rgba(0,0,0,0.10),
+       0 4px 6px rgba(0,0,0,0.06),
+      -2px -2px 4px rgba(255,255,255,0.95),
+      inset 0 0 0 1px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      inset 0 -1px 0 rgba(0,0,0,0.05);
+    transition:
+      box-shadow var(--t-release),
+      transform  var(--t-release);
+  }
+
+  .te-dial::before {
+    /* Thin concentric outline — the cap's edge */
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 999px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 1px 1.5px rgba(0,0,0,0.05),
+      inset 0 -1px 1px rgba(255,255,255,0.9);
+  }
+
+  .te-dial:hover {
+    transform: translateY(-1px);
+    box-shadow:
+       0 12px 20px rgba(0,0,0,0.12),
+       0 5px 8px rgba(0,0,0,0.07),
+      -2px -2px 4px rgba(255,255,255,0.95),
+      inset 0 0 0 1px rgba(0,0,0,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      inset 0 -1px 0 rgba(0,0,0,0.06);
+  }
+
+  .te-dial:active {
+    transform: translateY(1px);
+    box-shadow:
+      inset  3px  3px 8px rgba(0,0,0,0.10),
+      inset -2px -2px 6px rgba(255,255,255,0.9),
+      inset 0 0 0 1px rgba(0,0,0,0.05);
+  }
+
+  /*
+    ── te-pill-btn ───────────────────────────────────────────────────────────
+    Wide standalone pill button (HOME / BACK / DIVIDE / OPTIONS style).
+    Not segmented — each one is its own physical key.
+  */
+  .te-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    min-height: 38px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f5f5 100%);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow:
+       0 1px 1px rgba(0,0,0,0.05),
+       0 2px 3px rgba(0,0,0,0.05),
+      -1px -1px 2px rgba(255,255,255,0.9),
+      inset 0 0 0 1px rgba(0,0,0,0.03),
+      inset 0 1px 0 rgba(255,255,255,0.9),
+       0 0 0 1px var(--btn-edge, rgba(0,0,0,0.05));
+    transition: box-shadow var(--t-release), transform var(--t-release);
+  }
+  .te-pill-btn:hover {
+    transform: translateY(-0.5px);
+    box-shadow:
+       0 2px 2px rgba(0,0,0,0.06),
+       0 3px 5px rgba(0,0,0,0.06),
+      -1px -1px 2px rgba(255,255,255,0.9),
+      inset 0 0 0 1px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.9),
+       0 0 0 1px var(--btn-edge, rgba(0,0,0,0.05));
+  }
+  .te-pill-btn:active {
+    transform: translateY(1px);
+    box-shadow:
+      inset 3px 3px 6px rgba(0,0,0,0.08),
+      inset -2px -2px 5px rgba(255,255,255,0.85),
+      inset 0 0 0 1px rgba(0,0,0,0.04);
+    transition: box-shadow var(--t-press), transform var(--t-press);
+  }
+  .te-pill-btn-icon {
+    padding: 0.55rem;
+    min-width: 38px;
+  }
+
+  /* Pill size variants — match icon-btn scale (sm 34, md 38, lg 56 min-height) */
+  .te-pill-btn-sm {
+    min-height: 34px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.7rem;
+  }
+  .te-pill-btn-sm.te-pill-btn-icon {
+    padding: 0.4rem;
+    min-width: 34px;
+  }
+  .te-pill-btn-lg {
+    min-height: 56px;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.9rem;
+  }
+  .te-pill-btn-lg.te-pill-btn-icon {
+    padding: 0.85rem;
+    min-width: 56px;
+  }
+
+  /*
+    ── te-lcd-camera ─────────────────────────────────────────────────────────
+    Camera-style LCD panel variant with dividers for data groups.
+    Use on top of .te-lcd or standalone.
+  */
+  .te-lcd-camera {
+    background: linear-gradient(180deg, #0E0D10 0%, #17161A 100%);
+    border-radius: 1rem;
+    color: var(--panel-text);
+    font-family: 'JetBrains Mono', monospace;
+    box-shadow:
+      inset  3px  3px  8px rgba(0,0,0,0.70),
+      inset -2px -2px  5px rgba(255,255,255,0.04),
+      0 0 0 1px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .te-lcd-camera::after {
+    /* subtle screen glare */
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 40%);
+  }
+
+  .te-lcd-divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(255,255,255,0.08);
+    margin: 0 0.5rem;
+  }
+
+  /* Highlighted data pill inside LCD (e.g. 4:3) */
+  .te-lcd-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.05rem 0.4rem;
+    border-radius: 0.25rem;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /*
     ── te-pressable ──────────────────────────────────────────────────────────
     Interactive card tile — adds hover/press lift effects
   */
@@ -476,11 +702,6 @@
 
 /* ── 1. Auto: component overrides ────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  .te-key {
-    background: linear-gradient(180deg, #2C2A32 0%, #222028 100%);
-    border-color: rgba(255,255,255,0.04);
-  }
-  .te-key:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.30); }
   .te-surface { box-shadow: 0 0 0 1px rgba(255,255,255,0.03), var(--sh-physical); }
   .te-pressable:hover {
     box-shadow:
@@ -510,6 +731,74 @@
     box-shadow:
       3px  3px  8px rgba(0,0,0,0.60),
       -2px -2px  5px rgba(255,255,255,0.04);
+  }
+  .te-icon-btn {
+    background: radial-gradient(circle at 35% 30%,
+      #34323C 0%,
+      #2A2830 55%,
+      #1E1C22 100%
+    );
+    color: var(--text-mid);
+    box-shadow:
+       0 1px 1px rgba(0,0,0,0.55),
+       0 2px 4px rgba(0,0,0,0.40),
+      -1px -1px 2px rgba(255,255,255,0.04),
+      inset 0 0 0 1px rgba(255,255,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.05),
+       0 0 0 1px var(--btn-edge, rgba(255,255,255,0.06));
+  }
+  .te-icon-btn::before {
+    box-shadow:
+      inset 0 1px 1.5px rgba(0,0,0,0.40),
+      inset 0 -1px 1px rgba(255,255,255,0.04);
+  }
+  .te-icon-btn:active {
+    box-shadow:
+      inset  3px  3px 6px rgba(0,0,0,0.60),
+      inset -2px -2px 5px rgba(255,255,255,0.03),
+      inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .te-dial {
+    background: linear-gradient(180deg,
+      #34323C 0%,
+      #2A2830 50%,
+      #1E1C22 100%
+    );
+    box-shadow:
+       0 10px 18px rgba(0,0,0,0.60),
+       0 4px 6px rgba(0,0,0,0.40),
+      -2px -2px 4px rgba(255,255,255,0.04),
+      inset 0 0 0 1px rgba(255,255,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      inset 0 -1px 0 rgba(0,0,0,0.30);
+  }
+  .te-dial::before {
+    box-shadow:
+      inset 0 1px 1.5px rgba(0,0,0,0.40),
+      inset 0 -1px 1px rgba(255,255,255,0.04);
+  }
+  .te-dial:active {
+    box-shadow:
+      inset  3px  3px 8px rgba(0,0,0,0.55),
+      inset -2px -2px 6px rgba(255,255,255,0.04),
+      inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .te-pill-btn {
+    background: linear-gradient(180deg, #2C2A32 0%, #222028 100%);
+    color: var(--text);
+    box-shadow:
+       0 1px 1px rgba(0,0,0,0.45),
+       0 2px 3px rgba(0,0,0,0.35),
+      -1px -1px 2px rgba(255,255,255,0.04),
+      inset 0 0 0 1px rgba(255,255,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.05),
+       0 0 0 1px var(--btn-edge, rgba(255,255,255,0.06));
+  }
+  .te-pill-btn:active {
+    box-shadow:
+      inset 3px 3px 6px rgba(0,0,0,0.60),
+      inset -2px -2px 5px rgba(255,255,255,0.03),
+      inset 0 0 0 1px rgba(255,255,255,0.04);
   }
 }
 
@@ -542,11 +831,6 @@
 }
 
 /* ── 2. Manual dark: component overrides ─────────────────────────────────── */
-[data-theme="dark"] .te-key {
-  background: linear-gradient(180deg, #2C2A32 0%, #222028 100%);
-  border-color: rgba(255,255,255,0.04);
-}
-[data-theme="dark"] .te-key:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.30); }
 [data-theme="dark"] .te-surface { box-shadow: 0 0 0 1px rgba(255,255,255,0.03), var(--sh-physical); }
 [data-theme="dark"] .te-pressable:hover {
   box-shadow:
@@ -577,6 +861,74 @@
     3px  3px  8px rgba(0,0,0,0.60),
     -2px -2px  5px rgba(255,255,255,0.04);
 }
+[data-theme="dark"] .te-icon-btn {
+  background: radial-gradient(circle at 35% 30%,
+    #34323C 0%,
+    #2A2830 55%,
+    #1E1C22 100%
+  );
+  color: var(--text-mid);
+  box-shadow:
+     0 1px 1px rgba(0,0,0,0.55),
+     0 2px 4px rgba(0,0,0,0.40),
+    -1px -1px 2px rgba(255,255,255,0.04),
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+     0 0 0 1px var(--btn-edge, rgba(255,255,255,0.06));
+}
+[data-theme="dark"] .te-icon-btn::before {
+  box-shadow:
+    inset 0 1px 1.5px rgba(0,0,0,0.40),
+    inset 0 -1px 1px rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .te-icon-btn:active {
+  box-shadow:
+    inset  3px  3px 6px rgba(0,0,0,0.60),
+    inset -2px -2px 5px rgba(255,255,255,0.03),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .te-dial {
+  background: linear-gradient(180deg,
+    #34323C 0%,
+    #2A2830 50%,
+    #1E1C22 100%
+  );
+  box-shadow:
+     0 10px 18px rgba(0,0,0,0.60),
+     0 4px 6px rgba(0,0,0,0.40),
+    -2px -2px 4px rgba(255,255,255,0.04),
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.30);
+}
+[data-theme="dark"] .te-dial::before {
+  box-shadow:
+    inset 0 1px 1.5px rgba(0,0,0,0.40),
+    inset 0 -1px 1px rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .te-dial:active {
+  box-shadow:
+    inset  3px  3px 8px rgba(0,0,0,0.55),
+    inset -2px -2px 6px rgba(255,255,255,0.04),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .te-pill-btn {
+  background: linear-gradient(180deg, #2C2A32 0%, #222028 100%);
+  color: var(--text);
+  box-shadow:
+     0 1px 1px rgba(0,0,0,0.45),
+     0 2px 3px rgba(0,0,0,0.35),
+    -1px -1px 2px rgba(255,255,255,0.04),
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+     0 0 0 1px var(--btn-edge, rgba(255,255,255,0.06));
+}
+[data-theme="dark"] .te-pill-btn:active {
+  box-shadow:
+    inset 3px 3px 6px rgba(0,0,0,0.60),
+    inset -2px -2px 5px rgba(255,255,255,0.03),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+}
 
 /* ── 3. Manual light: restore defaults when OS is dark ───────────────────── */
 /* [data-theme="light"] re-declares the original :root values so they override @media */
@@ -606,11 +958,6 @@
     inset  3px  3px  7px rgba(0,0,0,0.06),
     inset -2px -2px  6px rgba(255,255,255,0.8);
 }
-[data-theme="light"] .te-key {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%);
-  border-color: rgba(0,0,0,0.03);
-}
-[data-theme="light"] .te-key:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 [data-theme="light"] .te-surface { box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical); }
 [data-theme="light"] .te-pressable:hover {
   box-shadow:
