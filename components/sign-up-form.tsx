@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TeButton } from "@/shared/components/TeButton";
+import { GoogleAuthButton } from "@/shared/components/GoogleAuthButton";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
@@ -48,6 +49,14 @@ export function SignUpForm() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 uppercase tracking-tighter" style={{ color: "var(--text)" }}>Реєстрація</h1>
         <p className="text-sm opacity-60" style={{ color: "var(--text-muted)" }}>Створіть акаунт Diez</p>
+      </div>
+      <div className="mb-5">
+        <GoogleAuthButton label="Реєстрація через Google" />
+      </div>
+      <div className="flex items-center gap-3 mb-5">
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+        <span className="text-[10px] font-bold tracking-widest uppercase opacity-60" style={{ color: "var(--text-muted)" }}>або</span>
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
       <form onSubmit={handleSignUp} className="space-y-5">
         <div className="space-y-2">
