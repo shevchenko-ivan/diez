@@ -408,7 +408,7 @@
   .te-icon-btn:active::before {
     box-shadow:
       inset  2px  2px 4px rgba(0,0,0,0.12),
-      inset -1px -1px 2px rgba(255,255,255,0.8),
+      inset -1px -1px 2px rgba(255,255,255,0.25),
       inset 0 0 0 1px rgba(0,0,0,0.04);
   }
 
@@ -552,7 +552,7 @@
     transform: translateY(1px);
     box-shadow:
       inset 3px 3px 6px rgba(0,0,0,0.08),
-      inset -2px -2px 5px rgba(255,255,255,0.85),
+      inset -2px -2px 5px rgba(255,255,255,0.25),
       inset 0 0 0 1px rgba(0,0,0,0.04);
     transition: box-shadow var(--t-press), transform var(--t-press);
   }
