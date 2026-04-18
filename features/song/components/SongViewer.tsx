@@ -1,14 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { SongPlayer } from "./SongPlayer";
-import { RhythmPlayer } from "./RhythmPlayer";
-import { TunerWidget } from "@/features/tuner/components/TunerWidget";
 import { ControlBlock } from "@/shared/components/ControlBlock";
+
+// Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
+const RhythmPlayer = dynamic(
+  () => import("./RhythmPlayer").then((m) => m.RhythmPlayer),
+  { ssr: false },
+);
+const TunerWidget = dynamic(
+  () => import("@/features/tuner/components/TunerWidget").then((m) => m.TunerWidget),
+  { ssr: false },
+);
 import { AdjusterButton } from "@/shared/components/AdjusterButton";
 import { TeButton } from "@/shared/components/TeButton";
 
