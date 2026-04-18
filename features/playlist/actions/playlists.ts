@@ -270,8 +270,7 @@ export async function setSongPlaylists(
     if (error) return { ok: false, reason: "error", message: error.message };
   }
 
-  revalidatePath("/profile");
-  revalidatePath("/profile/lists");
+  revalidatePath("/", "layout");
   return { ok: true, data: { saved: desired.size > 0 } };
 }
 

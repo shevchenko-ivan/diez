@@ -242,8 +242,7 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
           dx="3"
           fontSize="7"
           fontWeight="normal"
-          fill="var(--orange)"
-          style={{ pointerEvents: "none" }}
+          style={{ fill: "var(--orange)", pointerEvents: "none" }}
         >
           ▶
         </tspan>
@@ -386,7 +385,7 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
         const cx = stringX(i);
         return (
           <g key={`dot-${i}`}>
-            <circle cx={cx} cy={cy} r={4.5} fill="var(--orange)" />
+            <circle cx={cx} cy={cy} r={4.5} style={{ fill: "var(--orange)" }} />
             {fingers[i] !== null && (
               <text
                 x={cx}
@@ -580,6 +579,7 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
             left: pos.left,
             transform: "translate(-50%, -100%)",
             zIndex: 50,
+            color: "var(--text)",
             background: "var(--surface)",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 12,

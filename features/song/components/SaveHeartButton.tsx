@@ -105,7 +105,11 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
           slug={slug}
           anchorRect={anchorRect}
           initialLists={prefetched}
-          onClose={() => setAnchorRect(null)}
+          onClose={() => {
+            setAnchorRect(null);
+            setPrefetched(null);
+            prefetchStarted.current = false;
+          }}
           onSavedChange={(s) => setSaved(s)}
         />
       )}

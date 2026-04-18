@@ -4,6 +4,8 @@ import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { getAllSongs, getFreshSongs } from "@/features/song/services/songs";
 import { getArtists } from "@/features/artist/services/artists";
+import { getSavedSlugs, getMyPlaylists } from "@/features/playlist/actions/playlists";
+import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
 import { SiteFooter } from "@/shared/components/SiteFooter";
 
 export const revalidate = 3600;
@@ -23,11 +25,11 @@ export const metadata: Metadata = {
 };
 
 const TOPICS = [
+  { slug: "beginner",    icon: "🎸", label: "Пісні без баре",       description: "Для початківців" },
   { slug: "campfire",    icon: "🔥", label: "Біля вогнища",       description: "Класика для посиденьок" },
   { slug: "ukrainian",   icon: "🇺🇦", label: "Українська класика",  description: "Пісні, які знає кожен" },
   { slug: "screen",      icon: "🎬", label: "З кіно та серіалів",  description: "Саундтреки, що запамʼяталися" },
   { slug: "games",       icon: "🎮", label: "З відеоігор",          description: "Stalker, Відьмак, інші" },
-  { slug: "beginner",    icon: "🎸", label: "Для початківців",      description: "Прості акорди" },
   { slug: "rock",        icon: "🤘", label: "Рок-хіти",            description: "Найкращі рок-пісні" },
   { slug: "romantic",    icon: "💕", label: "Романтичні",           description: "Для настрою" },
   { slug: "acoustic",    icon: "🎧", label: "Акустика",             description: "Тихо і по-домашньому" },
@@ -35,10 +37,12 @@ const TOPICS = [
 ];
 
 export default async function HomePage() {
-  const [trendingSongs, freshSongs, artists] = await Promise.all([
+  const [trendingSongs, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
     getAllSongs(),
     getFreshSongs(4),
     getArtists(12),
+    getSavedSlugs(),
+    getMyPlaylists(),
   ]);
 
   const trending = trendingSongs.slice(0, 4);
@@ -99,6 +103,7 @@ export default async function HomePage() {
                   coverImage={s.coverImage}
                   coverColor={s.coverColor}
                   index={i}
+                  isSaved={savedSlugs.has(s.slug)}
                 />
               ))}
             </div>
@@ -213,7 +218,20 @@ export default async function HomePage() {
                   coverImage={s.coverImage}
                   coverColor={s.coverColor}
                   index={i}
+                  isSaved={savedSlugs.has(s.slug)}
                 />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── 6. Мої списки ────────────────────────────────────────────────── */}
+        {myPlaylists.length > 0 && (
+          <section className="mb-16">
+            <SectionHeader title="Мої списки" href="/profile/lists" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {myPlaylists.slice(0, 4).map((p) => (
+                <PlaylistCard key={p.id} playlist={p} />
               ))}
             </div>
           </section>
