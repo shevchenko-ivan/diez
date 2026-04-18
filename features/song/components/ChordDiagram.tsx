@@ -226,7 +226,7 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
         playChordStrum(strings);
       }}
     >
-      <title>Програти {name}</title>
+      <title>{`Програти ${name}`}</title>
       {/* Chord name + play icon (icon sits right next to the name) */}
       <text
         x={(STRING_LEFT + STRING_RIGHT) / 2}
