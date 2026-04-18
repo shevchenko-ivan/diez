@@ -247,19 +247,25 @@ export async function setSongPlaylists(
   }
 
   if (toAdd.length > 0) {
-    // Compute next position per target playlist.
-    const rows: Array<{ playlist_id: string; song_id: string; position: number }> = [];
-    for (const pid of toAdd) {
-      const { data: maxRow } = await supabase
-        .from("playlist_songs")
-        .select("position")
-        .eq("playlist_id", pid)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextPos = (maxRow?.position ?? -1) + 1;
-      rows.push({ playlist_id: pid, song_id: songId, position: nextPos });
+    // Fetch current positions for all target playlists in a single query,
+    // then derive next position per playlist locally.
+    const { data: positions } = await supabase
+      .from("playlist_songs")
+      .select("playlist_id, position")
+      .in("playlist_id", toAdd);
+
+    const maxByPlaylist = new Map<string, number>();
+    for (const row of (positions ?? []) as Array<{ playlist_id: string; position: number }>) {
+      const current = maxByPlaylist.get(row.playlist_id) ?? -1;
+      if (row.position > current) maxByPlaylist.set(row.playlist_id, row.position);
     }
+
+    const rows = toAdd.map((pid) => ({
+      playlist_id: pid,
+      song_id: songId,
+      position: (maxByPlaylist.get(pid) ?? -1) + 1,
+    }));
+
     const { error } = await supabase.from("playlist_songs").insert(rows);
     if (error) return { ok: false, reason: "error", message: error.message };
   }

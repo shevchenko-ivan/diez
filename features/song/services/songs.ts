@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type Difficulty } from "../types";
 import { hasEnvVars } from "@/lib/utils";
@@ -51,37 +52,71 @@ function mapRow(row: Record<string, unknown>): Song {
   };
 }
 
-export async function getAllSongs(options?: { sortBy?: "views" | "created_at" }): Promise<Song[]> {
-  if (!hasEnvVars) return [];
-  const { data, error } = await getClient()
-    .from("songs")
-    .select(SONG_COLUMNS)
-    .eq("status", "published")
-    .order(options?.sortBy ?? "views", { ascending: false });
-  if (error || !data) return [];
-  return data.map(mapRow);
-}
+export const getAllSongs = unstable_cache(
+  async (options?: { sortBy?: "views" | "created_at" }): Promise<Song[]> => {
+    if (!hasEnvVars) return [];
+    const { data, error } = await getClient()
+      .from("songs")
+      .select(SONG_COLUMNS)
+      .eq("status", "published")
+      .order(options?.sortBy ?? "views", { ascending: false });
+    if (error || !data) return [];
+    return data.map(mapRow);
+  },
+  ["all-songs"],
+  { revalidate: 300, tags: ["songs"] },
+);
 
-export async function getFreshSongs(limit = 4): Promise<Song[]> {
-  if (!hasEnvVars) return [];
-  const { data, error } = await getClient()
-    .from("songs")
-    .select(SONG_COLUMNS)
-    .eq("status", "published")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error || !data) return [];
-  return data.map(mapRow);
-}
+export const getFreshSongs = unstable_cache(
+  async (limit = 4): Promise<Song[]> => {
+    if (!hasEnvVars) return [];
+    const { data, error } = await getClient()
+      .from("songs")
+      .select(SONG_COLUMNS)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data.map(mapRow);
+  },
+  ["fresh-songs"],
+  { revalidate: 300, tags: ["songs"] },
+);
 
-export async function getSongBySlug(slug: string): Promise<Song | undefined> {
-  if (!hasEnvVars) return undefined;
-  const { data, error } = await getClient()
-    .from("songs")
-    .select(SONG_COLUMNS)
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
-  if (error || !data) return undefined;
-  return mapRow(data as Record<string, unknown>);
-}
+export const getSongsByArtist = unstable_cache(
+  async (
+    artist: string,
+    options?: { excludeSlug?: string; limit?: number },
+  ): Promise<Song[]> => {
+    if (!hasEnvVars) return [];
+    let q = getClient()
+      .from("songs")
+      .select(SONG_COLUMNS)
+      .eq("status", "published")
+      .eq("artist", artist)
+      .order("views", { ascending: false });
+    if (options?.excludeSlug) q = q.neq("slug", options.excludeSlug);
+    if (options?.limit) q = q.limit(options.limit);
+    const { data, error } = await q;
+    if (error || !data) return [];
+    return data.map(mapRow);
+  },
+  ["songs-by-artist"],
+  { revalidate: 300, tags: ["songs"] },
+);
+
+export const getSongBySlug = unstable_cache(
+  async (slug: string): Promise<Song | undefined> => {
+    if (!hasEnvVars) return undefined;
+    const { data, error } = await getClient()
+      .from("songs")
+      .select(SONG_COLUMNS)
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
+    if (error || !data) return undefined;
+    return mapRow(data as Record<string, unknown>);
+  },
+  ["song-by-slug"],
+  { revalidate: 300, tags: ["songs"] },
+);

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSongBySlug, getAllSongs } from "@/features/song/services/songs";
+import { getSongBySlug, getSongsByArtist } from "@/features/song/services/songs";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { type Song } from "@/features/song/types";
 import { Navbar } from "@/shared/components/Navbar";
@@ -62,11 +62,10 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
   if (!song) return notFound();
 
   const artistSlug = slugify(song.artist);
-  const allSongs = await getAllSongs();
-  const savedSlugs = await getSavedSlugs();
-  const otherSongs = allSongs
-    .filter((s) => s.artist === song.artist && s.slug !== slug)
-    .slice(0, 4);
+  const [otherSongs, savedSlugs] = await Promise.all([
+    getSongsByArtist(song.artist, { excludeSlug: slug, limit: 4 }),
+    getSavedSlugs(),
+  ]);
 
   // Check admin — get song ID for edit link
   let songId: string | null = null;

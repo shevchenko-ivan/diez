@@ -36,8 +36,17 @@ export async function GET(req: Request) {
       .limit(3),
   ]);
 
-  return NextResponse.json({
-    songs: songsRes.data ?? [],
-    artists: artistsRes.data ?? [],
-  });
+  return NextResponse.json(
+    {
+      songs: songsRes.data ?? [],
+      artists: artistsRes.data ?? [],
+    },
+    {
+      headers: {
+        // CDN caches 60s; stale-while-revalidate lets the next request hit instantly
+        // while the edge refreshes in the background.
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    },
+  );
 }

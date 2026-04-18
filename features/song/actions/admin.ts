@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { slugify } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 
@@ -125,6 +125,7 @@ export async function createSong(formData: FormData) {
 
   if (error) throw new Error(`Помилка збереження: ${error.message}`);
 
+  revalidateTag("songs");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/");
@@ -158,6 +159,7 @@ export async function updateSongStatus(formData: FormData) {
 
   if (error) throw new Error(`Помилка оновлення: ${error.message}`);
 
+  revalidateTag("songs");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/admin");
@@ -211,6 +213,7 @@ export async function updateSong(formData: FormData) {
 
   if (error) throw new Error(`Помилка збереження: ${error.message}`);
 
+  revalidateTag("songs");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
@@ -237,6 +240,7 @@ export async function deleteSong(formData: FormData) {
 
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
 
+  revalidateTag("songs");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/admin");
@@ -261,6 +265,7 @@ export async function bulkUpdateSongStatus(formData: FormData) {
     .in("id", ids);
   if (error) throw new Error(`Помилка: ${error.message}`);
 
+  revalidateTag("songs");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
@@ -282,6 +287,7 @@ export async function bulkDeleteSongs(formData: FormData) {
     .eq("status", "archived");
   if (error) throw new Error(`Помилка: ${error.message}`);
 
+  revalidateTag("songs");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
