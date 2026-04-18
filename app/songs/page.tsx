@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { type Metadata } from "next";
 import { getAllSongs } from "@/features/song/services/songs";
-import { getSavedSlugs } from "@/features/song/actions/saved";
+import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { SongCard } from "@/features/song/components/SongCard";
 import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";

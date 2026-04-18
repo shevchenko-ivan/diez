@@ -4,7 +4,9 @@ import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { LoadingState } from "@/shared/components/LoadingState";
 import { SongCard } from "@/features/song/components/SongCard";
-import { LogOut, Settings, Heart, Plus, User as UserIcon } from "lucide-react";
+import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
+import { getMyPlaylists } from "@/features/playlist/actions/playlists";
+import { LogOut, Settings, Heart, Plus, User as UserIcon, ListMusic } from "lucide-react";
 import Link from "next/link";
 import { TeButton } from "@/shared/components/TeButton";
 import { redirect } from "next/navigation";
@@ -32,17 +34,23 @@ async function ProfileDashboard() {
 
   const user = data.user;
 
-  // Saved songs — join saved_songs with songs via FK
-  const { data: savedData } = await supabase
-    .from("saved_songs")
-    .select("songs(slug, title, artist, difficulty, chords, views, cover_image, cover_color)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(6);
+  const playlists = await getMyPlaylists();
+  const defaultList = playlists.find((p) => p.isDefault) ?? null;
+  const totalSaved = playlists.reduce((acc, p) => acc + (p.songCount ?? 0), 0);
 
-  const savedSongs = (savedData ?? [])
-    .map((row: Record<string, unknown>) => row.songs as Record<string, unknown> | null)
-    .filter(Boolean) as Record<string, unknown>[];
+  // Preview songs from default list
+  let defaultPreview: Record<string, unknown>[] = [];
+  if (defaultList) {
+    const { data: preview } = await supabase
+      .from("playlist_songs")
+      .select("position, songs(slug, title, artist, difficulty, chords, views, cover_image, cover_color)")
+      .eq("playlist_id", defaultList.id)
+      .order("position", { ascending: true })
+      .limit(6);
+    defaultPreview = (preview ?? [])
+      .map((row: Record<string, unknown>) => row.songs as Record<string, unknown> | null)
+      .filter(Boolean) as Record<string, unknown>[];
+  }
 
   // Songs submitted by this user
   const { data: submittedData } = await supabase
@@ -53,6 +61,7 @@ async function ProfileDashboard() {
     .limit(6);
 
   const submittedSongs = (submittedData ?? []) as Record<string, unknown>[];
+  const otherLists = playlists.filter((p) => !p.isDefault);
 
   const userName = user.email!.split("@")[0];
 
@@ -68,7 +77,7 @@ async function ProfileDashboard() {
 
           <div className="flex gap-4 w-full">
             <div className="flex-1 te-inset p-3 rounded-2xl flex flex-col items-center">
-              <span className="text-xl font-bold tracking-tighter" style={{ color: "var(--orange)" }}>{savedSongs.length}</span>
+              <span className="text-xl font-bold tracking-tighter" style={{ color: "var(--orange)" }}>{totalSaved}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Збережених</span>
             </div>
             <div className="flex-1 te-inset p-3 rounded-2xl flex flex-col items-center">
@@ -79,6 +88,10 @@ async function ProfileDashboard() {
         </div>
 
         <div className="te-surface flex flex-col p-4" style={{ borderRadius: "1.5rem" }}>
+          <TeButton shape="pill" href="/profile/lists" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+            <ListMusic size={16} strokeWidth={1.8} />
+            Мої списки
+          </TeButton>
           <TeButton shape="pill" href="/add" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
             <Plus size={16} strokeWidth={1.8} />
             Додати нову пісню
@@ -99,18 +112,24 @@ async function ProfileDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
               <Heart size={20} style={{ color: "var(--orange)" }} />
-              Улюблені пісні
+              Подобається
             </h3>
-            <Link href="/songs" className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--orange)" }}>
-              Всі
-            </Link>
+            {defaultList && (
+              <Link
+                href={`/profile/lists/${defaultList.id}`}
+                className="text-xs font-bold uppercase tracking-widest"
+                style={{ color: "var(--orange)" }}
+              >
+                Всі
+              </Link>
+            )}
           </div>
 
-          {savedSongs.length === 0 ? (
+          {defaultPreview.length === 0 ? (
             <EmptyState message="Збережених пісень ще немає. Знайдіть щось до душі!" variant="inset" />
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              {savedSongs.map((song) => (
+              {defaultPreview.map((song) => (
                 <SongCard
                   key={song.slug as string}
                   slug={song.slug as string}
@@ -121,11 +140,35 @@ async function ProfileDashboard() {
                   views={song.views as number}
                   coverImage={(song.cover_image as string) ?? undefined}
                   coverColor={(song.cover_color as string) ?? undefined}
+                  isSaved
                 />
               ))}
             </div>
           )}
         </div>
+
+        {otherLists.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
+                <ListMusic size={20} style={{ color: "var(--orange)" }} />
+                Мої списки
+              </h3>
+              <Link
+                href="/profile/lists"
+                className="text-xs font-bold uppercase tracking-widest"
+                style={{ color: "var(--orange)" }}
+              >
+                Всі
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {otherLists.slice(0, 6).map((p) => (
+                <PlaylistCard key={p.id} playlist={p} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-6">

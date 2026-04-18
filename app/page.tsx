@@ -50,7 +50,7 @@ export default async function HomePage() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 pb-16">
 
         {/* ── 1. Hero ──────────────────────────────────────────────────────── */}
-        <section className="text-center py-16 md:py-24">
+        <section className="text-center py-8 md:py-12">
           <h1
             className="font-bold mb-4"
             style={{
@@ -66,7 +66,7 @@ export default async function HomePage() {
             Грай більше,<br />шукай менше.
           </h1>
           <p
-            className="font-medium mb-10 mx-auto"
+            className="font-medium mb-6 mx-auto"
             style={{
               fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
               color: "var(--text-muted)",
@@ -77,23 +77,8 @@ export default async function HomePage() {
           >
             Зручний пошук, точні тексти без зайвого сміття. Створено музикантами для музикантів.
           </p>
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-4">
             <HeroSearch />
-          </div>
-          <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
-            <span className="text-xs font-semibold uppercase tracking-wider mr-2 my-auto" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
-              Часті пошуки:
-            </span>
-            {["Океан Ельзи", "Бумбокс", "Shallow", "Інді"].map((tag) => (
-              <HapticLink
-                key={tag}
-                href={`/songs?q=${tag}`}
-                className="te-pill-btn px-3 py-1 rounded-full text-xs font-semibold"
-                style={{ color: "var(--text)" }}
-              >
-                {tag}
-              </HapticLink>
-            ))}
           </div>
         </section>
 

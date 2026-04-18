@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Heart, X } from "lucide-react";
-import { toggleSavedSong } from "@/features/song/actions/saved";
 import { TeButton } from "@/shared/components/TeButton";
+import { AddToPlaylistPopover } from "@/features/playlist/components/AddToPlaylistPopover";
+import { getPlaylistsForSong } from "@/features/playlist/actions/playlists";
+import type { PlaylistSummary } from "@/features/playlist/types";
+import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   slug: string;
@@ -14,34 +17,37 @@ interface Props {
   size?: number;
 }
 
-/**
- * Heart toggle for saving a song to "вибране".
- * - Optimistic state toggle
- * - Orange filled when saved, grey outline when not
- * - For signed-out users shows a sign-up prompt modal
- */
 export function SaveHeartButton({ slug, initialSaved = false, variant = "floating", size = 14 }: Props) {
   const [saved, setSaved] = useState(initialSaved);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [hover, setHover] = useState(false);
-  const [, startTransition] = useTransition();
+  const [prefetched, setPrefetched] = useState<PlaylistSummary[] | null>(null);
+  const prefetchStarted = useRef(false);
 
   useEffect(() => setSaved(initialSaved), [initialSaved]);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const prefetch = () => {
+    if (prefetchStarted.current) return;
+    prefetchStarted.current = true;
+    getPlaylistsForSong(slug)
+      .then(setPrefetched)
+      .catch(() => { prefetchStarted.current = false; });
+  };
+
+  const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const next = !saved;
-    setSaved(next); // optimistic
-    startTransition(async () => {
-      const res = await toggleSavedSong(slug);
-      if (!res.ok) {
-        setSaved(!next); // rollback
-        if (res.reason === "auth") setAuthOpen(true);
-      } else {
-        setSaved(res.saved);
-      }
-    });
+    // Capture anchor rect before awaiting — currentTarget is nulled after await.
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+    setAnchorRect(rect);
   };
 
   const heart = (
@@ -59,9 +65,11 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
         <button
           type="button"
           onClick={handleClick}
-          onMouseEnter={() => setHover(true)}
+          onMouseEnter={() => { setHover(true); prefetch(); }}
           onMouseLeave={() => setHover(false)}
-          aria-label={saved ? "Прибрати з вибраного" : "Додати у вибране"}
+          onFocus={prefetch}
+          onTouchStart={prefetch}
+          aria-label={saved ? "Змінити списки" : "Додати у список"}
           aria-pressed={saved}
           className="absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full transition-colors"
           style={{
@@ -80,7 +88,10 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
       ) : (
         <TeButton
           onClick={(e) => handleClick(e as unknown as React.MouseEvent)}
-          aria-label={saved ? "Прибрати з вибраного" : "Додати у вибране"}
+          onMouseEnter={prefetch}
+          onFocus={prefetch}
+          onTouchStart={prefetch}
+          aria-label={saved ? "Змінити списки" : "Додати у список"}
           aria-pressed={saved}
           active={saved}
           style={{ width: 36, height: 36 }}
@@ -89,6 +100,15 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
         </TeButton>
       )}
 
+      {anchorRect && (
+        <AddToPlaylistPopover
+          slug={slug}
+          anchorRect={anchorRect}
+          initialLists={prefetched}
+          onClose={() => setAnchorRect(null)}
+          onSavedChange={(s) => setSaved(s)}
+        />
+      )}
       {authOpen && <AuthRequiredModal onClose={() => setAuthOpen(false)} />}
     </>
   );
@@ -101,7 +121,6 @@ function AuthRequiredModal({ onClose }: { onClose: () => void }) {
     setMounted(true);
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    // Lock body scroll while modal is open — compensate scrollbar width so layout doesn't shift
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     const prevOverflow = document.body.style.overflow;
     const prevPadding = document.body.style.paddingRight;
@@ -140,23 +159,13 @@ function AuthRequiredModal({ onClose }: { onClose: () => void }) {
           onClick={stopAndClose}
           aria-label="Закрити"
           className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full"
-          style={{
-            width: 28,
-            height: 28,
-            color: "var(--text-muted)",
-            background: "transparent",
-          }}
+          style={{ width: 28, height: 28, color: "var(--text-muted)", background: "transparent" }}
         >
           <X size={16} strokeWidth={2} />
         </button>
         <div
           className="flex items-center justify-center rounded-full"
-          style={{
-            width: 56,
-            height: 56,
-            background: "rgba(255,136,0,0.12)",
-            color: "var(--orange)",
-          }}
+          style={{ width: 56, height: 56, background: "rgba(255,136,0,0.12)", color: "var(--orange)" }}
         >
           <Heart size={24} strokeWidth={2} fill="currentColor" />
         </div>
@@ -164,7 +173,7 @@ function AuthRequiredModal({ onClose }: { onClose: () => void }) {
           Зареєструйтеся, щоб зберігати
         </h2>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          Створіть акаунт — і всі ваші улюблені пісні будуть у розділі «Вибране».
+          Створіть акаунт — і всі ваші улюблені пісні будуть у списках.
         </p>
         <div className="flex flex-col gap-2 w-full mt-2">
           <TeButton shape="pill" href="/auth/sign-up" className="w-full justify-center py-2.5">

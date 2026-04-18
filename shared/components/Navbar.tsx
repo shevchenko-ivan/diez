@@ -2,17 +2,15 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette } from "lucide-react";
+import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, ListMusic } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
 import { TeButton } from "@/shared/components/TeButton";
 
 const NAV_LINKS = [
-  { href: "/songs?sort=popular",label: "Топ популярних" },
+  { href: "/",                  label: "Головна" },
   { href: "/artists",           label: "Виконавці" },
   { href: "/tuner",             label: "Тюнер" },
-  { href: "/songs",             label: "Акорди" },
-  { href: "/songs?sort=new",    label: "Новинки" },
   { href: "/chords",            label: "Визначити акорд" },
 ];
 
@@ -107,11 +105,6 @@ export function Navbar() {
         {/* Desktop right area */}
         <div className="hidden md:flex items-center gap-3">
 
-          {/* Primary action — Створити */}
-          <TeButton shape="pill" href="/add" className="px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--orange)" }}>
-            <Plus size={13} /> Створити
-          </TeButton>
-
           <TeButton
             shape="pill"
             onClick={toggle}
@@ -171,11 +164,25 @@ export function Navbar() {
                   </div>
 
                   <div className="py-1">
+                    <Link href="/add" onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                      style={{ color: "var(--orange)" }}
+                    >
+                      <Plus size={15} style={{ color: "var(--orange)" }} /> Створити пісню
+                    </Link>
+
                     <Link href="/profile" onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--text)" }}
                     >
                       <User size={15} style={{ color: "var(--text-muted)" }} /> Профіль
+                    </Link>
+
+                    <Link href="/profile/lists" onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                      style={{ color: "var(--text)" }}
+                    >
+                      <ListMusic size={15} style={{ color: "var(--text-muted)" }} /> Мої списки
                     </Link>
 
                     {isAdmin && (
@@ -248,6 +255,7 @@ export function Navbar() {
             {isLoggedIn ? (
               <>
                 <TeButton shape="pill" href="/profile" className="px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Профіль</TeButton>
+                <TeButton shape="pill" href="/profile/lists" className="px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Мої списки</TeButton>
                 {isAdmin && (
                   <TeButton shape="pill" href="/admin" className="px-4 py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Адмін-панель</TeButton>
                 )}

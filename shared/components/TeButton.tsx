@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import type { CSSProperties, MouseEvent, ReactNode, TouchEvent } from "react";
+import type { CSSProperties, FocusEvent, MouseEvent, ReactNode, TouchEvent } from "react";
 
 type Shape = "circle" | "pill";
 type Size = "sm" | "md" | "lg";
@@ -37,6 +37,8 @@ type AsButton = BaseProps & {
   href?: undefined;
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   onMouseDown?: (e: MouseEvent<HTMLButtonElement>) => void;
+  onMouseEnter?: (e: MouseEvent<HTMLButtonElement>) => void;
+  onFocus?: (e: FocusEvent<HTMLButtonElement>) => void;
   onTouchStart?: (e: TouchEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit" | "reset";
 };
@@ -158,6 +160,8 @@ export function TeButton(props: TeButtonProps) {
       type={btn.type ?? "button"}
       onClick={btn.onClick}
       onMouseDown={btn.onMouseDown}
+      onMouseEnter={btn.onMouseEnter}
+      onFocus={btn.onFocus}
       onTouchStart={btn.onTouchStart}
       disabled={disabled}
       data-active={active || undefined}

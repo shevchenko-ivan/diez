@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
-import { suggestCapo } from "@/features/song/data/chord-templates";
 import { SongPlayer } from "./SongPlayer";
 import { RhythmPlayer } from "./RhythmPlayer";
 import { TunerWidget } from "@/features/tuner/components/TunerWidget";
@@ -17,21 +16,11 @@ import { TeButton } from "@/shared/components/TeButton";
 
 export function SongViewer({ song }: { song: Song }) {
   const [transpose, setTranspose] = useState(0);
-  const [capo, setCapo] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
   const sectionsRef = useRef<HTMLDivElement>(null);
   const { trigger } = useHaptics();
   const voicingState = useVoicings(song.slug);
-
-  const bestCapo = useMemo(() => {
-    const ranked = suggestCapo(song.chords, transpose);
-    const best = ranked.find((r) => r.fret > 0);
-    if (!best) return null;
-    // Only recommend if it's meaningfully easier than no capo
-    const noCapoScore = ranked.find((r) => r.fret === 0)?.score ?? Infinity;
-    return best.score < noCapoScore - 1 ? best.fret : null;
-  }, [song.chords, transpose]);
 
   // Auto-scroll loop. Stops when the bottom of the last lyrics block reaches
   // the viewport bottom — so the footer never enters the fold during auto-play.
@@ -65,7 +54,11 @@ export function SongViewer({ song }: { song: Song }) {
     });
   };
 
-  const [showTuner, setShowTuner] = useState(false);
+  const [expandedTool, setExpandedTool] = useState<"font" | "tuner" | null>(null);
+  const toggleTool = (tool: "font" | "tuner") => {
+    trigger("light");
+    setExpandedTool((prev) => (prev === tool ? null : tool));
+  };
 
   return (
     <div className="relative">
@@ -80,11 +73,11 @@ export function SongViewer({ song }: { song: Song }) {
             <p className="text-[9px] font-bold tracking-widest uppercase mb-3 opacity-50">
               Акорди
             </p>
-            <ChordPanel chords={song.chords} transpose={transpose - capo} voicingState={voicingState} />
+            <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} />
           </div>
 
           {/* Transpose */}
-          <ControlBlock label="Транспоз">
+          <ControlBlock label="Транспонування">
             <div className="flex items-center justify-between">
               <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><ChevronDown size={16} strokeWidth={2} /></AdjusterButton>
               <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
@@ -94,25 +87,6 @@ export function SongViewer({ song }: { song: Song }) {
             </div>
           </ControlBlock>
 
-          {/* Capo */}
-          <ControlBlock label="Каподастр">
-            <div className="flex items-center justify-between">
-              <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }} aria-label="Менше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
-              <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-                {capo > 0 ? `${capo} лад` : "—"}
-              </span>
-              <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }} aria-label="Більше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
-            </div>
-            {bestCapo !== null && bestCapo !== capo && (
-              <button
-                onClick={() => { trigger("light"); setCapo(bestCapo); }}
-                className="w-full mt-2 text-[10px] font-bold py-1 rounded-lg transition-colors"
-                style={{ color: "var(--orange)", background: "rgba(255,136,0,0.08)" }}
-              >
-                Рекоменд.: {bestCapo} лад
-              </button>
-            )}
-          </ControlBlock>
         </aside>
 
         {/* ── CENTER: Lyrics ───────────────────────────────────────────────── */}
@@ -135,7 +109,7 @@ export function SongViewer({ song }: { song: Song }) {
             <div className="px-4 pb-4">
               <ChordPanel
                 chords={song.chords}
-                transpose={transpose - capo}
+                transpose={transpose}
                 voicingState={voicingState}
                 diagramWidth={140}
                 diagramHeight={175}
@@ -207,7 +181,7 @@ export function SongViewer({ song }: { song: Song }) {
                         {hasChords && (
                           <div style={{ position: "relative", height: `${fontSize * 1.3}px` }}>
                             {line.chords.map(({ chord, col }, j) => {
-                              const tr = transposeChord(chord, transpose - capo);
+                              const tr = transposeChord(chord, transpose);
                               return (
                                 <span
                                   key={j}
@@ -246,29 +220,49 @@ export function SongViewer({ song }: { song: Song }) {
         {/* ── RIGHT: Controls (sticky) ─────────────────────────────────────── */}
         <aside className="hidden lg:block self-start sticky top-6">
           <div className="space-y-3">
-            {/* Font size */}
-            <ControlBlock label="Розмір">
-              <div className="flex items-center justify-between">
-                <AdjusterButton
-                  onClick={() => setFontSize((p) => Math.max(12, p - 2))}
-                  aria-label="Менший текст"
-                >
-                  <AArrowDown size={16} strokeWidth={2} />
-                </AdjusterButton>
-                <span
-                  className="font-mono font-bold text-sm"
-                  style={{ color: "var(--text)" }}
-                >
-                  {fontSize}
-                </span>
-                <AdjusterButton
-                  onClick={() => setFontSize((p) => Math.min(28, p + 2))}
-                  aria-label="Більший текст"
-                >
-                  <AArrowUp size={16} strokeWidth={2} />
-                </AdjusterButton>
-              </div>
-            </ControlBlock>
+            {/* Font size + Tuner toggle row */}
+            <div className="flex gap-2">
+              <TeButton
+                shape="pill"
+                onClick={() => toggleTool("font")}
+                active={expandedTool === "font"}
+                icon={AArrowUp}
+                iconSize={16}
+                className="flex-1 py-2 text-xs font-bold"
+                style={{ borderRadius: "1rem", color: expandedTool === "font" ? "var(--orange)" : "var(--text-muted)" }}
+              >
+                Розмір
+              </TeButton>
+              <TeButton
+                shape="pill"
+                onClick={() => toggleTool("tuner")}
+                active={expandedTool === "tuner"}
+                icon={Music}
+                iconSize={14}
+                className="flex-1 py-2 text-xs font-bold"
+                style={{ borderRadius: "1rem", color: expandedTool === "tuner" ? "var(--orange)" : "var(--text-muted)" }}
+              >
+                Тюнер
+              </TeButton>
+            </div>
+            {expandedTool === "font" && (
+              <ControlBlock label="Розмір тексту">
+                <div className="flex items-center justify-between">
+                  <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))} aria-label="Менший текст">
+                    <AArrowDown size={16} strokeWidth={2} />
+                  </AdjusterButton>
+                  <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
+                    {fontSize}
+                  </span>
+                  <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))} aria-label="Більший текст">
+                    <AArrowUp size={16} strokeWidth={2} />
+                  </AdjusterButton>
+                </div>
+              </ControlBlock>
+            )}
+            {expandedTool === "tuner" && (
+              <TunerWidget onClose={() => setExpandedTool(null)} />
+            )}
 
             {/* Auto scroll */}
             <ControlBlock label="Прокрутка">
@@ -302,22 +296,6 @@ export function SongViewer({ song }: { song: Song }) {
               timeSignature={song.timeSignature ?? "4/4"}
             />
 
-            {/* Tuner */}
-            {showTuner ? (
-              <TunerWidget onClose={() => setShowTuner(false)} />
-            ) : (
-              <TeButton
-                shape="pill"
-                onClick={() => { trigger("light"); setShowTuner(true); }}
-                icon={Music}
-                iconSize={14}
-                className="w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2"
-                style={{ borderRadius: "1rem", color: "var(--text-muted)" }}
-              >
-                Тюнер
-              </TeButton>
-            )}
-
             {/* Audio player */}
             {song.youtubeId && (
               <SongPlayer
@@ -330,51 +308,15 @@ export function SongViewer({ song }: { song: Song }) {
         </aside>
       </div>
 
-      {/* ── Mobile tuner ──────────────────────────────────────────────────────── */}
-      {showTuner && (
-        <div className="lg:hidden mt-4 max-w-sm mx-auto">
-          <TunerWidget onClose={() => setShowTuner(false)} />
-        </div>
-      )}
-
       {/* ── Mobile controls bar ──────────────────────────────────────────────── */}
       <div className="lg:hidden mt-6 grid grid-cols-2 gap-3">
-        <ControlBlock label="Транспоз">
+        <ControlBlock label="Транспонування">
           <div className="flex items-center justify-between">
             <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><ChevronDown size={16} strokeWidth={2} /></AdjusterButton>
             <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
               {transpose > 0 ? `+${transpose}` : transpose}
             </span>
             <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><ChevronUp size={16} strokeWidth={2} /></AdjusterButton>
-          </div>
-        </ControlBlock>
-
-        <ControlBlock label="Каподастр">
-          <div className="flex items-center justify-between">
-            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.max(0, p - 1)); }} aria-label="Менше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
-            <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-              {capo > 0 ? capo : "—"}
-            </span>
-            <AdjusterButton onClick={() => { trigger("light"); setCapo((p) => Math.min(11, p + 1)); }} aria-label="Більше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
-          </div>
-          {bestCapo !== null && bestCapo !== capo && (
-            <button
-              onClick={() => { trigger("light"); setCapo(bestCapo); }}
-              className="w-full mt-1 text-[9px] font-bold py-0.5 rounded-md"
-              style={{ color: "var(--orange)", background: "rgba(255,136,0,0.08)" }}
-            >
-              Рек.: {bestCapo} лад
-            </button>
-          )}
-        </ControlBlock>
-
-        <ControlBlock label="Розмір">
-          <div className="flex items-center justify-between">
-            <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))} aria-label="Менший текст"><AArrowDown size={16} strokeWidth={2} /></AdjusterButton>
-            <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-              {fontSize}
-            </span>
-            <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))} aria-label="Більший текст"><AArrowUp size={16} strokeWidth={2} /></AdjusterButton>
           </div>
         </ControlBlock>
 
@@ -400,19 +342,51 @@ export function SongViewer({ song }: { song: Song }) {
         </ControlBlock>
       </div>
 
-      {/* Mobile tuner button */}
-      {!showTuner && (
+      {/* Mobile font size + tuner toggle row */}
+      <div className="lg:hidden mt-3 flex gap-2">
+        <TeButton
+          shape="pill"
+          onClick={() => toggleTool("font")}
+          active={expandedTool === "font"}
+          icon={AArrowUp}
+          iconSize={16}
+          className="flex-1 py-2.5 text-xs font-bold"
+          style={{ borderRadius: "1rem", color: expandedTool === "font" ? "var(--orange)" : "var(--text-muted)" }}
+        >
+          Розмір
+        </TeButton>
+        <TeButton
+          shape="pill"
+          onClick={() => toggleTool("tuner")}
+          active={expandedTool === "tuner"}
+          icon={Music}
+          iconSize={14}
+          className="flex-1 py-2.5 text-xs font-bold"
+          style={{ borderRadius: "1rem", color: expandedTool === "tuner" ? "var(--orange)" : "var(--text-muted)" }}
+        >
+          Тюнер
+        </TeButton>
+      </div>
+      {expandedTool === "font" && (
         <div className="lg:hidden mt-3">
-          <TeButton
-            shape="pill"
-            onClick={() => { trigger("light"); setShowTuner(true); }}
-            icon={Music}
-            iconSize={14}
-            className="w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2"
-            style={{ borderRadius: "1rem", color: "var(--text-muted)" }}
-          >
-            Тюнер
-          </TeButton>
+          <ControlBlock label="Розмір тексту">
+            <div className="flex items-center justify-between">
+              <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))} aria-label="Менший текст">
+                <AArrowDown size={16} strokeWidth={2} />
+              </AdjusterButton>
+              <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
+                {fontSize}
+              </span>
+              <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))} aria-label="Більший текст">
+                <AArrowUp size={16} strokeWidth={2} />
+              </AdjusterButton>
+            </div>
+          </ControlBlock>
+        </div>
+      )}
+      {expandedTool === "tuner" && (
+        <div className="lg:hidden mt-3 max-w-sm mx-auto">
+          <TunerWidget onClose={() => setExpandedTool(null)} />
         </div>
       )}
 

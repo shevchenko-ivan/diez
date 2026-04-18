@@ -582,7 +582,7 @@ export default function UIKitPage() {
             </p>
             <Row gap={6}>
               <div>
-                <ControlBlock label="Транспоз" className="w-[180px]">
+                <ControlBlock label="Транспонування" className="w-[180px]">
                   <div className="flex items-center justify-between">
                     <AdjusterButton aria-label="Transpose down">−</AdjusterButton>
                     <span className="font-mono-te font-bold text-base" style={{ color: "var(--text)" }}>+2</span>

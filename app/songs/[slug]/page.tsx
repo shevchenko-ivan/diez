@@ -4,7 +4,7 @@ import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSongBySlug, getAllSongs } from "@/features/song/services/songs";
-import { getSavedSlugs } from "@/features/song/actions/saved";
+import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { type Song } from "@/features/song/types";
 import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
