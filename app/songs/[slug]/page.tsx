@@ -3,11 +3,12 @@ export const dynamic = "force-dynamic";
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSongBySlug, getSongsByArtist } from "@/features/song/services/songs";
-import { getSavedSlugs } from "@/features/playlist/actions/playlists";
+import { getSongBySlug, getSongsByArtist, applyVariant } from "@/features/song/services/songs";
+import { getSavedSlugs, getSavedVariantId } from "@/features/playlist/actions/playlists";
 import { type Song } from "@/features/song/types";
 import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
+import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Eye, Pencil } from "lucide-react";
@@ -19,6 +20,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteFooter } from "@/shared/components/SiteFooter";
 import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
+import { VariantSwitcher } from "@/features/song/components/VariantSwitcher";
+import { Suspense } from "react";
+import { SavedToast } from "@/shared/components/SavedToast";
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -28,27 +32,27 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const song = await getSongBySlug(slug);
-  if (!song) return {};
+  const metaSong = await getSongBySlug(slug);
+  if (!metaSong) return {};
 
   const difficultyLabel =
-    song.difficulty === "easy" ? "легка" : song.difficulty === "medium" ? "середня" : "складна";
-  const title = `${song.title} — ${song.artist} | Акорди | Diez`;
-  const description = `Акорди пісні «${song.title}» виконавця ${song.artist}. Тональність: ${song.key}, складність: ${difficultyLabel}. Акорди: ${song.chords.join(", ")}.`;
+    metaSong.difficulty === "easy" ? "легка" : metaSong.difficulty === "medium" ? "середня" : "складна";
+  const title = `${metaSong.title} — ${metaSong.artist} | Акорди | Diez`;
+  const description = `Акорди пісні «${metaSong.title}» виконавця ${metaSong.artist}. Тональність: ${metaSong.key}, складність: ${difficultyLabel}. Акорди: ${metaSong.chords.join(", ")}.`;
 
   return {
     title,
     description,
     alternates: { canonical: `/songs/${slug}` },
     openGraph: {
-      title: `${song.title} — ${song.artist}`,
+      title: `${metaSong.title} — ${metaSong.artist}`,
       description,
       type: "article",
       url: `/songs/${slug}`,
       // Use song cover when available; falls back to app/opengraph-image.png via Next.js inheritance.
       // Relative paths are resolved against metadataBase in app/layout.tsx.
-      ...(song.coverImage && {
-        images: [{ url: song.coverImage, alt: `${song.title} — ${song.artist}` }],
+      ...(metaSong.coverImage && {
+        images: [{ url: metaSong.coverImage, alt: `${metaSong.title} — ${metaSong.artist}` }],
       }),
     },
   };
@@ -56,16 +60,28 @@ export async function generateMetadata({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function SongPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SongPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ v?: string }>;
+}) {
   const { slug } = await params;
-  const song = await getSongBySlug(slug);
-  if (!song) return notFound();
+  const { v: variantId } = await searchParams;
+  const baseSong = await getSongBySlug(slug);
+  if (!baseSong) return notFound();
 
-  const artistSlug = slugify(song.artist);
-  const [otherSongs, savedSlugs] = await Promise.all([
-    getSongsByArtist(song.artist, { excludeSlug: slug, limit: 4 }),
+  const artistSlug = slugify(baseSong.artist);
+  const [otherSongs, savedSlugs, savedVariantId] = await Promise.all([
+    getSongsByArtist(baseSong.artist, { excludeSlug: slug, limit: 4 }),
     getSavedSlugs(),
+    getSavedVariantId(slug),
   ]);
+
+  // ?v= takes priority; then the variant the user previously saved; then primary.
+  const effectiveVariantId = variantId ?? savedVariantId ?? undefined;
+  const song = applyVariant(baseSong, effectiveVariantId);
 
   // Check admin — get song ID for edit link
   let songId: string | null = null;
@@ -100,6 +116,7 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
+      <Suspense><SavedToast /></Suspense>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -133,6 +150,12 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5 justify-end">
+            {song.variants && song.variants.length > 0 && (
+              <VariantSwitcher
+                variants={song.variants}
+                activeVariantId={song.activeVariantId}
+              />
+            )}
             {songId && (
               <TeButton
                 href={`/admin/songs/edit?id=${songId}&from=song`}
@@ -142,7 +165,8 @@ export default async function SongPage({ params }: { params: Promise<{ slug: str
                 <Pencil size={14} />
               </TeButton>
             )}
-            <SongActions slug={song.slug} isSaved={savedSlugs.has(song.slug)} />
+            <FocusModeToggle />
+            <SongActions slug={song.slug} isSaved={savedSlugs.has(song.slug)} variantId={song.activeVariantId} />
           </div>
         </div>
 

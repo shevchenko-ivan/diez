@@ -9,11 +9,20 @@ import {
   SHARP_TO_FLAT,
   transposeChord,
   lookupChord,
+  lookupNoBarreVoicing,
 } from "../data/chord-templates";
+import { lookupChordUke, UKE_OPEN_FREQS } from "../data/chord-templates-ukulele";
+import { lookupChordPiano } from "../data/chord-templates-piano";
+import { PianoDiagram } from "./PianoDiagram";
+import { useInstrument, type Instrument } from "@/shared/hooks/useInstrument";
 
 // Re-export for consumers (SongViewer.tsx imports from here)
 export { transposeChord, lookupChord };
 export type { ChordDef };
+
+function lookupChordForInstrument(chord: string, instrument: Instrument): ChordDef[] | null | undefined {
+  return instrument === "ukulele" ? lookupChordUke(chord) : lookupChord(chord);
+}
 
 // ─── SVG constants ────────────────────────────────────────────────────────────
 
@@ -23,13 +32,15 @@ const STRING_LEFT = 20;
 const STRING_RIGHT = 70;
 const FRET_TOP = 26;
 const FRET_BOTTOM = 90;
-const NUM_STRINGS = 6;
 const NUM_FRETS = 4;
-const STRING_GAP = (STRING_RIGHT - STRING_LEFT) / (NUM_STRINGS - 1); // 10
 const FRET_GAP = (FRET_BOTTOM - FRET_TOP) / NUM_FRETS; // 16
 
-function stringX(i: number) {
-  return STRING_LEFT + i * STRING_GAP;
+function stringGapFor(numStrings: number) {
+  return (STRING_RIGHT - STRING_LEFT) / (numStrings - 1);
+}
+
+function stringXFor(i: number, numStrings: number) {
+  return STRING_LEFT + i * stringGapFor(numStrings);
 }
 
 function fretY(rowIndex: number) {
@@ -38,7 +49,7 @@ function fretY(rowIndex: number) {
 
 // ─── Audio: play a chord strum ────────────────────────────────────────────────
 // Standard tuning frequencies for open strings (E2, A2, D3, G3, B3, E4 in Hz).
-const OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
+const GUITAR_OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 
 let sharedAudioCtx: AudioContext | null = null;
 function getAudioCtx(): AudioContext | null {
@@ -107,7 +118,7 @@ function buildPluckBuffer(ctx: AudioContext, freq: number, seconds = 2.2): Audio
   return buf;
 }
 
-function playChordStrum(strings: number[]) {
+function playChordStrum(strings: number[], openFreqs: number[]) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
@@ -116,7 +127,7 @@ function playChordStrum(strings: number[]) {
   let voice = 0;
   strings.forEach((fret, i) => {
     if (fret < 0) return; // muted
-    const freq = OPEN_FREQS[i] * Math.pow(2, fret / 12);
+    const freq = openFreqs[i] * Math.pow(2, fret / 12);
     const start = now + voice * strumGap;
     voice++;
 
@@ -147,6 +158,7 @@ interface ChordDiagramProps {
   def: ChordDef;
   width?: number;
   height?: number;
+  openFreqs?: number[];
 }
 
 // Compute finger assignments (1=index, 2=middle, 3=ring, 4=pinky).
@@ -196,8 +208,10 @@ function computeFingers(strings: number[], barre?: number): (number | null)[] {
   return fingers;
 }
 
-export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiagramProps) {
+export function ChordDiagram({ name, def, width = 100, height = 125, openFreqs = GUITAR_OPEN_FREQS }: ChordDiagramProps) {
   const { strings, baseFret, barre } = def;
+  const numStrings = strings.length;
+  const stringX = (i: number) => stringXFor(i, numStrings);
 
   // Compute barre span: indices where fret value === barre (non-muted, >= barre)
   const barreIndices =
@@ -220,14 +234,15 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
       width={width}
       height={height}
       xmlns="http://www.w3.org/2000/svg"
+      className="chord-diagram-svg"
       style={{ display: "block", overflow: "visible", cursor: "pointer" }}
       onClick={(e) => {
         e.stopPropagation();
-        playChordStrum(strings);
+        playChordStrum(strings, openFreqs);
       }}
     >
       <title>{`Програти ${name}`}</title>
-      {/* Chord name + play icon (icon sits right next to the name) */}
+      {/* Chord name (stays centered) */}
       <text
         x={(STRING_LEFT + STRING_RIGHT) / 2}
         y="10"
@@ -238,14 +253,24 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
         fontFamily="inherit"
       >
         {name}
-        <tspan
-          dx="3"
-          fontSize="7"
-          fontWeight="normal"
-          style={{ fill: "var(--orange)", pointerEvents: "none" }}
-        >
-          ▶
-        </tspan>
+      </text>
+      {/* Play icon — revealed on hover, doesn't shift the name */}
+      <text
+        className="chord-diagram-play"
+        x={(STRING_LEFT + STRING_RIGHT) / 2 + name.length * 3.2 + 2}
+        y="10"
+        textAnchor="start"
+        fontSize="7"
+        fontWeight="normal"
+        fontFamily="inherit"
+        style={{
+          fill: "var(--orange)",
+          pointerEvents: "none",
+          opacity: 0,
+          transition: "opacity 120ms ease",
+        }}
+      >
+        ▶
       </text>
 
       {/* Nut (thick rect at top when baseFret === 1) */}
@@ -291,8 +316,8 @@ export function ChordDiagram({ name, def, width = 100, height = 125 }: ChordDiag
           </text>
         ))}
 
-      {/* String lines (6 vertical) */}
-      {Array.from({ length: NUM_STRINGS }).map((_, i) => (
+      {/* String lines (vertical, one per string) */}
+      {Array.from({ length: numStrings }).map((_, i) => (
         <line
           key={`string-${i}`}
           x1={stringX(i)}
@@ -417,6 +442,7 @@ interface ChordPanelProps {
   voicingState?: VoicingState;
   diagramWidth?: number;
   diagramHeight?: number;
+  noBarreMode?: boolean;
 }
 
 // ─── Shared voicing state hook ───────────────────────────────────────────────
@@ -540,13 +566,17 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const [instrument] = useInstrument();
+  const openFreqs = instrument === "ukulele" ? UKE_OPEN_FREQS : GUITAR_OPEN_FREQS;
 
-  const defs = lookupChord(chord);
-  if (!defs) return <>{children}</>;
+  const pianoDefs = instrument === "piano" ? lookupChordPiano(chord) : null;
+  const defs = instrument === "piano" ? null : lookupChordForInstrument(chord, instrument);
+  if (!defs && !pianoDefs) return <>{children}</>;
 
-  const total = defs.length;
+  const total = (pianoDefs ?? defs)!.length;
   const idx = (voicingState.voicingIdx[chord] ?? 0) % total;
-  const def = defs[idx];
+  const def = defs ? defs[idx] : null;
+  const pianoDef = pianoDefs ? pianoDefs[idx] : null;
 
   const show = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -591,7 +621,11 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
             pointerEvents: "auto",
           }}
         >
-          <ChordDiagram name={chord} def={def} width={90} height={112} />
+          {pianoDef ? (
+            <PianoDiagram name={chord} def={pianoDef} width={140} height={70} />
+          ) : (
+            <ChordDiagram name={chord} def={def!} width={90} height={112} openFreqs={openFreqs} />
+          )}
           <VoicingSwitcher
             chordName={chord}
             total={total}
@@ -604,16 +638,45 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
   );
 }
 
-export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramWidth = 100, diagramHeight = 125 }: ChordPanelProps) {
+export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramWidth = 100, diagramHeight = 125, noBarreMode = false }: ChordPanelProps) {
   // Use external state if provided, otherwise create local
   const localState = useVoicings(songSlug);
   const { voicingIdx, setVoicingIdx } = voicingState || localState;
+  const [instrument] = useInstrument();
+  const openFreqs = instrument === "ukulele" ? UKE_OPEN_FREQS : GUITAR_OPEN_FREQS;
 
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-6">
+    <div className={`flex flex-wrap gap-x-3 gap-y-6 ${instrument === "piano" ? "justify-center" : ""}`}>
       {chords.map((chord) => {
         const transposed = transposeChord(chord, transpose);
-        const defs = lookupChord(transposed);
+
+        // Piano uses its own lookup/diagram path — no voicings, no barre.
+        if (instrument === "piano") {
+          const pianoDefs = lookupChordPiano(transposed);
+          if (!pianoDefs) {
+            return (
+              <div
+                key={chord}
+                style={{ width: diagramWidth, height: diagramHeight, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 4 }}
+              >
+                <span style={{ fontSize: 10, fontWeight: "bold", color: "var(--text)", marginBottom: 4 }}>{transposed}</span>
+                <div style={{ width: diagramWidth - 8, height: (diagramHeight - 20) * 0.55, border: "1px dashed currentColor", borderRadius: 6, opacity: 0.2 }} />
+              </div>
+            );
+          }
+          const pw = Math.max(diagramWidth, 130);
+          const ph = Math.round(pw * (82 / 140));
+          return (
+            <div key={chord} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <PianoDiagram name={transposed} def={pianoDefs[0]} width={pw} height={ph} />
+            </div>
+          );
+        }
+
+        // In no-barre mode prefer the dedicated alternative voicing if available (guitar only).
+        const noBarreAlt = noBarreMode && instrument === "guitar" ? lookupNoBarreVoicing(transposed) : null;
+        const base = lookupChordForInstrument(transposed, instrument);
+        const defs = noBarreAlt ? [noBarreAlt, ...(base ?? [])] : base;
 
         if (!defs) {
           return (
@@ -663,6 +726,7 @@ export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramW
               def={def}
               width={diagramWidth}
               height={diagramHeight}
+              openFreqs={openFreqs}
             />
             <VoicingSwitcher
               chordName={transposed}

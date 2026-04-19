@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp } from "lucide-react";
+import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
+import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
 import { ControlBlock } from "@/shared/components/ControlBlock";
+import { useFocusMode } from "@/shared/hooks/useFocusMode";
 
 // Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
 const RhythmPlayer = dynamic(
@@ -20,6 +22,48 @@ const TunerWidget = dynamic(
 );
 import { AdjusterButton } from "@/shared/components/AdjusterButton";
 import { TeButton } from "@/shared/components/TeButton";
+import { ToggleKnob } from "@/shared/components/ToggleKnob";
+import { InstrumentSwitch } from "./InstrumentSwitch";
+
+// ─── Beginner-mode heuristics ────────────────────────────────────────────────
+// Open/easy voicings a beginner can play without barre.
+const OPEN_CHORDS = new Set([
+  "C", "D", "E", "G", "A",
+  "Am", "Em", "Dm",
+  "D7", "E7", "A7", "G7", "C7", "B7",
+  "Cmaj7", "Gmaj7", "Em7", "Am7", "Dm7",
+  "Asus2", "Dsus2", "Esus4", "Asus4", "Dsus4",
+]);
+// Majors that have a known no-barre alternative (see NO_BARRE_ALTERNATIVES).
+const EASY_WITH_ALT = new Set(["F", "F#", "Gb", "B", "Bb", "A#"]);
+
+function chordDifficulty(chord: string): number {
+  const m = chord.match(/^([A-G][#b]?)(m)?/);
+  if (!m) return 2;
+  const root = m[1];
+  const isMinor = m[2] === "m";
+  const key = isMinor ? `${root}m` : root;
+  if (OPEN_CHORDS.has(key)) return 0;
+  if (!isMinor && EASY_WITH_ALT.has(root)) return 1;
+  return 2;
+}
+
+function bestBeginnerTranspose(chords: string[]): number {
+  const order = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6];
+  let best = 0;
+  let bestScore = Infinity;
+  for (const delta of order) {
+    let score = 0;
+    for (const c of chords) {
+      score += chordDifficulty(transposeChord(c, delta));
+    }
+    if (score < bestScore) {
+      bestScore = score;
+      best = delta;
+    }
+  }
+  return best;
+}
 
 // ─── SongViewer ───────────────────────────────────────────────────────────────
 
@@ -27,9 +71,38 @@ export function SongViewer({ song }: { song: Song }) {
   const [transpose, setTranspose] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
+  const [noBarreMode, setNoBarreMode] = useState(false);
+  const [beginnerMode, setBeginnerMode] = useState(false);
+  const [focusMode] = useFocusMode();
   const sectionsRef = useRef<HTMLDivElement>(null);
+
+  const toggleBeginner = () => {
+    trigger("light");
+    if (beginnerMode) {
+      setBeginnerMode(false);
+      setNoBarreMode(false);
+      setTranspose(0);
+    } else {
+      const delta = bestBeginnerTranspose(song.chords);
+      setTranspose(delta);
+      setNoBarreMode(true);
+      setBeginnerMode(true);
+    }
+  };
   const { trigger } = useHaptics();
   const voicingState = useVoicings(song.slug);
+
+  // Fire-and-forget view increment once per page load, keyed to the active variant.
+  const activeVariantId = song.activeVariantId;
+  useEffect(() => {
+    if (!activeVariantId) return;
+    fetch("/api/songs/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variantId: activeVariantId }),
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVariantId]);
 
   // Auto-scroll loop. Stops when the bottom of the last lyrics block reaches
   // the viewport bottom — so the footer never enters the fold during auto-play.
@@ -69,20 +142,75 @@ export function SongViewer({ song }: { song: Song }) {
     setExpandedTool((prev) => (prev === tool ? null : tool));
   };
 
+  // Fade mask on the chord list — recomputes when chords, voicings, or transpose change
+  // (voicing switches can change row count; transpose can change chord names).
+  const chordScroll = useScrollFade<HTMLDivElement>([song.chords, transpose, noBarreMode, voicingState]);
+
+  const beginnerButton = (
+    <button
+      type="button"
+      onClick={toggleBeginner}
+      className="w-full te-surface px-3 py-2 flex items-center justify-between gap-2 transition-colors"
+      style={{
+        borderRadius: "1rem",
+        background: beginnerMode ? "rgba(255,136,0,0.12)" : undefined,
+      }}
+    >
+      <div className="flex items-center gap-2 text-left min-w-0">
+        <Sparkles
+          size={15}
+          strokeWidth={2}
+          style={{ color: beginnerMode ? "var(--orange)" : "var(--text-muted)", flexShrink: 0 }}
+        />
+        <div className="min-w-0">
+          <div
+            className="text-[13px] font-bold leading-tight"
+            style={{ color: beginnerMode ? "var(--orange)" : "var(--text)" }}
+          >
+            Режим для новачка
+          </div>
+          <div
+            className="text-[11px] leading-tight mt-0.5"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Тональність і аплікатури без баре
+          </div>
+        </div>
+      </div>
+      <ToggleKnob active={beginnerMode} />
+    </button>
+  );
+
   return (
     <div className="relative">
       {/* ── 3-column grid (desktop) ───────────────────────────────────────── */}
       <div
-        className="lg:grid lg:gap-5"
-        style={{ gridTemplateColumns: "280px 1fr 260px" }}
+        className={focusMode ? "lg:mx-auto lg:max-w-3xl" : "lg:grid lg:gap-5"}
+        style={focusMode ? undefined : { gridTemplateColumns: "280px 1fr 260px" }}
       >
         {/* ── LEFT: Chord diagrams + Transpose/Capo (sticky) ────────────── */}
-        <aside className="hidden lg:block self-start sticky top-6 space-y-3">
-          <div className="te-surface p-3 rounded-2xl">
-            <p className="text-[9px] font-bold tracking-widest uppercase mb-3 opacity-50">
-              Акорди
-            </p>
-            <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} />
+        <aside
+          className={`${focusMode ? "hidden" : "hidden lg:flex"} flex-col self-start sticky top-6 gap-3 min-h-0`}
+          style={{ maxHeight: "calc(100vh - 3rem)" }}
+        >
+          {beginnerButton}
+          <div className="te-surface p-3 rounded-2xl flex flex-col min-h-0 overflow-hidden">
+            <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
+              <p className="text-[9px] font-bold tracking-widest uppercase opacity-50">Акорди</p>
+              <InstrumentSwitch />
+            </div>
+            <div
+              ref={chordScroll.ref}
+              onScroll={chordScroll.onScroll}
+              className="overflow-y-auto -mx-1 px-1 -my-1 py-1 scrollbar-none"
+              style={{
+                WebkitMaskImage: buildFadeMask(chordScroll.fadeTop, chordScroll.fadeBottom),
+                maskImage: buildFadeMask(chordScroll.fadeTop, chordScroll.fadeBottom),
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} noBarreMode={noBarreMode} />
+            </div>
           </div>
 
           {/* Transpose */}
@@ -100,6 +228,9 @@ export function SongViewer({ song }: { song: Song }) {
 
         {/* ── CENTER: Lyrics ───────────────────────────────────────────────── */}
         <div>
+          {/* Mobile: beginner toggle above chord panel */}
+          <div className="lg:hidden mb-3">{beginnerButton}</div>
+
           {/* Mobile: collapsible chord panel */}
           <details className="lg:hidden mb-4 te-surface rounded-2xl group">
             <summary className="cursor-pointer select-none list-none px-4 py-3 flex items-center justify-between">
@@ -116,12 +247,14 @@ export function SongViewer({ song }: { song: Song }) {
               />
             </summary>
             <div className="px-4 pb-4">
+              <div className="mb-3"><InstrumentSwitch /></div>
               <ChordPanel
                 chords={song.chords}
                 transpose={transpose}
                 voicingState={voicingState}
                 diagramWidth={140}
                 diagramHeight={175}
+                noBarreMode={noBarreMode}
               />
             </div>
           </details>
@@ -227,21 +360,28 @@ export function SongViewer({ song }: { song: Song }) {
         </div>
 
         {/* ── RIGHT: Controls (sticky) ─────────────────────────────────────── */}
-        <aside className="hidden lg:block self-start sticky top-6">
+        <aside className={`${focusMode ? "hidden" : "hidden lg:block"} self-start sticky top-6`}>
           <div className="space-y-3">
             {/* Font size + Tuner toggle row */}
             <div className="flex gap-2">
               <TeButton
                 shape="pill"
-                onClick={() => toggleTool("font")}
-                active={expandedTool === "font"}
+                onClick={() => setFontSize((p) => Math.max(12, p - 2))}
+                aria-label="Менший текст"
+                icon={AArrowDown}
+                iconSize={16}
+                className="py-2 font-bold"
+                style={{ borderRadius: "1rem", color: "var(--text-muted)", minWidth: 44 }}
+              />
+              <TeButton
+                shape="pill"
+                onClick={() => setFontSize((p) => Math.min(28, p + 2))}
+                aria-label="Більший текст"
                 icon={AArrowUp}
                 iconSize={16}
-                className="flex-1 py-2 text-xs font-bold"
-                style={{ borderRadius: "1rem", color: expandedTool === "font" ? "var(--orange)" : "var(--text-muted)" }}
-              >
-                Розмір
-              </TeButton>
+                className="py-2 font-bold"
+                style={{ borderRadius: "1rem", color: "var(--text-muted)", minWidth: 44 }}
+              />
               <TeButton
                 shape="pill"
                 onClick={() => toggleTool("tuner")}
@@ -254,21 +394,6 @@ export function SongViewer({ song }: { song: Song }) {
                 Тюнер
               </TeButton>
             </div>
-            {expandedTool === "font" && (
-              <ControlBlock label="Розмір тексту">
-                <div className="flex items-center justify-between">
-                  <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))} aria-label="Менший текст">
-                    <AArrowDown size={16} strokeWidth={2} />
-                  </AdjusterButton>
-                  <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-                    {fontSize}
-                  </span>
-                  <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))} aria-label="Більший текст">
-                    <AArrowUp size={16} strokeWidth={2} />
-                  </AdjusterButton>
-                </div>
-              </ControlBlock>
-            )}
             {expandedTool === "tuner" && (
               <TunerWidget onClose={() => setExpandedTool(null)} />
             )}
@@ -355,15 +480,22 @@ export function SongViewer({ song }: { song: Song }) {
       <div className="lg:hidden mt-3 flex gap-2">
         <TeButton
           shape="pill"
-          onClick={() => toggleTool("font")}
-          active={expandedTool === "font"}
+          onClick={() => setFontSize((p) => Math.max(12, p - 2))}
+          aria-label="Менший текст"
+          icon={AArrowDown}
+          iconSize={16}
+          className="py-2.5 font-bold"
+          style={{ borderRadius: "1rem", color: "var(--text-muted)", minWidth: 44 }}
+        />
+        <TeButton
+          shape="pill"
+          onClick={() => setFontSize((p) => Math.min(28, p + 2))}
+          aria-label="Більший текст"
           icon={AArrowUp}
           iconSize={16}
-          className="flex-1 py-2.5 text-xs font-bold"
-          style={{ borderRadius: "1rem", color: expandedTool === "font" ? "var(--orange)" : "var(--text-muted)" }}
-        >
-          Розмір
-        </TeButton>
+          className="py-2.5 font-bold"
+          style={{ borderRadius: "1rem", color: "var(--text-muted)", minWidth: 44 }}
+        />
         <TeButton
           shape="pill"
           onClick={() => toggleTool("tuner")}
@@ -376,23 +508,6 @@ export function SongViewer({ song }: { song: Song }) {
           Тюнер
         </TeButton>
       </div>
-      {expandedTool === "font" && (
-        <div className="lg:hidden mt-3">
-          <ControlBlock label="Розмір тексту">
-            <div className="flex items-center justify-between">
-              <AdjusterButton onClick={() => setFontSize((p) => Math.max(12, p - 2))} aria-label="Менший текст">
-                <AArrowDown size={16} strokeWidth={2} />
-              </AdjusterButton>
-              <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-                {fontSize}
-              </span>
-              <AdjusterButton onClick={() => setFontSize((p) => Math.min(28, p + 2))} aria-label="Більший текст">
-                <AArrowUp size={16} strokeWidth={2} />
-              </AdjusterButton>
-            </div>
-          </ControlBlock>
-        </div>
-      )}
       {expandedTool === "tuner" && (
         <div className="lg:hidden mt-3 max-w-sm mx-auto">
           <TunerWidget onClose={() => setExpandedTool(null)} />
