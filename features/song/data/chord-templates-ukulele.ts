@@ -7,6 +7,7 @@ export const UKE_OPEN_FREQS = [391.995, 261.626, 329.628, 440.0];
 // strings are [G, C, E, A], -1 = muted, 0 = open, 1+ = fret number.
 const TEMPLATES_C: Record<string, number[]> = {
   "": [0, 0, 0, 3],
+  "5": [0, 0, -1, 3],
   m: [0, 3, 3, 3],
   "7": [0, 0, 0, 1],
   maj7: [0, 0, 0, 2],
@@ -115,7 +116,15 @@ export function lookupChordUke(chord: string): ChordDef[] | null {
 
   const parsed = parseChord(normalized);
   if (!parsed) return null;
-  const tmpl = TEMPLATES_C[parsed.suffix];
+  // Slash chord (e.g. "G/B", "Am/A") — ukulele's 4 strings can't reliably
+  // voice a bass inversion, so fall back to the base chord.
+  const coreSuffix = parsed.suffix.includes("/")
+    ? parsed.suffix.slice(0, parsed.suffix.indexOf("/"))
+    : parsed.suffix;
+  // Prefer the open-position override for the base chord before transposing.
+  const baseOverride = OVERRIDES[parsed.root + coreSuffix];
+  if (baseOverride) return [baseOverride];
+  const tmpl = TEMPLATES_C[coreSuffix];
   if (!tmpl) return null;
 
   const rootIdx = NOTES.indexOf(parsed.root as typeof NOTES[number]);

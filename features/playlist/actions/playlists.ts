@@ -60,6 +60,28 @@ export async function getSavedSlugs(): Promise<Set<string>> {
   );
 }
 
+/**
+ * Returns the variant_id the current user saved for a specific song slug,
+ * or null if the song isn't saved / no specific variant was recorded.
+ * Used as a fallback default on the song page when no ?v= param is present.
+ */
+export async function getSavedVariantId(slug: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("playlist_songs")
+    .select("variant_id, songs!inner(slug), playlists!inner(owner_id)")
+    .eq("songs.slug", slug)
+    .eq("playlists.owner_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  return (data as Record<string, unknown>).variant_id as string | null;
+}
+
 /** Current user's playlists with song count + up to 3 cover previews. */
 export async function getMyPlaylists(): Promise<Playlist[]> {
   const supabase = await createClient();
@@ -215,6 +237,7 @@ async function resolveSongBySlug(slug: string): Promise<string | null> {
 export async function setSongPlaylists(
   slug: string,
   selectedIds: string[],
+  variantId?: string,
 ): Promise<ActionResult<{ saved: boolean }>> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -264,6 +287,7 @@ export async function setSongPlaylists(
       playlist_id: pid,
       song_id: songId,
       position: (maxByPlaylist.get(pid) ?? -1) + 1,
+      ...(variantId ? { variant_id: variantId } : {}),
     }));
 
     const { error } = await supabase.from("playlist_songs").insert(rows);

@@ -9,51 +9,17 @@ import {
   setSongPlaylists,
 } from "../actions/playlists";
 import type { PlaylistSummary } from "../types";
+import { ToggleKnob } from "@/shared/components/ToggleKnob";
 
 interface Props {
   slug: string;
+  variantId?: string;
   /** Rect of the anchor (heart button) — popover positions itself below/above. */
   anchorRect: DOMRect;
   /** Pre-fetched playlists (from hover/focus prefetch) — skips the loading state. */
   initialLists?: PlaylistSummary[] | null;
   onClose: () => void;
   onSavedChange: (saved: boolean) => void;
-}
-
-function ToggleKnob({ active }: { active: boolean }) {
-  const W = 40;
-  const H = 22;
-  const PAD = 3;
-  const KNOB = H - PAD * 2;
-  return (
-    <span
-      aria-hidden
-      style={{
-        position: "relative",
-        width: W,
-        height: H,
-        flexShrink: 0,
-        borderRadius: 999,
-        background: active ? "var(--orange)" : "var(--surface-dk, rgba(0,0,0,0.06))",
-        boxShadow: "var(--sh-socket)",
-        transition: "background 150ms ease",
-      }}
-    >
-      <span
-        style={{
-          position: "absolute",
-          top: PAD,
-          left: active ? W - KNOB - PAD : PAD,
-          width: KNOB,
-          height: KNOB,
-          borderRadius: 999,
-          background: "var(--surface-hi, #ffffff)",
-          boxShadow: "var(--sh-physical)",
-          transition: "left 160ms cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
-      />
-    </span>
-  );
 }
 
 const POPOVER_WIDTH = 288;
@@ -67,7 +33,7 @@ function buildFadeMask(top: boolean, bottom: boolean): string {
 }
 const GAP = 8;
 
-export function AddToPlaylistPopover({ slug, anchorRect, initialLists, onClose, onSavedChange }: Props) {
+export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists, onClose, onSavedChange }: Props) {
   const [mounted, setMounted] = useState(false);
   const [lists, setLists] = useState<PlaylistSummary[] | null>(initialLists ?? null);
   const [selected, setSelected] = useState<Set<string>>(() => {
@@ -104,7 +70,7 @@ export function AddToPlaylistPopover({ slug, anchorRect, initialLists, onClose, 
       onClose();
       return;
     }
-    setSongPlaylists(slug, [...current]).then((res) => {
+    setSongPlaylists(slug, [...current], variantId).then((res) => {
       if (res.ok) onSavedChange(res.data.saved);
     });
     onClose();
@@ -161,10 +127,6 @@ export function AddToPlaylistPopover({ slug, anchorRect, initialLists, onClose, 
       setLists(data);
       const already = new Set(data.filter((p) => p.hasSong).map((p) => p.id));
       initialSelectedRef.current = new Set(already);
-      if (already.size === 0) {
-        const def = data.find((p) => p.isDefault);
-        if (def) already.add(def.id);
-      }
       setSelected(already);
     };
     if (initialLists) {
@@ -194,6 +156,7 @@ export function AddToPlaylistPopover({ slug, anchorRect, initialLists, onClose, 
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      onSavedChange(next.size > 0);
       return next;
     });
   };

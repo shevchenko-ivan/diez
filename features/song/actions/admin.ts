@@ -105,25 +105,50 @@ export async function createSong(formData: FormData) {
 
   const finalSlug = existing ? `${slug}-${Date.now()}` : slug;
 
-  const { error } = await admin.from("songs").insert({
-    slug: finalSlug,
-    title,
-    artist,
-    genre,
-    key,
-    difficulty,
-    tempo,
-    time_signature,
-    strumming,
-    chords: parsed.chords,
-    sections: { raw: lyricsRaw, sections: parsed.sections },
-    status: "published", // Admin-created songs are published immediately in MVP
-    submitted_by: adminId,
-    reviewed_by: adminId,
-    reviewed_at: new Date().toISOString(),
-  });
+  // Create the song first (primary_variant_id filled in a second step).
+  const { data: songRow, error: songErr } = await admin
+    .from("songs")
+    .insert({
+      slug: finalSlug,
+      title,
+      artist,
+      genre,
+      key,
+      difficulty,
+      tempo,
+      time_signature,
+      strumming,
+      chords: parsed.chords,
+      sections: { raw: lyricsRaw, sections: parsed.sections },
+      status: "published",
+      submitted_by: adminId,
+      reviewed_by: adminId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
 
-  if (error) throw new Error(`Помилка збереження: ${error.message}`);
+  if (songErr || !songRow) throw new Error(`Помилка збереження: ${songErr?.message}`);
+
+  const { data: variantRow, error: varErr } = await admin
+    .from("song_variants")
+    .insert({
+      song_id: songRow.id,
+      label: "Основний",
+      sections: { raw: lyricsRaw, sections: parsed.sections },
+      chords: parsed.chords,
+      key,
+      tempo,
+      strumming,
+      status: "published",
+      author_id: adminId,
+    })
+    .select("id")
+    .single();
+
+  if (varErr || !variantRow) throw new Error(`Помилка варіанта: ${varErr?.message}`);
+
+  await admin.from("songs").update({ primary_variant_id: variantRow.id }).eq("id", songRow.id);
 
   revalidateTag("songs");
   revalidatePath("/songs");
@@ -131,6 +156,177 @@ export async function createSong(formData: FormData) {
   revalidatePath("/");
   revalidatePath(`/songs/${finalSlug}`);
   redirect(`/songs/${finalSlug}`);
+}
+
+// ─── Song variants ────────────────────────────────────────────────────────────
+
+async function getSongSlug(songId: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("songs").select("slug").eq("id", songId).single();
+  return (data?.slug as string | undefined) ?? null;
+}
+
+export async function createVariant(formData: FormData) {
+  const adminId = await requireAdmin();
+
+  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
+  const label = (formData.get("label") as string)?.trim() || "Новий варіант";
+  const key = (formData.get("key") as string)?.trim() || "Am";
+  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
+  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const strumming = parseStrumming(formData.get("strumming") as string);
+  const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
+  const makePrimary = formData.get("make_primary") === "on";
+
+  if (!lyricsRaw) throw new Error("Потрібен текст з акордами");
+
+  const parsed = parseLyricsWithChords(lyricsRaw);
+  const admin = createAdminClient();
+
+  const { data: variant, error } = await admin
+    .from("song_variants")
+    .insert({
+      song_id: songId,
+      label,
+      sections: { raw: lyricsRaw, sections: parsed.sections },
+      chords: parsed.chords,
+      key,
+      capo,
+      tempo,
+      strumming,
+      status: "published",
+      author_id: adminId,
+    })
+    .select("id")
+    .single();
+
+  if (error || !variant) throw new Error(`Помилка: ${error?.message}`);
+
+  if (makePrimary) {
+    await admin.from("songs").update({ primary_variant_id: variant.id }).eq("id", songId);
+  }
+
+  const slug = await getSongSlug(songId);
+  revalidateTag("songs");
+  if (slug) revalidatePath(`/songs/${slug}`);
+  revalidatePath("/admin");
+  if (slug) redirect(`/songs/${slug}?v=${variant.id}`);
+}
+
+export async function updateVariant(formData: FormData) {
+  await requireAdmin();
+
+  const variantId = assertUuid(formData.get("variantId") as string, "ID варіанта");
+  const label = (formData.get("label") as string)?.trim();
+  const key = (formData.get("key") as string)?.trim();
+  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
+  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const strummingRaw = formData.get("strumming");
+  const strumming = strummingRaw === null ? undefined : parseStrumming(strummingRaw as string);
+  const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
+
+  const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
+
+  const admin = createAdminClient();
+  const { data: variant } = await admin
+    .from("song_variants")
+    .select("song_id")
+    .eq("id", variantId)
+    .single();
+  if (!variant) throw new Error("Варіант не знайдено");
+
+  const { error } = await admin
+    .from("song_variants")
+    .update({
+      ...(label ? { label } : {}),
+      ...(key ? { key } : {}),
+      capo,
+      tempo,
+      ...(strumming !== undefined ? { strumming } : {}),
+      ...(parsed
+        ? {
+            sections: { raw: lyricsRaw, sections: parsed.sections },
+            chords: parsed.chords,
+          }
+        : {}),
+    })
+    .eq("id", variantId);
+
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  const slug = await getSongSlug(variant.song_id as string);
+  revalidateTag("songs");
+  if (slug) revalidatePath(`/songs/${slug}`);
+  revalidatePath("/admin");
+
+  const returnTo = (formData.get("returnTo") as string) || (slug ? `/songs/${slug}?v=${variantId}` : "/admin");
+  const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin";
+  const sep = safeReturn.includes("?") ? "&" : "?";
+  redirect(`${safeReturn}${sep}saved=variant`);
+}
+
+export async function setPrimaryVariant(formData: FormData) {
+  await requireAdmin();
+
+  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
+  const variantId = assertUuid(formData.get("variantId") as string, "ID варіанта");
+
+  const admin = createAdminClient();
+  // Ensure the variant actually belongs to this song.
+  const { data: variant } = await admin
+    .from("song_variants")
+    .select("song_id")
+    .eq("id", variantId)
+    .single();
+  if (!variant || variant.song_id !== songId) throw new Error("Варіант не належить пісні");
+
+  const { error } = await admin
+    .from("songs")
+    .update({ primary_variant_id: variantId })
+    .eq("id", songId);
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  const slug = await getSongSlug(songId);
+  revalidateTag("songs");
+  if (slug) revalidatePath(`/songs/${slug}`);
+  revalidatePath("/admin");
+}
+
+export async function deleteVariant(formData: FormData) {
+  await requireAdmin();
+
+  const variantId = assertUuid(formData.get("variantId") as string, "ID варіанта");
+
+  const admin = createAdminClient();
+  const { data: variant } = await admin
+    .from("song_variants")
+    .select("song_id")
+    .eq("id", variantId)
+    .single();
+  if (!variant) throw new Error("Варіант не знайдено");
+
+  // Refuse to delete the last variant or the current primary — keep data safe.
+  const { data: song } = await admin
+    .from("songs")
+    .select("primary_variant_id")
+    .eq("id", variant.song_id)
+    .single();
+  if (song?.primary_variant_id === variantId) {
+    throw new Error("Не можна видалити основний варіант — спочатку оберіть інший");
+  }
+  const { count } = await admin
+    .from("song_variants")
+    .select("id", { count: "exact", head: true })
+    .eq("song_id", variant.song_id);
+  if ((count ?? 0) <= 1) throw new Error("Має лишитися хоча б один варіант");
+
+  const { error } = await admin.from("song_variants").delete().eq("id", variantId);
+  if (error) throw new Error(`Помилка: ${error.message}`);
+
+  const slug = await getSongSlug(variant.song_id as string);
+  revalidateTag("songs");
+  if (slug) revalidatePath(`/songs/${slug}`);
+  revalidatePath("/admin");
 }
 
 // ─── Update song status ───────────────────────────────────────────────────────
@@ -184,7 +380,6 @@ export async function updateSong(formData: FormData) {
   const difficulty = (formData.get("difficulty") as string) || null;
   const status = (formData.get("status") as string) || null;
   const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
-  const cover_color = (formData.get("cover_color") as string)?.trim() || null;
   const youtube_id = extractYoutubeId(formData.get("youtube_id") as string);
   const strummingRaw = formData.get("strumming");
   const strumming = strummingRaw === null ? undefined : parseStrumming(strummingRaw as string);
@@ -197,11 +392,11 @@ export async function updateSong(formData: FormData) {
     : null;
 
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data: songBefore, error } = await admin
     .from("songs")
     .update({
       title, artist, album, genre, ...(key ? { key } : {}), capo, tempo, time_signature,
-      difficulty, status, cover_image, cover_color, youtube_id,
+      difficulty, status, cover_image, youtube_id,
       ...(strumming !== undefined ? { strumming } : {}),
       ...(parsed ? {
         sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -209,9 +404,29 @@ export async function updateSong(formData: FormData) {
       } : {}),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", songId);
+    .eq("id", songId)
+    .select("primary_variant_id")
+    .single();
 
   if (error) throw new Error(`Помилка збереження: ${error.message}`);
+
+  // Keep the primary variant in sync with the song-level edit — so switching
+  // between the "song" edit and variant dropdown stays consistent.
+  if (songBefore?.primary_variant_id) {
+    await admin
+      .from("song_variants")
+      .update({
+        ...(key ? { key } : {}),
+        capo,
+        tempo,
+        ...(strumming !== undefined ? { strumming } : {}),
+        ...(parsed ? {
+          sections: { raw: lyricsRaw, sections: parsed.sections },
+          chords: parsed.chords,
+        } : {}),
+      })
+      .eq("id", songBefore.primary_variant_id);
+  }
 
   revalidateTag("songs");
   revalidatePath("/songs");
@@ -221,7 +436,8 @@ export async function updateSong(formData: FormData) {
 
   const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
   const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
-  redirect(safeReturn);
+  const sep = safeReturn.includes("?") ? "&" : "?";
+  redirect(`${safeReturn}${sep}saved=meta`);
 }
 
 // ─── Delete song (only from archive) ─────────────────────────────────────────
@@ -259,11 +475,15 @@ export async function bulkUpdateSongStatus(formData: FormData) {
   if (!["published", "archived", "draft"].includes(status)) throw new Error("Невалідний статус");
 
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("songs")
-    .update({ status, updated_at: new Date().toISOString() })
-    .in("id", ids);
-  if (error) throw new Error(`Помилка: ${error.message}`);
+  const updated_at = new Date().toISOString();
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { error } = await admin
+      .from("songs")
+      .update({ status, updated_at })
+      .in("id", chunk);
+    if (error) throw new Error(`Помилка: ${error.message}`);
+  }
 
   revalidateTag("songs");
   revalidatePath("/songs");
@@ -280,12 +500,15 @@ export async function bulkDeleteSongs(formData: FormData) {
 
   const admin = createAdminClient();
   // Only delete archived songs
-  const { error } = await admin
-    .from("songs")
-    .delete()
-    .in("id", ids)
-    .eq("status", "archived");
-  if (error) throw new Error(`Помилка: ${error.message}`);
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { error } = await admin
+      .from("songs")
+      .delete()
+      .in("id", chunk)
+      .eq("status", "archived");
+    if (error) throw new Error(`Помилка: ${error.message}`);
+  }
 
   revalidateTag("songs");
   revalidatePath("/songs");

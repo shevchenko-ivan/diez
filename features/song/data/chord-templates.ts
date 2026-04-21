@@ -173,6 +173,24 @@ const OVERRIDES: Record<string, number[][]> = {
   "Fdim7": [[-1,5,6,4,6,-1]],
   "G#dim7": [[-1,8,9,7,9,-1]],
   "Gdim7": [[-1,7,8,6,8,-1]],
+  // Power chords (root + 5th + octave root). Only three strings sound.
+  "C5":  [[-1,3,5,5,-1,-1]],
+  "C#5": [[-1,4,6,6,-1,-1]],
+  "Db5": [[-1,4,6,6,-1,-1]],
+  "D5":  [[-1,5,7,7,-1,-1]],
+  "D#5": [[-1,6,8,8,-1,-1]],
+  "Eb5": [[-1,6,8,8,-1,-1]],
+  "E5":  [[0,2,2,-1,-1,-1]],
+  "F5":  [[1,3,3,-1,-1,-1]],
+  "F#5": [[2,4,4,-1,-1,-1]],
+  "Gb5": [[2,4,4,-1,-1,-1]],
+  "G5":  [[3,5,5,-1,-1,-1]],
+  "G#5": [[4,6,6,-1,-1,-1]],
+  "Ab5": [[4,6,6,-1,-1,-1]],
+  "A5":  [[-1,0,2,2,-1,-1]],
+  "A#5": [[-1,1,3,3,-1,-1]],
+  "Bb5": [[-1,1,3,3,-1,-1]],
+  "B5":  [[-1,2,4,4,-1,-1]],
 };
 
 // ─── Generation Engine ───────────────────────────────────────────────────────
@@ -370,11 +388,13 @@ export const CHORD_DB: Record<string, ChordDef[]> = generateChordDB();
 
 export function transposeChord(chord: string, semitones: number): string {
   if (!chord) return chord;
+  if (semitones === 0) return chord;
   const match = chord.match(/^([A-GH][#b]?)(.*)$/);
   if (!match) return chord;
 
   let root = match[1];
   const modifier = match[2];
+  const wasFlat = root.includes("b") || root === "H";
 
   if (root === "H") root = "B";
   if (FLAT_TO_SHARP[root]) root = FLAT_TO_SHARP[root];
@@ -385,7 +405,28 @@ export function transposeChord(chord: string, semitones: number): string {
   let newIndex = (index + semitones) % 12;
   if (newIndex < 0) newIndex += 12;
 
-  return NOTES[newIndex] + modifier;
+  const sharpName = NOTES[newIndex];
+  const displayRoot = wasFlat && SHARP_TO_FLAT[sharpName] ? SHARP_TO_FLAT[sharpName] : sharpName;
+  return displayRoot + modifier;
+}
+
+// ─── No-barre alternatives ───────────────────────────────────────────────────
+// Easy voicings that avoid a full barre, keyed by chord name.
+// Strings order: [lowE, A, D, G, B, highE], -1=muted, 0=open, 1+=fret.
+
+const NO_BARRE_ALTERNATIVES: Record<string, number[]> = {
+  "F":   [-1, -1, 3, 2, 1, 0],  // Fmaj7  xx3210
+  "F#":  [-1, -1, 4, 3, 2, 0],  // F#maj7 xx4320 (approx)
+  "Gb":  [-1, -1, 4, 3, 2, 0],
+  "B":   [-1, 2,  4, 4, 4, -1], // B      x2444x (partial)
+  "Bb":  [-1, 1,  3, 3, 3, -1], // Bb     x1333x (partial)
+  "A#":  [-1, 1,  3, 3, 3, -1],
+};
+
+export function lookupNoBarreVoicing(chord: string): ChordDef | null {
+  const strings = NO_BARRE_ALTERNATIVES[chord];
+  if (!strings) return null;
+  return makeChordDef(strings);
 }
 
 // ─── Lookup ──────────────────────────────────────────────────────────────────
@@ -405,10 +446,85 @@ function normalizeForDB(chord: string): string {
   return result;
 }
 
+// Parse a note name (C, C#, Db, H/B…) to a semitone index 0–11.
+function noteSemitone(note: string): number | null {
+  let n = note;
+  if (n === "H") n = "B";
+  if (FLAT_TO_SHARP[n]) n = FLAT_TO_SHARP[n];
+  const i = NOTES.indexOf(n as typeof NOTES[number]);
+  return i >= 0 ? i : null;
+}
+
+// Build a slash-chord voicing by replacing the lowest sounding string of `def`
+// with the target bass note. Picks low-E or A string, prefers low frets and
+// positions that don't overstretch the voicing's existing fret range.
+function withBassNote(def: ChordDef, bassSemi: number): ChordDef | null {
+  const played = def.strings.filter((f) => f > 0);
+  const minF = played.length ? Math.min(...played) : 0;
+  const maxF = played.length ? Math.max(...played) : 4;
+
+  for (const stringIdx of [0, 1]) {
+    const open = OPEN_STRINGS[stringIdx];
+    for (let fret = 0; fret <= 14; fret++) {
+      if ((open + fret) % 12 !== bassSemi) continue;
+      // Keep bass fret within playing zone (or open) so the shape stays reachable
+      const inRange = fret === 0 || (fret >= minF - 2 && fret <= maxF + 2);
+      if (!inRange) continue;
+      const strings = [...def.strings];
+      for (let j = 0; j < stringIdx; j++) strings[j] = -1;
+      strings[stringIdx] = fret;
+      if (isValidVoicing(strings)) return makeChordDef(strings);
+    }
+  }
+  return null;
+}
+
+// Drop uncommon quality extensions down to a voicing that exists in CHORD_DB.
+// e.g. Dmadd9 → Dm, Fmaj9 → Fmaj7, Am11 → Am7.
+function simplifyQuality(chord: string): string | null {
+  const rules: [RegExp, string][] = [
+    [/madd9$/, "m"],
+    [/add\d+$/, ""],
+    [/maj(9|11|13)$/, "maj7"],
+    [/m(9|11|13)$/, "m7"],
+    [/(11|13)$/, "7"],
+    [/sus[24]?$/, ""],
+  ];
+  for (const [re, rep] of rules) {
+    if (re.test(chord)) {
+      const next = chord.replace(re, rep);
+      if (next !== chord) return next;
+    }
+  }
+  return null;
+}
+
 export function lookupChord(chord: string): ChordDef[] | undefined {
+  // 1. Direct match (with flat↔sharp normalization)
   const lookupKey = normalizeForDB(chord);
-  const defs = CHORD_DB[lookupKey] ?? CHORD_DB[chord];
-  return defs?.length ? defs : undefined;
+  const direct = CHORD_DB[lookupKey] ?? CHORD_DB[chord];
+  if (direct?.length) return direct;
+
+  // 2. Slash chord — look up base, then rewrite bass
+  const slash = chord.match(/^(.+?)\/([A-GH][#b]?)$/);
+  if (slash) {
+    const baseDefs = lookupChord(slash[1]);
+    const bassSemi = noteSemitone(slash[2]);
+    if (baseDefs && bassSemi !== null) {
+      const rewritten = baseDefs
+        .map((d) => withBassNote(d, bassSemi))
+        .filter((d): d is ChordDef => d !== null);
+      if (rewritten.length) return rewritten;
+      // Can't place bass — fall back to the base chord's voicings
+      return baseDefs;
+    }
+  }
+
+  // 3. Unknown extension — drop to a nearby simpler quality
+  const simpler = simplifyQuality(chord);
+  if (simpler && simpler !== chord) return lookupChord(simpler);
+
+  return undefined;
 }
 
 // ─── Capo suggestion ────────────────────────────────────────────────────────

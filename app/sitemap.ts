@@ -1,5 +1,5 @@
 import { type MetadataRoute } from "next";
-import { getAllSongs } from "@/features/song/services/songs";
+import { getAllSongSlugs } from "@/features/song/services/songs";
 import { siteUrl } from "@/lib/utils";
 
 // Mirror the robots.ts guard: no sitemap on non-production deployments.
@@ -7,7 +7,7 @@ const isProduction = !!process.env.NEXT_PUBLIC_SITE_URL;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!isProduction) return [];
-  const songs = await getAllSongs();
+  const songs = await getAllSongSlugs();
   const artistSlugs = [
     ...new Set(songs.map((s) => s.artist.toLowerCase().replace(/\s+/g, "-"))),
   ];

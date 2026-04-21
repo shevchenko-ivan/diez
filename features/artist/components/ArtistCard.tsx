@@ -47,16 +47,16 @@ export function ArtistCard({ name, genre, songsCount, color, image, slug }: Arti
       </div>
 
       {/* Name */}
-      <div className="p-3">
+      <div className="p-4">
         <p
-          className="font-medium text-xs tracking-wide leading-tight uppercase"
+          className="font-medium text-sm tracking-wide leading-tight uppercase"
           style={{ color: "var(--text)", letterSpacing: "0.04em" }}
         >
           {name}
         </p>
         <p
-          className="text-xs font-medium mt-0.5 uppercase"
-          style={{ color: "var(--text-muted)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
+          className="font-medium mt-1 uppercase"
+          style={{ color: "var(--text-muted)", fontSize: "0.7rem", letterSpacing: "0.08em" }}
         >
           {genre} · {songsCount} ♪
         </p>

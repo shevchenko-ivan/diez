@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { siteUrl } from "@/lib/utils";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
+import { Toaster } from "@/shared/components/Toaster";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -61,6 +62,7 @@ export default function RootLayout({
         />
         <ThemeProvider>
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -17,6 +17,22 @@ export interface SongSection {
   tab?: string;       // raw ASCII tablature (6 string lines)
 }
 
+export type Strum = "D" | "U" | "Dx" | "Ux";
+
+export interface SongVariant {
+  id: string;
+  label: string;
+  sections: SongSection[];
+  chords: string[];
+  key: string;
+  capo?: number;
+  tempo?: number;
+  strumming?: Strum[];
+  views: number;
+  createdAt: string;
+  isPrimary: boolean;
+}
+
 export interface Song {
   slug: string;
   title: string;
@@ -32,7 +48,10 @@ export interface Song {
   views: number;
   sections: SongSection[];
   youtubeId?: string;
-  strumming?: ("D" | "U" | "Dx" | "Ux")[]; // D=Down, U=Up, x=Mute
+  strumming?: Strum[];
   coverImage?: string;
   coverColor?: string;
+  variants?: SongVariant[];
+  primaryVariantId?: string;
+  activeVariantId?: string;
 }

@@ -2,16 +2,21 @@ export const dynamic = "force-dynamic";
 
 import { PageShell } from "@/shared/components/PageShell";
 import { FormField } from "@/shared/components/FormField";
-import { Save } from "lucide-react";
-import Link from "next/link";
+import { Save, Star, Trash2 } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { updateSong } from "@/features/song/actions/admin";
+import { updateSong, updateVariant, setPrimaryVariant, deleteVariant } from "@/features/song/actions/admin";
 import { AutoResizeTextarea } from "./AutoResizeTextarea";
+import { VariantTabs } from "./VariantTabs";
 import { TeButton } from "@/shared/components/TeButton";
 import { StrummingEditor } from "@/features/song/components/StrummingEditor";
+import { RhythmBlock } from "./RhythmBlock";
+import { StringAutocomplete } from "./StringAutocomplete";
+import { AlbumAutocomplete } from "./AlbumAutocomplete";
+import { Suspense } from "react";
+import { SavedToast } from "@/shared/components/SavedToast";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
@@ -95,7 +100,6 @@ function serializeSections(data: unknown): string {
 }
 
 const GENRES = ["Рок", "Поп-рок", "Поп", "Інді", "Фолк", "Реп", "Електронна", "Шансон", "Народна", "Інше"];
-const KEYS = ["Am", "Em", "Dm", "Gm", "Cm", "Fm", "Bm", "C", "G", "D", "A", "E", "F", "Bb", "Eb", "Ab"];
 const DIFFICULTIES = [
   { value: "easy", label: "Легка" },
   { value: "medium", label: "Середня" },
@@ -110,7 +114,7 @@ const STATUSES = [
 export default async function EditSongPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string; from?: string }>;
+  searchParams: Promise<{ id?: string; from?: string; variant?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -121,75 +125,106 @@ export default async function EditSongPage({
     .from("profiles").select("is_admin").eq("id", user.id).single();
   if (!profile?.is_admin) redirect("/");
 
-  const { id, from } = await searchParams;
+  const { id, from, variant: variantParam } = await searchParams;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!id || !UUID_RE.test(id)) redirect("/admin/songs");
 
   const { data: song } = await admin
     .from("songs")
-    .select("id, slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, status, cover_image, cover_color, youtube_id, sections, strumming")
+    .select("id, slug, title, artist, album, genre, time_signature, difficulty, status, cover_image, cover_color, youtube_id, primary_variant_id")
     .eq("id", id)
     .single();
 
   if (!song) redirect("/admin/songs");
 
+  const { data: metaRows } = await admin
+    .from("songs")
+    .select("artist, album");
+  const artistSuggestions = Array.from(
+    new Set((metaRows ?? []).map((r) => (r.artist as string)?.trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b, "uk"));
+  const albumPairs = ((metaRows ?? []) as Array<{ artist: string | null; album: string | null }>)
+    .map((r) => ({ artist: (r.artist ?? "").trim(), album: (r.album ?? "").trim() }))
+    .filter((p) => p.artist && p.album);
+
+  const { data: variants } = await admin
+    .from("song_variants")
+    .select("id, label, created_at, views, key, capo, tempo, strumming, sections")
+    .eq("song_id", song.id)
+    .order("created_at", { ascending: true });
+
+  const primaryVariantId = (song.primary_variant_id as string | null) ?? null;
+  const allVariants = (variants ?? []) as Array<{
+    id: string;
+    label: string;
+    created_at: string;
+    views: number | null;
+    key: string;
+    capo: number | null;
+    tempo: number | null;
+    strumming: string[] | null;
+    sections: unknown;
+  }>;
+
+  const requested =
+    variantParam && UUID_RE.test(variantParam)
+      ? allVariants.find((v) => v.id === variantParam)
+      : null;
+  const activeVariant =
+    requested ??
+    allVariants.find((v) => v.id === primaryVariantId) ??
+    allVariants[0];
+
+  const isActivePrimary = activeVariant ? activeVariant.id === primaryVariantId : false;
+
   return (
     <PageShell maxWidth="2xl" footer={false}>
+      <Suspense><SavedToast /></Suspense>
       <div className="mb-8">
         <BackButton fallback="/admin/songs" />
       </div>
 
-      <form action={updateSong} className="space-y-6">
+      <h1 className="text-3xl font-bold mb-1 uppercase tracking-tighter px-2" style={{ color: "var(--text)" }}>
+        Редагувати пісню
+      </h1>
+      <p className="text-xs font-mono opacity-40 mb-6 px-2" style={{ color: "var(--text-muted)" }}>
+        slug: {song.slug}
+      </p>
+
+      <form id="song-meta-form" action={updateSong} className="space-y-6 mb-8">
         <input type="hidden" name="songId" value={song.id} />
         {from === "song" && <input type="hidden" name="returnTo" value={`/songs/${song.slug}`} />}
 
         <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
-          <h1 className="text-3xl font-bold mb-1 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Редагувати пісню
-          </h1>
-          <p className="text-xs font-mono opacity-40 mb-10" style={{ color: "var(--text-muted)" }}>
-            slug: {song.slug}
-          </p>
+          <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+            Мета пісні
+          </h2>
 
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Назва *">
                 <input name="title" required defaultValue={song.title} className="field-input" style={{ color: "var(--text)" }} />
               </FormField>
-              <FormField label="Виконавець *">
-                <input name="artist" required defaultValue={song.artist} className="field-input" style={{ color: "var(--text)" }} />
-              </FormField>
+              <div className="space-y-2">
+                <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+                  Виконавець *
+                </label>
+                <StringAutocomplete name="artist" defaultValue={song.artist} suggestions={artistSuggestions} required />
+              </div>
             </div>
 
-            <FormField label="Альбом">
-              <input name="album" defaultValue={song.album ?? ""} placeholder="Назва альбому" className="field-input" style={{ color: "var(--text)" }} />
-            </FormField>
+            <div className="space-y-2">
+              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+                Альбом
+              </label>
+              <AlbumAutocomplete name="album" defaultValue={song.album ?? ""} pairs={albumPairs} placeholder="Назва альбому" />
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FormField label="Жанр">
                 <select name="genre" defaultValue={song.genre ?? ""} className="field-input" style={{ color: "var(--text)" }}>
                   <option value="">— Обрати —</option>
                   {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Тональність">
-                <select name="key" defaultValue={song.key ?? ""} className="field-input" style={{ color: "var(--text)" }}>
-                  <option value="">— Обрати —</option>
-                  {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
-                </select>
-              </FormField>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <FormField label="Капо (лад)">
-                <input name="capo" type="number" min={0} max={12} defaultValue={song.capo ?? ""} placeholder="0" className="field-input" style={{ color: "var(--text)" }} />
-              </FormField>
-              <FormField label="Темп (BPM)">
-                <input name="tempo" type="number" min={40} max={300} defaultValue={song.tempo ?? ""} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
-              </FormField>
-              <FormField label="Розмір">
-                <select name="time_signature" defaultValue={song.time_signature ?? "4/4"} className="field-input" style={{ color: "var(--text)" }}>
-                  {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
                 </select>
               </FormField>
               <FormField label="Складність">
@@ -208,73 +243,148 @@ export default async function EditSongPage({
               <input name="cover_image" defaultValue={song.cover_image ?? ""} placeholder="https://..." className="field-input" style={{ color: "var(--text)" }} />
             </FormField>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField label="Колір обкладинки (hex)">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    defaultValue={song.cover_color ?? "#888888"}
-                    onChange={undefined}
-                    className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0"
-                    id="cover_color_picker"
-                  />
-                  <input
-                    name="cover_color"
-                    id="cover_color"
-                    defaultValue={song.cover_color ?? ""}
-                    placeholder="#C8D5E8"
-                    className="field-input flex-1"
-                    style={{ color: "var(--text)" }}
-                  />
-                </div>
-              </FormField>
-              <FormField label="YouTube (ID або посилання)">
-                <input
-                  name="youtube_id"
-                  defaultValue={song.youtube_id ?? ""}
-                  placeholder="https://youtu.be/... або dQw4w9WgXcQ"
-                  className="field-input"
-                  style={{ color: "var(--text)" }}
-                />
-              </FormField>
+            <FormField label="Пісня на YouTube (для плеєра)">
+              <input
+                name="youtube_id"
+                defaultValue={song.youtube_id ?? ""}
+                placeholder="https://youtu.be/... або dQw4w9WgXcQ"
+                className="field-input"
+                style={{ color: "var(--text)" }}
+              />
+            </FormField>
+
+            <div className="pt-2 flex justify-end">
+              <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+                <Save size={16} />
+                ЗБЕРЕГТИ МЕТА
+              </TeButton>
             </div>
           </div>
         </div>
-
-        <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
-          <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Бій / ритмічний малюнок
-          </h2>
-          <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
-            <StrummingEditor
-              name="strumming"
-              defaultValue={(song.strumming as string[] | null) ?? undefined}
-            />
-          </div>
-        </div>
-
-        <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
-          <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Текст з акордами
-          </h2>
-          <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
-            <AutoResizeTextarea
-              name="lyrics_with_chords"
-              defaultValue={serializeSections(song.sections)}
-              placeholder={"Куплет 1:\n[Am]Слова пісні [C]тут\n[G]Наступний рядок\n\nПриспів:\n[F]Приспів тут"}
-              className="field-input w-full resize-none font-mono text-xs leading-relaxed"
-              style={{ color: "var(--text)" }}
-            />
-          </div>
-
-          <div className="pt-6 flex justify-end">
-            <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-              <Save size={16} />
-              ЗБЕРЕГТИ
-            </TeButton>
-          </div>
-        </div>
       </form>
+
+      {activeVariant && allVariants.length > 0 && (
+        <VariantTabs
+          songId={song.id}
+          activeVariantId={activeVariant.id}
+          primaryVariantId={primaryVariantId}
+          variants={allVariants.map((v) => ({ id: v.id, label: v.label }))}
+          basePath="/admin/songs/edit"
+          fromParam={from}
+        />
+      )}
+
+      {activeVariant && !isActivePrimary && (
+        <>
+          <form id="variant-primary-form" action={setPrimaryVariant} className="hidden">
+            <input type="hidden" name="songId" value={song.id} />
+            <input type="hidden" name="variantId" value={activeVariant.id} />
+          </form>
+          <form id="variant-delete-form" action={deleteVariant} className="hidden">
+            <input type="hidden" name="variantId" value={activeVariant.id} />
+          </form>
+        </>
+      )}
+
+      {activeVariant && (
+        <form action={updateVariant} className="space-y-6 mb-8 -mt-3 relative">
+          <input type="hidden" name="variantId" value={activeVariant.id} />
+          <input
+            type="hidden"
+            name="returnTo"
+            value={`/admin/songs/edit?id=${song.id}&variant=${activeVariant.id}${from === "song" ? "&from=song" : ""}`}
+          />
+
+          {/* Variant header: name + actions. Hidden for the primary variant — its name is fixed. */}
+          {isActivePrimary ? (
+            <input type="hidden" name="label" value={activeVariant.label} />
+          ) : (
+            <div className="te-surface p-6 mb-6" style={{ borderRadius: "1.5rem" }}>
+              <div className="flex items-end gap-4 flex-wrap">
+                <div className="flex-1 min-w-[200px]">
+                  <FormField label="Назва варіанту">
+                    <input name="label" defaultValue={activeVariant.label} className="field-input" style={{ color: "var(--text)" }} />
+                  </FormField>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 pb-1.5">
+                  <button
+                    type="submit"
+                    form="variant-primary-form"
+                    className="te-pressable px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
+                    style={{ borderRadius: "0.75rem", color: "var(--orange)" }}
+                    title="Зробити основним"
+                  >
+                    <Star size={12} />
+                    Зробити основним
+                  </button>
+                  <button
+                    type="submit"
+                    form="variant-delete-form"
+                    className="te-pressable px-2.5 py-1.5 text-xs font-bold"
+                    style={{ borderRadius: "0.75rem", color: "var(--danger, #e46060)" }}
+                    title="Видалити варіант"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <RhythmBlock initialEnabled={!!(activeVariant.tempo || (activeVariant.strumming && activeVariant.strumming.length > 0))}>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Темп (BPM)">
+                <input name="tempo" type="number" min={40} max={300} defaultValue={activeVariant.tempo ?? ""} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
+              </FormField>
+              <FormField label="Розмір">
+                <select
+                  form="song-meta-form"
+                  name="time_signature"
+                  defaultValue={song.time_signature ?? "4/4"}
+                  className="field-input"
+                  style={{ color: "var(--text)" }}
+                >
+                  {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
+                </select>
+              </FormField>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
+                Бій / ритмічний малюнок
+              </label>
+              <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
+                <StrummingEditor
+                  name="strumming"
+                  defaultValue={activeVariant.strumming ?? undefined}
+                />
+              </div>
+            </div>
+          </RhythmBlock>
+
+          <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+            <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+              Текст з акордами
+            </h2>
+            <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
+              <AutoResizeTextarea
+                name="lyrics_with_chords"
+                defaultValue={serializeSections(activeVariant.sections)}
+                placeholder={"Куплет 1:\n[Am]Слова пісні [C]тут\n[G]Наступний рядок\n\nПриспів:\n[F]Приспів тут"}
+                className="field-input w-full resize-none font-mono text-xs leading-relaxed"
+                style={{ color: "var(--text)" }}
+              />
+            </div>
+            <div className="pt-6 flex justify-end">
+              <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+                <Save size={16} />
+                ЗБЕРЕГТИ ВАРІАНТ
+              </TeButton>
+            </div>
+          </div>
+        </form>
+      )}
+
     </PageShell>
   );
 }

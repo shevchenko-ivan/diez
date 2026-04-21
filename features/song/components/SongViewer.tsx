@@ -73,7 +73,7 @@ export function SongViewer({ song }: { song: Song }) {
   const [scrollSpeed, setScrollSpeed] = useState(0);
   const [noBarreMode, setNoBarreMode] = useState(false);
   const [beginnerMode, setBeginnerMode] = useState(false);
-  const [focusMode] = useFocusMode();
+  const [focusMode, , toggleFocusMode] = useFocusMode();
   const sectionsRef = useRef<HTMLDivElement>(null);
 
   const toggleBeginner = () => {
@@ -92,10 +92,12 @@ export function SongViewer({ song }: { song: Song }) {
   const { trigger } = useHaptics();
   const voicingState = useVoicings(song.slug);
 
-  // Fire-and-forget view increment once per page load, keyed to the active variant.
+  // Fire-and-forget view increment — once per variant per browser session.
   const activeVariantId = song.activeVariantId;
   useEffect(() => {
     if (!activeVariantId) return;
+    const key = `diez:viewed:${activeVariantId}`;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
     fetch("/api/songs/view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -108,6 +110,10 @@ export function SongViewer({ song }: { song: Song }) {
   // the viewport bottom — so the footer never enters the fold during auto-play.
   useEffect(() => {
     if (scrollSpeed === 0) return;
+    // Sub-pixel accumulator: allows speed < 1 px/tick for smooth slow scroll.
+    // Base: scrollSpeed=1 → ~10 px/sec (1 px per 100ms tick).
+    let acc = 0;
+    const pxPerTick = scrollSpeed * 0.5;
     const interval = setInterval(() => {
       const el = sectionsRef.current;
       if (el) {
@@ -118,7 +124,12 @@ export function SongViewer({ song }: { song: Song }) {
           return;
         }
       }
-      window.scrollBy({ top: scrollSpeed, left: 0, behavior: "auto" });
+      acc += pxPerTick;
+      if (acc >= 1) {
+        const px = Math.floor(acc);
+        acc -= px;
+        window.scrollBy({ top: px, left: 0, behavior: "auto" });
+      }
     }, 50);
     return () => clearInterval(interval);
   }, [scrollSpeed]);
@@ -127,6 +138,28 @@ export function SongViewer({ song }: { song: Song }) {
     trigger("light");
     setScrollSpeed((prev) => (prev === 0 ? 1 : 0));
   };
+
+  // Global shortcuts: Space → toggle auto-scroll; F → toggle focus mode.
+  // Layout-independent (uses e.code). Ignored in input/textarea/select/contenteditable.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const isSpace = e.code === "Space" || e.key === " ";
+      const isF = e.code === "KeyF";
+      if (!isSpace && !isF) return;
+      const t = e.target as HTMLElement | null;
+      if (t) {
+        const tag = t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable) return;
+      }
+      e.preventDefault();
+      if (isSpace) handleScrollToggle();
+      else if (isF) toggleFocusMode();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleScrollSpeed = (delta: number) => {
     trigger("light");

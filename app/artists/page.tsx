@@ -1,7 +1,7 @@
 import { type Metadata } from "next";
 import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";
-import { getAllSongs } from "@/features/song/services/songs";
+import { getArtistSongCounts, getArtistPopularity } from "@/features/song/services/songs";
 import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { ArrowLeft } from "lucide-react";
@@ -34,44 +34,48 @@ function stringToColor(str: string) {
 }
 
 export default async function ArtistsPage() {
-  const [songs, dbArtists] = await Promise.all([getAllSongs(), getAllArtists()]);
-
-  // Count songs per artist name (published only)
-  const songCount = new Map<string, number>();
-  songs.forEach((s) => {
-    const key = s.artist.toLowerCase();
-    songCount.set(key, (songCount.get(key) ?? 0) + 1);
-  });
+  const [songCount, popularity, dbArtists] = await Promise.all([
+    getArtistSongCounts(),
+    getArtistPopularity(),
+    getAllArtists(),
+  ]);
 
   // Build from artists table — all artists, not just those with songs
-  const artists = dbArtists.map((a) => ({
-    name: a.name,
-    songsCount: songCount.get(a.name.toLowerCase()) ?? 0,
-    genre: a.genre ?? "",
-    color: stringToColor(a.name),
-    image: a.photo_url ?? undefined,
-    slug: a.slug,
-  }));
+  const artists = dbArtists
+    .map((a) => {
+      const key = a.name.toLowerCase();
+      return {
+        name: a.name,
+        songsCount: songCount[key] ?? 0,
+        avgViews: popularity[key]?.avg ?? 0,
+        genre: a.genre ?? "",
+        color: stringToColor(a.name),
+        image: a.photo_url ?? undefined,
+        slug: a.slug,
+      };
+    })
+    // Sort by average source_views desc; artists without songs fall to bottom,
+    // tie-break by name so the order is stable.
+    .sort((a, b) => {
+      if (b.avgViews !== a.avgViews) return b.avgViews - a.avgViews;
+      return a.name.localeCompare(b.name, "uk");
+    });
 
   return (
     <PageShell>
-      <Link href="/" className="inline-flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
-        <ArrowLeft size={14} /> Назад
-      </Link>
-
-      <div className="te-surface p-12 mb-12 text-center" style={{ borderRadius: "2.5rem" }}>
-        <h1 className="text-5xl font-bold mb-4 uppercase tracking-tighter">Виконавці</h1>
-        <p className="uppercase tracking-[0.2em] text-sm" style={{ color: "var(--text-muted)" }}>
-          Усі гітарні майстри в одному списку
-        </p>
+      <div className="relative flex items-center mb-6 -mt-2">
+        <Link href="/" className="inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
+          <ArrowLeft size={14} /> Назад
+        </Link>
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold uppercase tracking-wider">Виконавці</h1>
       </div>
 
       {artists.length === 0 ? (
         <EmptyState message="Виконавців ще немає в каталозі." />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {artists.map((artist) => (
-            <ArtistCard key={artist.name} {...artist} />
+            <ArtistCard key={artist.slug} {...artist} />
           ))}
         </div>
       )}

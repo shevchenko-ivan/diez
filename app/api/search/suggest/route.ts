@@ -25,7 +25,11 @@ export async function GET(req: Request) {
       .from("songs")
       .select("slug, title, artist, difficulty, cover_image, cover_color")
       .eq("status", "published")
-      .or(`title.ilike.${like},artist.ilike.${like}`)
+      .or(
+        q.length >= 3
+          ? `title.ilike.${like},artist.ilike.${like},lyrics_text.ilike.${like}`
+          : `title.ilike.${like},artist.ilike.${like}`,
+      )
       .order("views", { ascending: false })
       .limit(6),
     sb

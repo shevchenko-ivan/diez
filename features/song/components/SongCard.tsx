@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
 import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
@@ -21,12 +22,14 @@ export interface SongCardProps {
   coverColor?: string;
   coverImage?: string;
   index?: number;
+  variantId?: string | null;
 }
 
 export function SongCard({ ...props }: SongCardProps) {
-  const href = props.slug
+  const base = props.slug
     ? `/songs/${props.slug}`
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
+  const href = props.variantId ? `${base}?v=${props.variantId}` : base;
 
   return (
     <HapticLink
@@ -39,10 +42,12 @@ export function SongCard({ ...props }: SongCardProps) {
       <div className="w-full aspect-[4/3] relative overflow-hidden bg-[var(--surface)] border-b border-[rgba(0,0,0,0.05)]">
         {/* Cover */}
         {props.coverImage ? (
-          <img
+          <Image
             src={props.coverImage}
-            className="w-full h-full object-cover"
+            className="object-cover"
             alt={props.title}
+            fill
+            sizes="(max-width: 768px) 50vw, 25vw"
           />
         ) : (
           <div
@@ -224,8 +229,7 @@ export function HeroSearch() {
                       }}
                     >
                       {a.photo_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" />
+                        <Image src={a.photo_url} alt={a.name} width={36} height={36} className="w-full h-full object-cover" />
                       ) : (
                         a.name.charAt(0).toUpperCase()
                       )}
@@ -257,8 +261,7 @@ export function HeroSearch() {
                       }}
                     >
                       {s.cover_image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={s.cover_image} alt={s.title} className="w-full h-full object-cover" />
+                        <Image src={s.cover_image} alt={s.title} width={36} height={36} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs font-bold" style={{ color: `${fallback}` }}>{s.artist.charAt(0).toUpperCase()}</span>
                       )}

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { Globe, Link as LinkIcon, Lock, Plus, X } from "lucide-react";
+import { Link as LinkIcon, Lock, Plus, X } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
 import { createPlaylist } from "../actions/playlists";
 import type { PlaylistVisibility } from "../types";
@@ -11,7 +11,6 @@ import type { PlaylistVisibility } from "../types";
 const VIS_OPTIONS: Array<{ value: PlaylistVisibility; label: string; icon: typeof Lock }> = [
   { value: "private", label: "Приватний", icon: Lock },
   { value: "unlisted", label: "За посиланням", icon: LinkIcon },
-  { value: "public", label: "Публічний", icon: Globe },
 ];
 
 export function CreatePlaylistButton() {

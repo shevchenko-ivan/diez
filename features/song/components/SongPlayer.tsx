@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { TeButton } from "@/shared/components/TeButton";
-import { SkipBack, SkipForward } from "lucide-react";
+import { Rewind, FastForward } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -118,10 +118,13 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
     }
   };
 
-  // Global spacebar → toggle playback. Ignored when typing in input/textarea/select/contenteditable.
+  // YouTube-like shortcuts: K play/pause, J back 10s, L forward 10s.
+  // Ignored when typing in input/textarea/select/contenteditable.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "Space" && e.key !== " ") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const code = e.code;
+      if (code !== "KeyK" && code !== "KeyJ" && code !== "KeyL") return;
       const t = e.target as HTMLElement | null;
       if (t) {
         const tag = t.tagName;
@@ -129,7 +132,9 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
       }
       if (!ready) return;
       e.preventDefault();
-      togglePlay();
+      if (code === "KeyK") togglePlay();
+      else if (code === "KeyJ") skip(-10);
+      else if (code === "KeyL") skip(10);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -344,8 +349,8 @@ function PauseIcon() {
   );
 }
 function SkipBackIcon() {
-  return <SkipBack size={16} strokeWidth={2} fill="currentColor" style={{ color: "var(--text-mid)" }} />;
+  return <Rewind size={16} strokeWidth={2} fill="currentColor" style={{ color: "var(--text-mid)" }} />;
 }
 function SkipForwardIcon() {
-  return <SkipForward size={16} strokeWidth={2} fill="currentColor" style={{ color: "var(--text-mid)" }} />;
+  return <FastForward size={16} strokeWidth={2} fill="currentColor" style={{ color: "var(--text-mid)" }} />;
 }

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Globe, Link as LinkIcon, ListMusic } from "lucide-react";
+import { Link as LinkIcon, ListMusic } from "lucide-react";
 import { PageShell } from "@/shared/components/PageShell";
 import { SongCard } from "@/features/song/components/SongCard";
 import { getPublicPlaylistBySlug } from "@/features/playlist/services/playlists";
@@ -47,7 +47,7 @@ export default async function PublicListPage({
 
   const savedSlugs = await getSavedSlugs();
   const ownerLabel = playlist.owner.username || playlist.owner.email?.split("@")[0] || "Diez";
-  const VisIcon = playlist.visibility === "public" ? Globe : LinkIcon;
+  const VisIcon = LinkIcon;
 
   return (
     <PageShell>
@@ -62,7 +62,7 @@ export default async function PublicListPage({
           <div className="flex items-center gap-2 mb-2">
             <VisIcon size={12} style={{ color: "var(--text-muted)" }} />
             <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-              {playlist.visibility === "public" ? "Публічний список" : "Список за посиланням"}
+              Список за посиланням
             </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter mb-3" style={{ color: "var(--text)" }}>
@@ -99,6 +99,7 @@ export default async function PublicListPage({
               coverImage={song.coverImage}
               coverColor={song.coverColor}
               isSaved={savedSlugs.has(song.slug)}
+              variantId={song.variantId}
             />
           ))}
         </div>

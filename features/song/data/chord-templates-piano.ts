@@ -8,6 +8,7 @@ export type PianoChordDef = { notes: number[] };
 // Semitone intervals from the chord root for each suffix.
 const INTERVALS: Record<string, number[]> = {
   "": [0, 4, 7],
+  "5": [0, 7],
   m: [0, 3, 7],
   "7": [0, 4, 7, 10],
   maj7: [0, 4, 7, 11],
@@ -40,7 +41,10 @@ export function lookupChordPiano(chord: string): PianoChordDef[] | null {
   const m = normalized.match(/^([A-G]#?)(.*)$/);
   if (!m) return null;
   const [, root, suffix] = m;
-  const intervals = INTERVALS[suffix];
+  // Slash chord (e.g. "G/B", "Am/A") — piano keyboard doesn't visually
+  // distinguish bass inversions well, so we render the base chord's intervals.
+  const coreSuffix = suffix.includes("/") ? suffix.slice(0, suffix.indexOf("/")) : suffix;
+  const intervals = INTERVALS[coreSuffix];
   if (!intervals) return null;
   const rootIdx = NOTES.indexOf(root as typeof NOTES[number]);
   if (rootIdx < 0) return null;

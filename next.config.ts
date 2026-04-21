@@ -10,14 +10,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "upload.wikimedia.org",
-      },
-      {
-        protocol: "https",
-        hostname: "**.supabase.co",
-      },
+      { protocol: "https", hostname: "upload.wikimedia.org" },
+      { protocol: "https", hostname: "**.supabase.co" },
+      { protocol: "https", hostname: "**.mzstatic.com" },
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "i.scdn.co" },
+      { protocol: "https", hostname: "**.dzcdn.net" },
     ],
   },
   async headers() {

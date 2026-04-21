@@ -17,7 +17,12 @@ import type { ChordLine, SongSection } from "../types";
 const CHORD_TOKEN_RE = /^[A-G][b#]?(m|maj|min|dim|aug|sus|add)?[0-9]?(\/[A-G][b#]?)?$/;
 const HEADER_COLON_RE = /^([^[\]]+):\s*$/;
 const HEADER_PIPE_RE = /^\|([^|]+)\|\s*$/;
+const HEADER_BRACKETS_RE = /^\[([^\]]+)\]\s*$/;
 const TAB_LINE_RE = /^[eEBGDA]\|[-0-9h p/\\~x().^sbt\s|]+$/;
+
+function isChordToken(s: string): boolean {
+  return CHORD_TOKEN_RE.test(s);
+}
 
 function isChordOnlyBareLine(text: string): boolean {
   const trimmed = text.trim();
@@ -41,13 +46,13 @@ function extractChordPositions(line: string): { chord: string; col: number }[] {
     const re = /\[([^\]]+)\]/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
-      results.push({ chord: m[1], col: m.index });
+      if (isChordToken(m[1])) results.push({ chord: m[1], col: m.index });
     }
   } else {
     const re = /\S+/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
-      results.push({ chord: m[0], col: m.index });
+      if (isChordToken(m[0])) results.push({ chord: m[0], col: m.index });
     }
   }
   return results;
@@ -68,10 +73,12 @@ function parseInlineBracketsLine(line: string): ChordLine {
     if (body[i] === "[") {
       const close = body.indexOf("]", i + 1);
       if (close !== -1) {
-        const chord = body.slice(i + 1, close);
-        chords.push({ chord, col: lyricsCol + out.length });
-        i = close + 1;
-        continue;
+        const inner = body.slice(i + 1, close);
+        if (isChordToken(inner)) {
+          chords.push({ chord: inner, col: lyricsCol + out.length });
+          i = close + 1;
+          continue;
+        }
       }
     }
     out += body[i];
@@ -119,9 +126,12 @@ export function parseLyricsWithChords(raw: string): {
 
     const colonMatch = trimmed.match(HEADER_COLON_RE);
     const pipeMatch = trimmed.match(HEADER_PIPE_RE);
-    if (colonMatch || pipeMatch) {
+    const bracketMatch = trimmed.match(HEADER_BRACKETS_RE);
+    // [Vstup] alone on a line is a section header only when it's not a chord.
+    const bracketIsHeader = bracketMatch && !isChordToken(bracketMatch[1].trim());
+    if (colonMatch || pipeMatch || bracketIsHeader) {
       if (currentGroup) groups.push(currentGroup);
-      const label = (colonMatch ? colonMatch[1] : pipeMatch![1]).trim();
+      const label = (colonMatch ? colonMatch[1] : pipeMatch ? pipeMatch[1] : bracketMatch![1]).trim();
       currentGroup = { label, dataLines: [] };
       continue;
     }

@@ -667,6 +667,11 @@
     scrollbar-width: none;
   }
   .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  /* Chord diagram: reveal play icon on hover only */
+  .chord-diagram-svg:hover .chord-diagram-play {
+    opacity: 1 !important;
+  }
 }
 
 /* ── Dark theme ─────────────────────────────────────────────────────────────── */

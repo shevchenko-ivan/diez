@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Check,
   Copy,
   GripVertical,
-  Globe,
   Link as LinkIcon,
   Lock,
   Pencil,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
 import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
+import { toast } from "@/shared/components/Toaster";
 import {
   deletePlaylist,
   removeSongFromPlaylist,
@@ -35,6 +36,7 @@ interface Song {
   views: number;
   coverImage?: string;
   coverColor?: string;
+  variantId?: string | null;
 }
 
 interface Props {
@@ -52,7 +54,6 @@ interface Props {
 const VIS_OPTIONS: Array<{ value: PlaylistVisibility; label: string; icon: typeof Lock }> = [
   { value: "private", label: "Приватний", icon: Lock },
   { value: "unlisted", label: "За посиланням", icon: LinkIcon },
-  { value: "public", label: "Публічний", icon: Globe },
 ];
 
 export function PlaylistManager({ playlist, initialSongs }: Props) {
@@ -80,6 +81,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
     startTransition(async () => {
       await updatePlaylist(playlist.id, { name: trimmed });
       router.refresh();
+      toast("Назву збережено");
     });
   };
 
@@ -88,6 +90,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
     startTransition(async () => {
       await updatePlaylist(playlist.id, { visibility: v });
       router.refresh();
+      toast("Видимість змінено");
     });
   };
 
@@ -108,9 +111,21 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareUrl);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = shareUrl;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+    toast("Посилання скопійовано");
   };
 
   const onDragStart = (i: number) => setDragIndex(i);
@@ -139,27 +154,26 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {/* Header card */}
-      <div className="te-surface p-6" style={{ borderRadius: "1.5rem" }}>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex-1 min-w-0">
+      <div className="te-surface p-4" style={{ borderRadius: "1.5rem" }}>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Title */}
+          <div className="min-w-0">
             {editingName && !playlist.isDefault ? (
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onBlur={saveName}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveName();
-                    if (e.key === "Escape") { setName(playlist.name); setEditingName(false); }
-                  }}
-                  className="te-inset px-3 py-2 rounded-xl bg-transparent outline-none text-2xl font-bold tracking-tighter w-full max-w-md"
-                  style={{ color: "var(--text)" }}
-                />
-              </div>
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") { setName(playlist.name); setEditingName(false); }
+                }}
+                className="te-inset px-3 py-1 rounded-xl bg-transparent outline-none text-xl font-bold tracking-tighter"
+                style={{ color: "var(--text)" }}
+              />
             ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-2xl font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
                   {name}
                 </h1>
                 {!playlist.isDefault && (
@@ -167,15 +181,15 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                     type="button"
                     onClick={() => setEditingName(true)}
                     aria-label="Перейменувати"
-                    className="opacity-60 hover:opacity-100"
+                    className="opacity-50 hover:opacity-100"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    <Pencil size={16} />
+                    <Pencil size={13} />
                   </button>
                 )}
               </div>
             )}
-            <p className="text-sm font-medium mt-2" style={{ color: "var(--text-muted)" }}>
+            <p className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
               {songs.length} {pluralSongs(songs.length)}
               {playlist.isDefault && (
                 <span className="ml-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--orange)" }}>
@@ -185,38 +199,8 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <TeButton
-              shape="pill"
-              onClick={handleCopy}
-              disabled={!canShare}
-              title={canShare ? "Скопіювати посилання" : "Змініть видимість, щоб поділитися"}
-              className="px-4 py-2 text-xs font-bold"
-              style={!canShare ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-            >
-              {copied ? <Check size={14} strokeWidth={2} /> : <Share2 size={14} strokeWidth={2} />}
-              {copied ? "Скопійовано" : "Поділитися"}
-            </TeButton>
-            {!playlist.isDefault && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                aria-label="Видалити список"
-                className="inline-flex items-center justify-center rounded-full hover:bg-red-500/10"
-                style={{ width: 36, height: 36, color: "#e11d48" }}
-              >
-                <Trash2 size={14} strokeWidth={2} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Visibility selector */}
-        <div className="mt-6">
-          <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
-            Видимість
-          </label>
-          <div className="flex gap-1 max-w-md">
+          {/* Visibility inline */}
+          <div className="flex gap-0.5 te-inset" style={{ borderRadius: "0.75rem", padding: "2px" }}>
             {VIS_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const active = visibility === opt.value;
@@ -225,26 +209,42 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                   key={opt.value}
                   type="button"
                   onClick={() => changeVisibility(opt.value)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
                   style={{
-                    background: active ? "rgba(255,136,0,0.1)" : "transparent",
+                    borderRadius: "0.5rem",
+                    background: active ? "rgba(255,136,0,0.12)" : "transparent",
                     color: active ? "var(--orange)" : "var(--text-muted)",
                   }}
                 >
-                  <Icon size={12} strokeWidth={2} />
+                  <Icon size={11} strokeWidth={2} />
                   {opt.label}
                 </button>
               );
             })}
           </div>
+
+          {/* URL inline */}
           {canShare && (
-            <div className="mt-3 te-inset px-3 py-2 rounded-lg flex items-center gap-2 max-w-md">
-              <LinkIcon size={12} style={{ color: "var(--text-muted)" }} />
-              <code className="flex-1 text-xs truncate" style={{ color: "var(--text-muted)" }}>{shareUrl}</code>
-              <button type="button" onClick={handleCopy} aria-label="Копіювати" style={{ color: "var(--text-muted)" }}>
-                {copied ? <Check size={14} /> : <Copy size={14} />}
+            <div className="te-inset px-2.5 py-1.5 flex items-center gap-2 max-w-[200px]" style={{ borderRadius: "0.75rem" }}>
+              <LinkIcon size={11} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+              <code className="flex-1 text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{shareUrl}</code>
+              <button type="button" onClick={handleCopy} aria-label="Копіювати" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+                {copied ? <Check size={12} /> : <Copy size={12} />}
               </button>
             </div>
+          )}
+
+          {/* Delete */}
+          {!playlist.isDefault && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              aria-label="Видалити список"
+              className="inline-flex items-center justify-center rounded-full hover:bg-red-500/10 ml-auto"
+              style={{ width: 32, height: 32, color: "#e11d48" }}
+            >
+              <Trash2 size={13} strokeWidth={2} />
+            </button>
           )}
         </div>
       </div>
@@ -279,7 +279,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 <GripVertical size={16} />
               </span>
               <div
-                className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0"
+                className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0"
                 style={{
                   background: song.coverImage
                     ? undefined
@@ -287,11 +287,13 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 }}
               >
                 {song.coverImage && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+                  <Image src={song.coverImage} alt={song.title} width={64} height={64} className="w-full h-full object-cover" />
                 )}
               </div>
-              <Link href={`/songs/${song.slug}`} className="flex-1 min-w-0">
+              <Link
+                href={song.variantId ? `/songs/${song.slug}?v=${song.variantId}` : `/songs/${song.slug}`}
+                className="flex-1 min-w-0"
+              >
                 <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
                 <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
               </Link>

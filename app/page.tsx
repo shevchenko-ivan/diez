@@ -2,7 +2,7 @@ import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
-import { getAllSongs, getFreshSongs } from "@/features/song/services/songs";
+import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
 import { getArtists } from "@/features/artist/services/artists";
 import { getSavedSlugs, getMyPlaylists } from "@/features/playlist/actions/playlists";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
@@ -32,20 +32,19 @@ const TOPICS = [
   { slug: "games",       icon: "🎮", label: "З відеоігор",          description: "Stalker, Відьмак, інші" },
   { slug: "rock",        icon: "🤘", label: "Рок-хіти",            description: "Найкращі рок-пісні" },
   { slug: "romantic",    icon: "💕", label: "Романтичні",           description: "Для настрою" },
-  { slug: "acoustic",    icon: "🎧", label: "Акустика",             description: "Тихо і по-домашньому" },
   { slug: "summer",      icon: "🌻", label: "Літні вайби",          description: "Для сонячних днів" },
 ];
 
 export default async function HomePage() {
-  const [trendingSongs, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
-    getAllSongs(),
+  const [trendingPage, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
+    getSongsPage({ sortBy: "source_views", limit: 4 }),
     getFreshSongs(4),
     getArtists(12),
     getSavedSlugs(),
     getMyPlaylists(),
   ]);
 
-  const trending = trendingSongs.slice(0, 4);
+  const trending = trendingPage.songs;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>

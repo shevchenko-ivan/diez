@@ -27,16 +27,20 @@ async function getStats() {
 
   if (!profile?.is_admin) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
 
-  const [{ data: songs }, { data: artists }] = await Promise.all([
-    admin.from("songs").select("status"),
-    admin.from("artists").select("id"),
+  const [pub, drf, arc, art] = await Promise.all([
+    admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "published"),
+    admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "draft"),
+    admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "archived"),
+    admin.from("artists").select("id", { head: true, count: "exact" }),
   ]);
 
-  const published = songs?.filter((s) => s.status === "published").length ?? 0;
-  const drafts = songs?.filter((s) => s.status === "draft").length ?? 0;
-  const archived = songs?.filter((s) => s.status === "archived").length ?? 0;
-
-  return { published, drafts, archived, artists: artists?.length ?? 0, isAdmin: true };
+  return {
+    published: pub.count ?? 0,
+    drafts: drf.count ?? 0,
+    archived: arc.count ?? 0,
+    artists: art.count ?? 0,
+    isAdmin: true,
+  };
 }
 
 export default async function AdminPage() {

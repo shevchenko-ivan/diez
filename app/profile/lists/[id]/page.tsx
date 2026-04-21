@@ -45,6 +45,7 @@ async function ManageContent({ id }: { id: string }) {
           views: s.views,
           coverImage: s.coverImage,
           coverColor: s.coverColor,
+          variantId: s.variantId,
         }))}
       />
     </>

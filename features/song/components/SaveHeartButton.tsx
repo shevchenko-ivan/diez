@@ -15,9 +15,10 @@ interface Props {
   /** Floating pill style (white background on media) vs bare (inherits parent) */
   variant?: "floating" | "bare";
   size?: number;
+  variantId?: string;
 }
 
-export function SaveHeartButton({ slug, initialSaved = false, variant = "floating", size = 14 }: Props) {
+export function SaveHeartButton({ slug, initialSaved = false, variant = "floating", size = 14, variantId }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -103,6 +104,7 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
       {anchorRect && (
         <AddToPlaylistPopover
           slug={slug}
+          variantId={variantId}
           anchorRect={anchorRect}
           initialLists={prefetched}
           onClose={() => {

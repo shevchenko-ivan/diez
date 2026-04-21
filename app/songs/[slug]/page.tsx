@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -16,6 +14,7 @@ import { BackButton } from "@/shared/components/BackButton";
 import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
+import { getArtistSlugByName } from "@/features/artist/services/artists";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteFooter } from "@/shared/components/SiteFooter";
@@ -72,12 +71,14 @@ export default async function SongPage({
   const baseSong = await getSongBySlug(slug);
   if (!baseSong) return notFound();
 
-  const artistSlug = slugify(baseSong.artist);
-  const [otherSongs, savedSlugs, savedVariantId] = await Promise.all([
+  const [otherSongs, savedSlugs, savedVariantId, realArtistSlug] = await Promise.all([
     getSongsByArtist(baseSong.artist, { excludeSlug: slug, limit: 4 }),
     getSavedSlugs(),
     getSavedVariantId(slug),
+    getArtistSlugByName(baseSong.artist),
   ]);
+  // Prefer real DB slug; fall back to slugify() when artist row is missing.
+  const artistSlug = realArtistSlug ?? slugify(baseSong.artist);
 
   // ?v= takes priority; then the variant the user previously saved; then primary.
   const effectiveVariantId = variantId ?? savedVariantId ?? undefined;
