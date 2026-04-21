@@ -48,3 +48,7 @@ next-env.d.ts
 # editor / local tooling state
 /.vscode/
 /.claude/
+
+# supabase CLI local state
+/supabase/.branches/
+/supabase/.temp/
