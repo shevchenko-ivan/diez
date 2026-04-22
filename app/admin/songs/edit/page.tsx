@@ -7,7 +7,8 @@ import { BackButton } from "@/shared/components/BackButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { updateSong, updateVariant, setPrimaryVariant, deleteVariant } from "@/features/song/actions/admin";
+import { updateSongFull, setPrimaryVariant, deleteVariant } from "@/features/song/actions/admin";
+import { TempoInput } from "./TempoInput";
 import { AutoResizeTextarea } from "./AutoResizeTextarea";
 import { VariantTabs } from "./VariantTabs";
 import { TeButton } from "@/shared/components/TeButton";
@@ -20,8 +21,21 @@ import { SavedToast } from "@/shared/components/SavedToast";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
-// Matches standalone chord tokens: Am, C#m7, Bbmaj7, F/C, etc.
-const CHORD_TOKEN_RE = /^[A-G][b#]?(m|maj|min|dim|aug|sus|add)?[0-9]?(\/[A-G][b#]?)?$/;
+// Matches standalone chord tokens: Am, C#m7, Bbmaj7, F/C, Cmaj7#11, C7b9, etc.
+// Whitelist of qualities mirrors features/song/lib/parseLyrics.ts — keep in sync.
+const CHORD_QUALITIES = [
+  "maj7#11", "13sus4", "mMaj7", "7sus4", "9sus4",
+  "maj13", "maj9", "maj7", "m7b5", "add9", "add11",
+  "aug7", "dim7", "dim9", "sus2", "sus4",
+  "7b5", "7#5", "7b9", "7#9", "7#11",
+  "m6", "m7", "m9", "m11",
+  "13", "11",
+  "m", "maj", "min", "dim", "aug", "sus", "add",
+  "5", "6", "7", "9",
+].map(q => q.replace(/[#+]/g, "\\$&")).join("|");
+const CHORD_TOKEN_RE = new RegExp(
+  `^[A-H][b#]?(${CHORD_QUALITIES})?(\\/[A-H][b#]?)?$`,
+);
 
 function isChordOnlyLine(text: string): boolean {
   const tokens = text.trim().split(/\s+/);
@@ -191,89 +205,8 @@ export default async function EditSongPage({
         slug: {song.slug}
       </p>
 
-      <form id="song-meta-form" action={updateSong} className="space-y-6 mb-8">
-        <input type="hidden" name="songId" value={song.id} />
-        {from === "song" && <input type="hidden" name="returnTo" value={`/songs/${song.slug}`} />}
-
-        <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
-          <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Мета пісні
-          </h2>
-
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField label="Назва *">
-                <input name="title" required defaultValue={song.title} className="field-input" style={{ color: "var(--text)" }} />
-              </FormField>
-              <div className="space-y-2">
-                <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-                  Виконавець *
-                </label>
-                <StringAutocomplete name="artist" defaultValue={song.artist} suggestions={artistSuggestions} required />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-                Альбом
-              </label>
-              <AlbumAutocomplete name="album" defaultValue={song.album ?? ""} pairs={albumPairs} placeholder="Назва альбому" />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <FormField label="Жанр">
-                <select name="genre" defaultValue={song.genre ?? ""} className="field-input" style={{ color: "var(--text)" }}>
-                  <option value="">— Обрати —</option>
-                  {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Складність">
-                <select name="difficulty" defaultValue={song.difficulty ?? "easy"} className="field-input" style={{ color: "var(--text)" }}>
-                  {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Статус">
-                <select name="status" defaultValue={song.status ?? "draft"} className="field-input" style={{ color: "var(--text)" }}>
-                  {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </FormField>
-            </div>
-
-            <FormField label="URL обкладинки">
-              <input name="cover_image" defaultValue={song.cover_image ?? ""} placeholder="https://..." className="field-input" style={{ color: "var(--text)" }} />
-            </FormField>
-
-            <FormField label="Пісня на YouTube (для плеєра)">
-              <input
-                name="youtube_id"
-                defaultValue={song.youtube_id ?? ""}
-                placeholder="https://youtu.be/... або dQw4w9WgXcQ"
-                className="field-input"
-                style={{ color: "var(--text)" }}
-              />
-            </FormField>
-
-            <div className="pt-2 flex justify-end">
-              <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-                <Save size={16} />
-                ЗБЕРЕГТИ МЕТА
-              </TeButton>
-            </div>
-          </div>
-        </div>
-      </form>
-
-      {activeVariant && allVariants.length > 0 && (
-        <VariantTabs
-          songId={song.id}
-          activeVariantId={activeVariant.id}
-          primaryVariantId={primaryVariantId}
-          variants={allVariants.map((v) => ({ id: v.id, label: v.label }))}
-          basePath="/admin/songs/edit"
-          fromParam={from}
-        />
-      )}
-
+      {/* Mini-forms for variant-level side-actions (set primary / delete).
+          Kept separate so the main form's inputs don't get submitted with them. */}
       {activeVariant && !isActivePrimary && (
         <>
           <form id="variant-primary-form" action={setPrimaryVariant} className="hidden">
@@ -286,20 +219,103 @@ export default async function EditSongPage({
         </>
       )}
 
-      {activeVariant && (
-        <form action={updateVariant} className="space-y-6 mb-8 -mt-3 relative">
+      {activeVariant ? (
+        <form action={updateSongFull} className="space-y-6 mb-8">
+          <input type="hidden" name="songId" value={song.id} />
           <input type="hidden" name="variantId" value={activeVariant.id} />
           <input
             type="hidden"
             name="returnTo"
-            value={`/admin/songs/edit?id=${song.id}&variant=${activeVariant.id}${from === "song" ? "&from=song" : ""}`}
+            value={
+              from === "song"
+                ? `/songs/${song.slug}`
+                : `/admin/songs/edit?id=${song.id}&variant=${activeVariant.id}`
+            }
           />
 
-          {/* Variant header: name + actions. Hidden for the primary variant — its name is fixed. */}
+          {/* ── Мета пісні ──────────────────────────────────────────────── */}
+          <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+            <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+              Мета пісні
+            </h2>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Назва *">
+                  <input name="title" required defaultValue={song.title} className="field-input" style={{ color: "var(--text)" }} />
+                </FormField>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+                    Виконавець *
+                  </label>
+                  <StringAutocomplete name="artist" defaultValue={song.artist} suggestions={artistSuggestions} required />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+                  Альбом
+                </label>
+                <AlbumAutocomplete name="album" defaultValue={song.album ?? ""} pairs={albumPairs} placeholder="Назва альбому" />
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <FormField label="Жанр">
+                  <select name="genre" defaultValue={song.genre ?? ""} className="field-input" style={{ color: "var(--text)" }}>
+                    <option value="">— Обрати —</option>
+                    {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Складність">
+                  <select name="difficulty" defaultValue={song.difficulty ?? "easy"} className="field-input" style={{ color: "var(--text)" }}>
+                    {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Статус">
+                  <select name="status" defaultValue={song.status ?? "draft"} className="field-input" style={{ color: "var(--text)" }}>
+                    {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Розмір">
+                  <select name="time_signature" defaultValue={song.time_signature ?? "4/4"} className="field-input" style={{ color: "var(--text)" }}>
+                    {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
+                  </select>
+                </FormField>
+              </div>
+
+              <FormField label="URL обкладинки">
+                <input name="cover_image" defaultValue={song.cover_image ?? ""} placeholder="https://..." className="field-input" style={{ color: "var(--text)" }} />
+              </FormField>
+
+              <FormField label="Пісня на YouTube (для плеєра)">
+                <input
+                  name="youtube_id"
+                  defaultValue={song.youtube_id ?? ""}
+                  placeholder="https://youtu.be/... або dQw4w9WgXcQ"
+                  className="field-input"
+                  style={{ color: "var(--text)" }}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          {/* ── Variant tabs ──────────────────────────────────────────── */}
+          {allVariants.length > 0 && (
+            <VariantTabs
+              songId={song.id}
+              activeVariantId={activeVariant.id}
+              primaryVariantId={primaryVariantId}
+              variants={allVariants.map((v) => ({ id: v.id, label: v.label }))}
+              basePath="/admin/songs/edit"
+              fromParam={from}
+            />
+          )}
+
+          {/* ── Variant label + side actions (non-primary only) ───────── */}
           {isActivePrimary ? (
             <input type="hidden" name="label" value={activeVariant.label} />
           ) : (
-            <div className="te-surface p-6 mb-6" style={{ borderRadius: "1.5rem" }}>
+            <div className="te-surface p-6" style={{ borderRadius: "1.5rem" }}>
               <div className="flex items-end gap-4 flex-wrap">
                 <div className="flex-1 min-w-[200px]">
                   <FormField label="Назва варіанту">
@@ -331,21 +347,11 @@ export default async function EditSongPage({
             </div>
           )}
 
+          {/* ── Ритм ──────────────────────────────────────────────────── */}
           <RhythmBlock initialEnabled={!!(activeVariant.tempo || (activeVariant.strumming && activeVariant.strumming.length > 0))}>
-            <div className="grid grid-cols-2 gap-4">
+            <div>
               <FormField label="Темп (BPM)">
-                <input name="tempo" type="number" min={40} max={300} defaultValue={activeVariant.tempo ?? ""} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
-              </FormField>
-              <FormField label="Розмір">
-                <select
-                  form="song-meta-form"
-                  name="time_signature"
-                  defaultValue={song.time_signature ?? "4/4"}
-                  className="field-input"
-                  style={{ color: "var(--text)" }}
-                >
-                  {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
-                </select>
+                <TempoInput name="tempo" defaultValue={activeVariant.tempo ?? ""} />
               </FormField>
             </div>
 
@@ -362,6 +368,7 @@ export default async function EditSongPage({
             </div>
           </RhythmBlock>
 
+          {/* ── Текст з акордами + один сабміт ───────────────────────── */}
           <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
             <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
               Текст з акордами
@@ -378,12 +385,12 @@ export default async function EditSongPage({
             <div className="pt-6 flex justify-end">
               <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
                 <Save size={16} />
-                ЗБЕРЕГТИ ВАРІАНТ
+                ЗБЕРЕГТИ
               </TeButton>
             </div>
           </div>
         </form>
-      )}
+      ) : null}
 
     </PageShell>
   );

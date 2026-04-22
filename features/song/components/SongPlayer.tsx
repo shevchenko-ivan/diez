@@ -276,6 +276,7 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
             onClick={() => skip(-10)}
             disabled={!ready}
             aria-label="Назад 10с"
+            title="Назад 10с — клавіша J"
             style={{
               width: 36, height: 36,
               opacity: ready ? 1 : 0.35,
@@ -291,6 +292,7 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
             onClick={togglePlay}
             disabled={!ready}
             aria-label={playing ? "Пауза" : "Грати"}
+            title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
             style={{
               width: 56, height: 56,
               color: "var(--orange)",
@@ -317,6 +319,7 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
             onClick={() => skip(10)}
             disabled={!ready}
             aria-label="Вперед 10с"
+            title="Вперед 10с — клавіша L"
             style={{
               width: 36, height: 36,
               opacity: ready ? 1 : 0.35,

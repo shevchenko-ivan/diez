@@ -82,9 +82,10 @@ export async function createSong(formData: FormData) {
   const genre = (formData.get("genre") as string)?.trim() || "Інше";
   const key = (formData.get("key") as string)?.trim() || "Am";
   const difficulty = (formData.get("difficulty") as string) || "easy";
-  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
+  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
   const time_signature = (formData.get("time_signature") as string)?.trim() || null;
-  const strumming = parseStrumming(formData.get("strumming") as string);
+  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   if (!title || !artist || !lyricsRaw) {
@@ -150,7 +151,7 @@ export async function createSong(formData: FormData) {
 
   await admin.from("songs").update({ primary_variant_id: variantRow.id }).eq("id", songRow.id);
 
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/");
@@ -173,8 +174,9 @@ export async function createVariant(formData: FormData) {
   const label = (formData.get("label") as string)?.trim() || "Новий варіант";
   const key = (formData.get("key") as string)?.trim() || "Am";
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
-  const strumming = parseStrumming(formData.get("strumming") as string);
+  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
+  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
   const makePrimary = formData.get("make_primary") === "on";
 
@@ -207,7 +209,7 @@ export async function createVariant(formData: FormData) {
   }
 
   const slug = await getSongSlug(songId);
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
   if (slug) redirect(`/songs/${slug}?v=${variant.id}`);
@@ -220,9 +222,10 @@ export async function updateVariant(formData: FormData) {
   const label = (formData.get("label") as string)?.trim();
   const key = (formData.get("key") as string)?.trim();
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
-  const strummingRaw = formData.get("strumming");
-  const strumming = strummingRaw === null ? undefined : parseStrumming(strummingRaw as string);
+  // Rhythm block toggle: if disabled, clear both tempo and strumming.
+  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
+  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
@@ -242,7 +245,7 @@ export async function updateVariant(formData: FormData) {
       ...(key ? { key } : {}),
       capo,
       tempo,
-      ...(strumming !== undefined ? { strumming } : {}),
+      strumming,
       ...(parsed
         ? {
             sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -254,8 +257,35 @@ export async function updateVariant(formData: FormData) {
 
   if (error) throw new Error(`Помилка: ${error.message}`);
 
-  const slug = await getSongSlug(variant.song_id as string);
-  revalidateTag("songs");
+  // Mirror tempo/strumming (+ key/capo/sections/chords) to songs table when this variant
+  // is the primary — the view page reads these from songs-level columns via applyVariant
+  // fallback, and this guards against join/RLS quirks.
+  const songId = variant.song_id as string;
+  const { data: parentSong } = await admin
+    .from("songs")
+    .select("primary_variant_id")
+    .eq("id", songId)
+    .single();
+  if (parentSong?.primary_variant_id === variantId) {
+    await admin
+      .from("songs")
+      .update({
+        ...(key ? { key } : {}),
+        capo,
+        tempo,
+        strumming,
+        ...(parsed
+          ? {
+              sections: { raw: lyricsRaw, sections: parsed.sections },
+              chords: parsed.chords,
+            }
+          : {}),
+      })
+      .eq("id", songId);
+  }
+
+  const slug = await getSongSlug(songId);
+  revalidateTag("songs", "max");
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
 
@@ -287,7 +317,7 @@ export async function setPrimaryVariant(formData: FormData) {
   if (error) throw new Error(`Помилка: ${error.message}`);
 
   const slug = await getSongSlug(songId);
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
 }
@@ -324,7 +354,7 @@ export async function deleteVariant(formData: FormData) {
   if (error) throw new Error(`Помилка: ${error.message}`);
 
   const slug = await getSongSlug(variant.song_id as string);
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
 }
@@ -355,7 +385,7 @@ export async function updateSongStatus(formData: FormData) {
 
   if (error) throw new Error(`Помилка оновлення: ${error.message}`);
 
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/admin");
@@ -428,11 +458,115 @@ export async function updateSong(formData: FormData) {
       .eq("id", songBefore.primary_variant_id);
   }
 
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
+
+  const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
+  const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
+  const sep = safeReturn.includes("?") ? "&" : "?";
+  redirect(`${safeReturn}${sep}saved=meta`);
+}
+
+// ─── Update song + active variant in one go ─────────────────────────────────
+// Unified save path used by the admin edit page. Keeps the form single-button
+// so there are no ambiguous "save-meta vs save-variant" states.
+
+export async function updateSongFull(formData: FormData) {
+  await requireAdmin();
+
+  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
+  const variantId = assertUuid(formData.get("variantId") as string, "ID варіанта");
+
+  // ── Song-level (meta) ─────────────────────────────────────────────────────
+  const title = (formData.get("title") as string)?.trim();
+  const artist = (formData.get("artist") as string)?.trim();
+  const album = (formData.get("album") as string)?.trim() || null;
+  const genre = (formData.get("genre") as string)?.trim() || null;
+  const difficulty = (formData.get("difficulty") as string) || null;
+  const status = (formData.get("status") as string) || null;
+  const time_signature = (formData.get("time_signature") as string)?.trim() || null;
+  const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
+  const youtube_id = extractYoutubeId(formData.get("youtube_id") as string);
+
+  if (!title || !artist) throw new Error("Назва та виконавець обов'язкові");
+
+  // ── Variant-level ─────────────────────────────────────────────────────────
+  const label = (formData.get("label") as string)?.trim();
+  const key = (formData.get("key") as string)?.trim();
+  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
+  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
+  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
+  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
+  const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
+  const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
+
+  const admin = createAdminClient();
+
+  // Make sure the variant belongs to this song (guards against forged IDs).
+  const { data: variantRow } = await admin
+    .from("song_variants")
+    .select("song_id")
+    .eq("id", variantId)
+    .single();
+  if (!variantRow || variantRow.song_id !== songId) {
+    throw new Error("Варіант не належить пісні");
+  }
+
+  // 1) Update the variant.
+  const { error: variantErr } = await admin
+    .from("song_variants")
+    .update({
+      ...(label ? { label } : {}),
+      ...(key ? { key } : {}),
+      capo,
+      tempo,
+      strumming,
+      ...(parsed
+        ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
+        : {}),
+    })
+    .eq("id", variantId);
+  if (variantErr) throw new Error(`Помилка варіанта: ${variantErr.message}`);
+
+  // 2) Update the song meta — and mirror variant-level fields to songs when
+  //    this variant is the primary (so view-page reads stay consistent).
+  const { data: songRow } = await admin
+    .from("songs")
+    .select("primary_variant_id, slug")
+    .eq("id", songId)
+    .single();
+  const isPrimary = songRow?.primary_variant_id === variantId;
+
+  const { error: songErr } = await admin
+    .from("songs")
+    .update({
+      title, artist, album, genre, difficulty, status, time_signature,
+      cover_image, youtube_id,
+      ...(isPrimary
+        ? {
+            ...(key ? { key } : {}),
+            capo,
+            tempo,
+            strumming,
+            ...(parsed
+              ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
+              : {}),
+          }
+        : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", songId);
+  if (songErr) throw new Error(`Помилка пісні: ${songErr.message}`);
+
+  revalidateTag("songs", "max");
+  revalidatePath("/songs");
+  revalidatePath("/admin/songs");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  if (songRow?.slug) revalidatePath(`/songs/${songRow.slug}`);
 
   const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
   const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
@@ -456,7 +590,7 @@ export async function deleteSong(formData: FormData) {
 
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
 
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/admin");
@@ -485,7 +619,7 @@ export async function bulkUpdateSongStatus(formData: FormData) {
     if (error) throw new Error(`Помилка: ${error.message}`);
   }
 
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
@@ -510,7 +644,7 @@ export async function bulkDeleteSongs(formData: FormData) {
     if (error) throw new Error(`Помилка: ${error.message}`);
   }
 
-  revalidateTag("songs");
+  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");

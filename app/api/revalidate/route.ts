@@ -5,6 +5,6 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const url = new URL(req.url);
   const tag = url.searchParams.get("tag") ?? "songs";
-  revalidateTag(tag);
+  revalidateTag(tag, "max");
   return NextResponse.json({ ok: true, tag });
 }

@@ -6,6 +6,7 @@ import { FormField } from "@/shared/components/FormField";
 import { BackButton } from "@/shared/components/BackButton";
 import { TeButton } from "@/shared/components/TeButton";
 import { StrummingEditor } from "@/features/song/components/StrummingEditor";
+import { RhythmBlock } from "../../edit/RhythmBlock";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createVariant } from "@/features/song/actions/admin";
@@ -81,26 +82,26 @@ export default async function NewVariantPage({
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Темп (BPM)">
-                <input name="tempo" type="number" min={40} max={300} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
-              </FormField>
-              <label className="flex items-center gap-3 pt-6 text-sm font-bold" style={{ color: "var(--text)" }}>
-                <input type="checkbox" name="make_primary" className="w-4 h-4" />
-                Зробити основним варіантом
-              </label>
-            </div>
+            <label className="flex items-center gap-3 text-sm font-bold" style={{ color: "var(--text)" }}>
+              <input type="checkbox" name="make_primary" className="w-4 h-4" />
+              Зробити основним варіантом
+            </label>
           </div>
         </div>
 
-        <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
-          <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-            Бій / ритмічний малюнок
-          </h2>
-          <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
-            <StrummingEditor name="strumming" />
+        <RhythmBlock initialEnabled={false}>
+          <FormField label="Темп (BPM)">
+            <input name="tempo" type="number" min={40} max={300} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
+          </FormField>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
+              Бій / ритмічний малюнок
+            </label>
+            <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
+              <StrummingEditor name="strumming" />
+            </div>
           </div>
-        </div>
+        </RhythmBlock>
 
         <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
           <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>

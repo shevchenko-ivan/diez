@@ -99,6 +99,25 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
     setPlaying((p) => !p);
   };
 
+  // Global shortcut: M → toggle metronome. Layout-independent via e.code.
+  // Ignored in inputs/textareas so typing isn't hijacked.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.code !== "KeyM") return;
+      const t = e.target as HTMLElement | null;
+      if (t) {
+        const tag = t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable) return;
+      }
+      e.preventDefault();
+      togglePlay();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const adjustTempo = (delta: number) => {
     trigger("light");
     setTempo((t) => Math.max(40, Math.min(240, t + delta)));
@@ -160,7 +179,7 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
       </div>
 
       {/* BPM */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <AdjusterButton onClick={() => adjustTempo(-5)} aria-label="Повільніше">
           <Minus size={14} strokeWidth={2.5} />
         </AdjusterButton>
@@ -177,6 +196,7 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
       <TeButton
         shape="pill"
         onClick={togglePlay}
+        title={playing ? "Зупинити метроном — клавіша M" : "Запустити метроном — клавіша M"}
         className="w-full py-1.5 text-xs font-bold"
         style={{
           borderRadius: "0.5rem",
@@ -186,12 +206,12 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
         {playing ? (
           <>
             <Square size={10} className="inline mr-1" fill="currentColor" />
-            Стоп
+            Стоп (M)
           </>
         ) : (
           <>
             <Play size={10} className="inline mr-1" fill="currentColor" />
-            Грати
+            Грати (M)
           </>
         )}
       </TeButton>

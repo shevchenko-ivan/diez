@@ -14,7 +14,27 @@
 
 import type { ChordLine, SongSection } from "../types";
 
-const CHORD_TOKEN_RE = /^[A-G][b#]?(m|maj|min|dim|aug|sus|add)?[0-9]?(\/[A-G][b#]?)?$/;
+// Whitelist of known chord qualities — kept in sync with the voicing database
+// (features/song/data/chord-templates.ts). Sorted longest-first so patterns
+// like "maj7#11" match before "maj7" under regex alternation semantics.
+// Using a whitelist instead of a permissive `[a-z0-9#b]*` suffix avoids false
+// positives on English words that happen to start with A–H (e.g. "Add", "Beg",
+// "Face") appearing inside lyrics.
+const CHORD_QUALITIES = [
+  "maj7#11", "13sus4", "mMaj7", "7sus4", "9sus4",
+  "maj13", "maj9", "maj7", "m7b5", "add9", "add11",
+  "aug7", "dim7", "dim9", "sus2", "sus4",
+  "7b5", "7#5", "7b9", "7#9", "7#11",
+  "m6", "m7", "m9", "m11",
+  "13", "11",
+  "m", "maj", "min", "dim", "aug", "sus", "add",
+  "5", "6", "7", "9",
+].map(q => q.replace(/[#+]/g, "\\$&")).join("|");
+// H is the Ukrainian/German B — accept it alongside A-G so that chords like
+// "H", "Hm" written in Cyrillic-style songbooks resolve to the same voicing.
+const CHORD_TOKEN_RE = new RegExp(
+  `^[A-H][b#]?(${CHORD_QUALITIES})?(\\/[A-H][b#]?)?$`,
+);
 const HEADER_COLON_RE = /^([^[\]]+):\s*$/;
 const HEADER_PIPE_RE = /^\|([^|]+)\|\s*$/;
 const HEADER_BRACKETS_RE = /^\[([^\]]+)\]\s*$/;
@@ -129,9 +149,17 @@ export function parseLyricsWithChords(raw: string): {
     const bracketMatch = trimmed.match(HEADER_BRACKETS_RE);
     // [Vstup] alone on a line is a section header only when it's not a chord.
     const bracketIsHeader = bracketMatch && !isChordToken(bracketMatch[1].trim());
-    if (colonMatch || pipeMatch || bracketIsHeader) {
+    // "text:" is a header only when it's short — lyrics often end with ":".
+    // Real section labels ("Куплет 1:", "Приспів:", "Бридж:") are ≤4 words.
+    const colonLabel = colonMatch ? colonMatch[1].trim() : "";
+    const colonIsHeader =
+      !!colonMatch &&
+      colonLabel.length > 0 &&
+      colonLabel.length <= 30 &&
+      colonLabel.split(/\s+/).length <= 4;
+    if (colonIsHeader || pipeMatch || bracketIsHeader) {
       if (currentGroup) groups.push(currentGroup);
-      const label = (colonMatch ? colonMatch[1] : pipeMatch ? pipeMatch[1] : bracketMatch![1]).trim();
+      const label = (colonIsHeader ? colonLabel : pipeMatch ? pipeMatch[1] : bracketMatch![1]).trim();
       currentGroup = { label, dataLines: [] };
       continue;
     }

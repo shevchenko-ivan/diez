@@ -26,25 +26,41 @@ const VARIANT_COLUMNS =
 
 // Re-parse sections from the stored `raw` text so old rows (saved in the
 // previous word-aligned format) render with the new column-preserving parser.
-function resolveSections(value: unknown): SongSection[] {
+// Also returns the chord list extracted by the current parser — important
+// whenever the parser's chord-recognition regex is extended (e.g. new qualities
+// like Cmaj7#11 that older saves couldn't tokenize), so the chord sidebar
+// stays in sync with what's actually rendered on the page.
+function resolveSectionsAndChords(
+  value: unknown,
+  storedChords: string[] | null,
+): { sections: SongSection[]; chords: string[] } {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const obj = value as Record<string, unknown>;
     if (typeof obj.raw === "string") {
-      return parseLyricsWithChords(obj.raw).sections;
+      const parsed = parseLyricsWithChords(obj.raw);
+      return { sections: parsed.sections, chords: parsed.chords };
     }
-    if (Array.isArray(obj.sections)) return obj.sections as SongSection[];
+    if (Array.isArray(obj.sections)) {
+      return { sections: obj.sections as SongSection[], chords: storedChords ?? [] };
+    }
   }
-  if (Array.isArray(value)) return value as SongSection[];
-  return [];
+  if (Array.isArray(value)) {
+    return { sections: value as SongSection[], chords: storedChords ?? [] };
+  }
+  return { sections: [], chords: storedChords ?? [] };
 }
 
 function mapVariantRow(row: Record<string, unknown>, primaryId: string | null): SongVariant {
   const id = row.id as string;
+  const resolved = resolveSectionsAndChords(
+    row.sections,
+    (row.chords as string[] | null) ?? null,
+  );
   return {
     id,
     label: row.label as string,
-    sections: resolveSections(row.sections),
-    chords: (row.chords as string[] | null) ?? [],
+    sections: resolved.sections,
+    chords: resolved.chords,
     key: row.key as string,
     capo: (row.capo as number | null) ?? undefined,
     tempo: (row.tempo as number | null) ?? undefined,
@@ -67,6 +83,11 @@ function mapRow(row: Record<string, unknown>): Song {
         })
     : undefined;
 
+  const resolved = resolveSectionsAndChords(
+    row.sections,
+    (row.chords as string[] | null) ?? null,
+  );
+
   return {
     slug: row.slug as string,
     title: row.title as string,
@@ -78,9 +99,9 @@ function mapRow(row: Record<string, unknown>): Song {
     tempo: (row.tempo as number | null) ?? undefined,
     timeSignature: (row.time_signature as string | null) ?? undefined,
     difficulty: row.difficulty as Difficulty,
-    chords: row.chords as string[],
+    chords: resolved.chords,
     views: row.views as number,
-    sections: resolveSections(row.sections),
+    sections: resolved.sections,
     strumming: (row.strumming as Strum[] | null) ?? undefined,
     coverImage: (row.cover_image as string | null) ?? undefined,
     coverColor: (row.cover_color as string | null) ?? undefined,
@@ -279,21 +300,21 @@ export const getSongsByArtist = unstable_cache(
 
 // Song + all of its published variants. The viewer decides which variant to
 // render based on a `?v=<id>` query param; default is primary.
-export const getSongBySlug = unstable_cache(
-  async (slug: string): Promise<Song | undefined> => {
-    if (!hasEnvVars) return undefined;
-    const { data, error } = await getClient()
-      .from("songs")
-      .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
-      .eq("slug", slug)
-      .eq("status", "published")
-      .single();
-    if (error || !data) return undefined;
-    return mapRow(data as Record<string, unknown>);
-  },
-  ["song-by-slug"],
-  { revalidate: 3600, tags: ["songs"] },
-);
+// Not using unstable_cache here — in Next.js 16 its tag-based invalidation
+// via revalidateTag is flaky after server actions, so admin edits to tempo/
+// strumming appeared stale on the viewer. Direct fetch is fast enough and
+// the result is per-request-deduped by Next automatically.
+export async function getSongBySlug(slug: string): Promise<Song | undefined> {
+  if (!hasEnvVars) return undefined;
+  const { data, error } = await getClient()
+    .from("songs")
+    .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
+  if (error || !data) return undefined;
+  return mapRow(data as Record<string, unknown>);
+}
 
 // Apply an active variant on top of the base song fields — swaps sections,
 // chords, key, capo, tempo, strumming. Falls back to song-level values when

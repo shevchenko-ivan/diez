@@ -18,6 +18,7 @@ import {
 import { TeButton } from "@/shared/components/TeButton";
 import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
 import { toast } from "@/shared/components/Toaster";
+import { useHaptics } from "@/shared/hooks/useHaptics";
 import {
   deletePlaylist,
   removeSongFromPlaylist,
@@ -65,6 +66,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [, startTransition] = useTransition();
+  const { trigger } = useHaptics();
 
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/lists/${playlist.slug}` : `/lists/${playlist.slug}`;
@@ -179,7 +181,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 {!playlist.isDefault && (
                   <button
                     type="button"
-                    onClick={() => setEditingName(true)}
+                    onClick={() => { trigger("selection"); setEditingName(true); }}
                     aria-label="Перейменувати"
                     className="opacity-50 hover:opacity-100"
                     style={{ color: "var(--text-muted)" }}
@@ -208,7 +210,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => changeVisibility(opt.value)}
+                  onClick={() => { trigger("selection"); changeVisibility(opt.value); }}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
                   style={{
                     borderRadius: "0.5rem",
@@ -228,7 +230,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
             <div className="te-inset px-2.5 py-1.5 flex items-center gap-2 max-w-[200px]" style={{ borderRadius: "0.75rem" }}>
               <LinkIcon size={11} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
               <code className="flex-1 text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{shareUrl}</code>
-              <button type="button" onClick={handleCopy} aria-label="Копіювати" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+              <button type="button" onClick={() => { trigger("light"); handleCopy(); }} aria-label="Копіювати" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
                 {copied ? <Check size={12} /> : <Copy size={12} />}
               </button>
             </div>
@@ -238,7 +240,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
           {!playlist.isDefault && (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => { trigger("warning"); handleDelete(); }}
               aria-label="Видалити список"
               className="inline-flex items-center justify-center rounded-full hover:bg-red-500/10 ml-auto"
               style={{ width: 32, height: 32, color: "#e11d48" }}
@@ -300,7 +302,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
               <DifficultyBadge difficulty={song.difficulty} />
               <button
                 type="button"
-                onClick={() => removeSong(song.id)}
+                onClick={() => { trigger("warning"); removeSong(song.id); }}
                 aria-label="Прибрати"
                 className="inline-flex items-center justify-center rounded-full hover:bg-red-500/10"
                 style={{ width: 32, height: 32, color: "var(--text-muted)" }}

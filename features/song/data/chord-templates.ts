@@ -25,6 +25,62 @@ export const SHARP_TO_FLAT: Record<string, string> = {
 // Standard tuning: semitones from C for each open string [E, A, D, G, B, E]
 const OPEN_STRINGS = [4, 9, 2, 7, 11, 4];
 
+// Allowed pitch classes (relative to root) for each chord quality. Used to
+// filter out template entries whose sounding notes don't actually belong to
+// the chord — a handful of templates in the list were typos (e.g. major's
+// [-1,15,14,10,13,10] generates F and D on top of a C root) and would leak
+// bogus voicings into the database, especially via the -12 transpose where
+// a wrong note on a high fret becomes a wrong open string further down.
+const QUALITY_PCS: Record<string, Set<number>> = {
+  major:    new Set([0, 4, 7]),
+  m:        new Set([0, 3, 7]),
+  dim:      new Set([0, 3, 6]),
+  aug:      new Set([0, 4, 8]),
+  sus2:     new Set([0, 2, 7]),
+  sus4:     new Set([0, 5, 7]),
+  "6":      new Set([0, 4, 7, 9]),
+  m6:       new Set([0, 3, 7, 9]),
+  "7":      new Set([0, 4, 7, 10]),
+  m7:       new Set([0, 3, 7, 10]),
+  maj7:     new Set([0, 4, 7, 11]),
+  dim7:     new Set([0, 3, 6, 9]),
+  m7b5:     new Set([0, 3, 6, 10]),
+  "9":      new Set([0, 4, 7, 10, 2]),
+  add9:     new Set([0, 4, 7, 2]),
+  // Extended / altered qualities. These are typically voiced with omitted
+  // tones on guitar (the 5th is the first to go), so the allowed PC set is
+  // the full chord spelling — any subset that forms the shape is accepted.
+  mMaj7:    new Set([0, 3, 7, 11]),
+  aug7:     new Set([0, 4, 8, 10]),
+  "7#5":    new Set([0, 4, 8, 10]),
+  "7b5":    new Set([0, 4, 6, 10]),
+  "7b9":    new Set([0, 4, 7, 10, 1]),
+  "7#9":    new Set([0, 4, 7, 10, 3]),
+  "7#11":   new Set([0, 4, 7, 10, 6]),
+  "maj7#11":new Set([0, 4, 7, 11, 6]),
+  add11:    new Set([0, 4, 7, 5]),
+  maj9:     new Set([0, 4, 7, 11, 2]),
+  maj13:    new Set([0, 4, 7, 11, 2, 9]),
+  m9:       new Set([0, 3, 7, 10, 2]),
+  m11:      new Set([0, 3, 7, 10, 2, 5]),
+  "13":     new Set([0, 4, 7, 10, 2, 9]),
+  "13sus4": new Set([0, 5, 7, 10, 2, 9]),
+  "7sus4":  new Set([0, 5, 7, 10]),
+  "9sus4":  new Set([0, 5, 7, 10, 2]),
+};
+
+function shapeNotesMatchQuality(shape: number[], quality: string): boolean {
+  const allowed = QUALITY_PCS[quality];
+  if (!allowed) return true; // unknown quality — don't filter
+  for (let i = 0; i < shape.length; i++) {
+    const f = shape[i];
+    if (f < 0) continue;
+    const pc = (OPEN_STRINGS[i] + f) % 12;
+    if (!allowed.has(pc)) return false;
+  }
+  return true;
+}
+
 function semi(from: string, to: string): number {
   return (NOTES.indexOf(to as typeof NOTES[number]) - NOTES.indexOf(from as typeof NOTES[number]) + 12) % 12;
 }
@@ -148,6 +204,71 @@ const TEMPLATES: Record<string, number[][]> = {
     [-1,-1,10,10,8,8],[8,8,10,10,8,8],[8,-1,10,10,8,8],[8,-1,15,12,13,8],
     [-1,15,15,8,13,-1],[-1,15,15,9,13,-1],[-1,-1,10,12,13,13],[-1,15,15,10,13,-1],
   ],
+  // ─── Extended / altered qualities ───────────────────────────────────────
+  // Each shape is C-rooted. Transposer adds ±offset to reach all 12 roots.
+  mMaj7: [
+    [-1,3,1,0,0,3],[-1,3,5,4,4,3],[-1,-1,5,4,4,3],
+    [8,10,9,8,8,-1],[8,-1,9,8,8,-1],
+  ],
+  aug7: [
+    [-1,3,2,3,1,4],[4,3,2,3,-1,-1],[-1,-1,2,3,1,4],
+    [8,-1,8,9,9,-1],
+  ],
+  "7#5": [
+    [-1,3,2,3,1,4],[4,3,2,3,-1,-1],[-1,-1,2,3,1,4],
+    [8,-1,8,9,9,-1],
+  ],
+  "7b5": [
+    [-1,3,2,3,1,2],[-1,3,2,3,-1,2],[-1,-1,2,3,1,2],
+    [-1,3,4,3,-1,2],
+  ],
+  "7b9": [
+    [-1,3,2,3,2,3],[-1,3,2,3,2,0],[-1,-1,2,3,2,3],
+    [8,-1,8,9,8,9],
+  ],
+  "7#9": [
+    [-1,3,2,3,4,3],[-1,3,2,3,4,-1],[-1,-1,2,3,4,3],
+    [-1,-1,2,3,4,-1],
+  ],
+  // 7#11 and 7b5 share voicings on guitar — the natural 5th is almost always
+  // omitted, leaving C E Bb F# for both. Keeping separate entries so lookup
+  // still succeeds for users who spell it either way.
+  "7#11": [
+    [-1,3,2,3,1,2],[-1,3,2,3,-1,2],[-1,-1,2,3,1,2],
+  ],
+  "maj7#11": [
+    [-1,3,2,0,0,2],[-1,3,2,4,4,2],[8,-1,9,9,7,7],
+  ],
+  add11: [
+    [-1,3,2,0,1,1],[-1,3,3,0,1,3],[-1,-1,2,0,1,1],
+    [8,-1,10,10,8,8],
+  ],
+  maj9: [
+    [-1,3,2,4,3,0],[-1,3,0,0,0,0],[-1,3,5,4,3,-1],
+    [8,-1,9,9,10,10],
+  ],
+  maj13: [
+    [-1,3,2,4,5,5],[-1,3,2,4,3,5],[8,-1,9,9,10,12],
+  ],
+  m9: [
+    [-1,3,1,3,3,3],[-1,3,5,3,3,3],[8,-1,8,8,8,10],
+  ],
+  m11: [
+    [-1,3,1,3,3,1],[-1,3,1,3,4,1],[8,-1,8,10,11,11],
+  ],
+  "13": [
+    [-1,3,2,3,5,5],[-1,3,2,3,3,5],[8,-1,8,9,10,10],
+  ],
+  "13sus4": [
+    [-1,3,3,3,3,5],[-1,3,3,3,6,5],
+  ],
+  "7sus4": [
+    [-1,3,3,3,1,1],[-1,3,3,3,1,3],[-1,-1,3,3,1,1],
+    [8,10,8,10,11,-1],[8,-1,8,10,11,-1],
+  ],
+  "9sus4": [
+    [-1,3,3,3,3,3],[-1,3,3,0,3,3],[-1,-1,3,3,3,3],
+  ],
 };
 
 // Voicings that can't be derived from C-root templates (open string shapes)
@@ -211,7 +332,13 @@ function isValidVoicing(strings: number[]): boolean {
 
 function makeChordDef(strings: number[]): ChordDef {
   const played = strings.filter(f => f > 0);
-  const baseFret = played.length > 0 ? Math.min(...played) : 1;
+  const minPlayed = played.length > 0 ? Math.min(...played) : 1;
+  // When any string rings open, the nut (fret 0) is part of the shape — always
+  // render starting at fret 1 so the nut is visible. Without this, open-chord
+  // shapes like Em [0,2,2,0,0,0] would start at fret 2 and the open strings
+  // would lose their visual anchor.
+  const hasOpen = strings.some(f => f === 0);
+  const baseFret = hasOpen ? 1 : minPlayed;
 
   let barre: number | undefined;
   if (played.length > 0) {
@@ -271,13 +398,49 @@ export function voicingDifficulty(def: ChordDef): number {
     if (strings[i] === -1) mutedPenalty += 3;
   }
 
-  // Wide stretches without a barre are awkward (e.g. first-position shapes
-  // spanning frets 1–4 with four independent fingers). Penalise more sharply
-  // than the usual +stretch so a full barre is preferred when a "low-position"
-  // non-barre shape has a big span.
-  const stretchPenalty = !barre && stretch >= 3 ? stretch * 1.5 : 0;
+  // Wide stretches are awkward (e.g. first-position shapes spanning frets 1–4
+  // with four independent fingers, or a partial barre at fret 1 with a pinky
+  // reaching fret 4). Penalise sharply so a clean higher-position barre is
+  // preferred over a low-position voicing that needs a big stretch.
+  const stretchPenalty = stretch >= 3 ? stretch * 1.5 : 0;
 
-  return fingerCount * 2 + stretch + stretchPenalty + baseFret * 1.1 + mutedPenalty;
+  // Partial voicings with 2+ muted bass strings are mid-neck fragments rather
+  // than rooted chord shapes — subjectively thinner and harder to keep clean
+  // (the muted strings need active damping with no barre to help). Rooted
+  // shapes like x32010 (C) mute only one bass string and are unaffected; any
+  // voicing that mutes two or more pays +3 per extra muted bass, pushing it
+  // behind a proper barre even when the barre sits higher up the neck.
+  const mutedBassCount = Math.max(0, strings.findIndex(f => f >= 0));
+  const mutedBassPenalty = Math.max(0, mutedBassCount - 1) * 3;
+
+  // Thinness penalty: 4-string partial voicings (common for sharp/flat roots
+  // like A#m, G#m, A#7 where the engine's low-position templates end up with
+  // muted bass + muted treble) sound weaker and are subjectively no easier than
+  // a proper barre at the same or nearby position. +2 per missing string pushes
+  // the clean 5/6-string barre ahead of the 4-string fragment even when the
+  // fragment wins on finger count and position alone.
+  const soundingCount = strings.filter(f => f >= 0).length;
+  const thinnessPenalty = (6 - soundingCount) * 2;
+
+  // Awkward-open penalty: an open string directly adjacent to a high fret
+  // (≥4) forces the neighbouring finger to arch over the open string without
+  // damping it. That's the specific ergonomic problem with the Bm partial
+  // x20432 (pinky at fret 4 on G, open D right next to it) — it subjectively
+  // rates harder than the 2nd-fret A-shape barre x24432 that otherwise costs
+  // slightly more on paper. Low-fret opens (G, C, D, Am, Em, …) never trigger
+  // this because none of their neighbours are at fret 4+.
+  let awkwardOpenPenalty = 0;
+  if (!barre) {
+    for (let i = 0; i < strings.length; i++) {
+      if (strings[i] !== 0) continue;
+      const left = strings[i - 1];
+      const right = strings[i + 1];
+      const maxNeighbor = Math.max(left ?? -1, right ?? -1);
+      if (maxNeighbor >= 4) awkwardOpenPenalty += (maxNeighbor - 3) * 2;
+    }
+  }
+
+  return fingerCount * 2 + stretch + stretchPenalty + baseFret * 1.1 + mutedPenalty + mutedBassPenalty + thinnessPenalty + awkwardOpenPenalty;
 }
 
 function selectDiverse(defs: ChordDef[], max = 8): ChordDef[] {
@@ -332,6 +495,12 @@ function generateChordDB(): Record<string, ChordDef[]> {
   for (const [quality, shapes] of Object.entries(TEMPLATES)) {
     const q = quality === "major" ? "" : quality;
     for (const shape of shapes) {
+      // Skip templates whose sounding notes don't actually form the declared
+      // quality — catches typos in the static list (e.g. a "major" shape whose
+      // open strings introduce notes outside the triad). Without this, bogus
+      // templates get ranked as default voicings for their transposed keys
+      // (D was defaulting to [-1,5,4,0,3,0] with stray G and E).
+      if (!shapeNotesMatchQuality(shape, quality)) continue;
       for (const root of NOTES) {
         const offset = semi("C", root);
         for (const diff of [offset, offset - 12]) {
@@ -354,6 +523,32 @@ function generateChordDB(): Record<string, ChordDef[]> {
   // Select diverse voicings per chord
   for (const name of Object.keys(db)) {
     db[name] = selectDiverse(db[name]);
+  }
+
+  // Force specific voicings to rank first for chords where the scored "easiest"
+  // voicing is a thin partial-open shape that textbooks don't actually teach
+  // as the default. Gm/G7 open partials technically score lower than the
+  // E-shape barre at fret 3, but the barre is what every guitar book presents
+  // as the canonical voicing. Beginner mode still falls back via
+  // NO_BARRE_ALTERNATIVES below.
+  const DEFAULT_PROMOTIONS: Record<string, number[]> = {
+    "Cm": [-1, 3, 5, 5, 4, 3],
+    "C#m": [-1, 4, 6, 6, 5, 4],
+    "Dm": [-1, -1, 0, 2, 3, 1],
+    "Gm": [3, 5, 5, 3, 3, 3],
+    "G7": [3, 5, 3, 4, 3, 3],
+  };
+  for (const [name, target] of Object.entries(DEFAULT_PROMOTIONS)) {
+    const list = db[name];
+    if (!list) continue;
+    const key = target.join(",");
+    const idx = list.findIndex((d) => d.strings.join(",") === key);
+    if (idx > 0) {
+      const [promoted] = list.splice(idx, 1);
+      list.unshift(promoted);
+    } else if (idx === -1) {
+      list.unshift(makeChordDef(target));
+    }
   }
 
   // Add enharmonic aliases
@@ -421,6 +616,10 @@ const NO_BARRE_ALTERNATIVES: Record<string, number[]> = {
   "B":   [-1, 2,  4, 4, 4, -1], // B      x2444x (partial)
   "Bb":  [-1, 1,  3, 3, 3, -1], // Bb     x1333x (partial)
   "A#":  [-1, 1,  3, 3, 3, -1],
+  "Bm":  [-1, 2,  0, 4, 3, 2],  // Bm     x20432 (partial — no barre)
+  "Cm":  [-1, 3,  1, 0, 1, -1], // Cm     x31010 (partial — no barre)
+  "Gm":  [3,  1,  0, 0, 3, 3],  // Gm     partial-open (no barre)
+  "G7":  [3,  2,  0, 0, 0, 1],  // G7     open dominant (no barre)
 };
 
 export function lookupNoBarreVoicing(chord: string): ChordDef | null {

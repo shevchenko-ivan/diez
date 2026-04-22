@@ -8,6 +8,7 @@ import { AddToPlaylistPopover } from "@/features/playlist/components/AddToPlayli
 import { getPlaylistsForSong } from "@/features/playlist/actions/playlists";
 import type { PlaylistSummary } from "@/features/playlist/types";
 import { createClient } from "@/lib/supabase/client";
+import { useHaptics } from "@/shared/hooks/useHaptics";
 
 interface Props {
   slug: string;
@@ -25,6 +26,7 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
   const [hover, setHover] = useState(false);
   const [prefetched, setPrefetched] = useState<PlaylistSummary[] | null>(null);
   const prefetchStarted = useRef(false);
+  const { trigger } = useHaptics();
 
   useEffect(() => setSaved(initialSaved), [initialSaved]);
 
@@ -39,6 +41,7 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    trigger("medium");
     // Capture anchor rect before awaiting — currentTarget is nulled after await.
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
@@ -162,7 +165,7 @@ function AuthRequiredModal({ onClose }: { onClose: () => void }) {
       >
         <button
           type="button"
-          onClick={stopAndClose}
+          onClick={(e) => { trigger("light"); stopAndClose(e); }}
           aria-label="Закрити"
           className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full"
           style={{ width: 28, height: 28, color: "var(--text-muted)", background: "transparent" }}
@@ -190,7 +193,7 @@ function AuthRequiredModal({ onClose }: { onClose: () => void }) {
           </TeButton>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { trigger("light"); onClose(); }}
             className="text-xs mt-1"
             style={{ color: "var(--text-muted)" }}
           >

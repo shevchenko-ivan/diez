@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Check, Eye, Plus } from "lucide-react";
 import type { SongVariant } from "@/features/song/types";
 import Link from "next/link";
+import { useHaptics } from "@/shared/hooks/useHaptics";
 
 interface Props {
   variants: SongVariant[];
@@ -28,6 +29,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { trigger } = useHaptics();
 
   const hasChoice = variants.length > 1 || !!addVariantHref;
 
@@ -53,7 +55,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { trigger("selection"); setOpen((o) => !o); }}
         className="te-pressable flex items-center gap-2 px-3 py-1.5 text-xs font-bold tracking-wide"
         style={{
           borderRadius: "0.75rem",
@@ -82,7 +84,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
                 <li key={v.id}>
                   <Link
                     href={hrefFor(v)}
-                    onClick={() => setOpen(false)}
+                    onClick={() => { trigger("selection"); setOpen(false); }}
                     className="w-full text-left px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--bg-hover,rgba(255,255,255,0.03))]"
                     style={{ color: "var(--text)" }}
                   >
@@ -128,7 +130,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
                   href={addVariantHref}
                   className="w-full text-left px-4 py-2.5 flex items-center gap-2 text-xs font-bold"
                   style={{ color: "var(--orange)" }}
-                  onClick={() => setOpen(false)}
+                  onClick={() => { trigger("light"); setOpen(false); }}
                 >
                   <Plus size={13} />
                   Додати варіант

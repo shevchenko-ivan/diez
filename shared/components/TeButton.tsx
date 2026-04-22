@@ -3,10 +3,12 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import type { CSSProperties, FocusEvent, MouseEvent, ReactNode, TouchEvent } from "react";
+import { useHaptics } from "@/shared/hooks/useHaptics";
 
 type Shape = "circle" | "pill";
 type Size = "sm" | "md" | "lg";
 type Tone = "default" | "red" | "orange";
+type Haptic = "light" | "medium" | "heavy" | "selection" | "success" | "warning" | "error" | false;
 
 interface BaseProps {
   /** Visual form. `circle` — round key (default). `pill` — rounded pill (icon-only or icon+label). */
@@ -31,6 +33,16 @@ interface BaseProps {
   className?: string;
   style?: CSSProperties;
   disabled?: boolean;
+  /**
+   * Haptic feedback on click (mobile only, no-op on desktop).
+   * Default is inferred from props:
+   *   - tone="red"    → "warning"  (destructive intent)
+   *   - tone="orange" → "medium"   (primary/important)
+   *   - active !== undefined → "selection"  (toggle)
+   *   - otherwise     → "light"
+   * Pass `false` to disable.
+   */
+  haptic?: Haptic;
 }
 
 type AsButton = BaseProps & {
@@ -104,7 +116,25 @@ export function TeButton(props: TeButtonProps) {
     className = "",
     style,
     disabled,
+    haptic,
   } = props;
+
+  const { trigger } = useHaptics();
+  // Infer sensible default by semantic role if caller didn't specify.
+  const resolvedHaptic: Haptic =
+    haptic !== undefined
+      ? haptic
+      : tone === "red"
+      ? "warning"
+      : tone === "orange"
+      ? "medium"
+      : active !== undefined
+      ? "selection"
+      : "light";
+
+  const fireHaptic = () => {
+    if (resolvedHaptic !== false && !disabled) trigger(resolvedHaptic);
+  };
 
   const baseClass = shape === "pill" ? "te-pill-btn" : "te-icon-btn";
   const sizeClass = shape === "pill" ? PILL_SIZE[size] : CIRCLE_SIZE[size];
@@ -143,7 +173,10 @@ export function TeButton(props: TeButtonProps) {
     return (
       <Link
         href={props.href}
-        onClick={props.onClick}
+        onClick={(e) => {
+          fireHaptic();
+          props.onClick?.(e);
+        }}
         className={cls}
         style={computedStyle}
         title={title}
@@ -158,7 +191,10 @@ export function TeButton(props: TeButtonProps) {
   return (
     <button
       type={btn.type ?? "button"}
-      onClick={btn.onClick}
+      onClick={(e) => {
+        fireHaptic();
+        btn.onClick?.(e);
+      }}
       onMouseDown={btn.onMouseDown}
       onMouseEnter={btn.onMouseEnter}
       onFocus={btn.onFocus}

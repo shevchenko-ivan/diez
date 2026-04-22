@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles } from "lucide-react";
+import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Play, Pause, Pencil } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
@@ -65,9 +65,79 @@ function bestBeginnerTranspose(chords: string[]): number {
   return best;
 }
 
+// ─── Line wrapping ──────────────────────────────────────────────────────────
+// Split a chord+lyric line into segments that fit within `charsPerRow` columns.
+// Each segment keeps its own lyric substring + chord list re-anchored to segment
+// start, so the renderer can draw them as independent mono rows without losing
+// chord-over-character alignment.
+type LineSegment = {
+  lyrics: string;
+  lyricsCol: number;
+  chords: { chord: string; col: number }[];
+};
+
+function wrapLine(
+  line: { lyrics: string; lyricsCol: number; chords: { chord: string; col: number }[] },
+  chords: { chord: string; col: number; len: number }[],
+  charsPerRow: number,
+): LineSegment[] {
+  const lyricsEnd = line.lyricsCol + line.lyrics.length;
+  const chordsEnd = chords.reduce((m, c) => Math.max(m, c.col + c.len), 0);
+  const total = Math.max(lyricsEnd, chordsEnd);
+  if (total <= charsPerRow || charsPerRow === Infinity) {
+    return [{ lyrics: line.lyrics, lyricsCol: line.lyricsCol, chords: line.chords }];
+  }
+
+  const segments: LineSegment[] = [];
+  let absStart = 0;
+  while (absStart < total) {
+    let absEnd = Math.min(absStart + charsPerRow, total);
+    // Prefer breaking at a space inside the lyric window, never mid-chord.
+    if (absEnd < total) {
+      // Don't cut a chord in half.
+      const chordStraddle = chords.find((c) => c.col < absEnd && c.col + c.len > absEnd);
+      if (chordStraddle) absEnd = chordStraddle.col;
+
+      // Try to back-off to a space within the lyric range.
+      const lyricAbsStart = line.lyricsCol;
+      const scanFrom = Math.min(absEnd, lyricsEnd);
+      const minBreak = absStart + Math.max(8, Math.floor(charsPerRow / 3));
+      for (let p = scanFrom; p > minBreak; p--) {
+        const i = p - lyricAbsStart;
+        if (i > 0 && i < line.lyrics.length && line.lyrics[i] === " ") {
+          absEnd = p;
+          break;
+        }
+      }
+    }
+
+    const lStart = Math.max(0, absStart - line.lyricsCol);
+    const lEnd = Math.max(0, absEnd - line.lyricsCol);
+    let segLyrics = line.lyrics.slice(lStart, lEnd);
+    let segLyricsCol = absStart === 0 ? line.lyricsCol : Math.max(0, line.lyricsCol - absStart);
+
+    // On wrapped continuations drop a leading space to avoid phantom indent.
+    if (absStart > 0 && segLyrics.startsWith(" ")) {
+      const trimmed = segLyrics.replace(/^ +/, "");
+      segLyricsCol += segLyrics.length - trimmed.length;
+      segLyrics = trimmed;
+      // Space absorbed into padding — keep segLyricsCol small to still anchor chords.
+      if (segLyricsCol > 0) segLyricsCol = 0;
+    }
+
+    const segChords = line.chords
+      .filter((c) => c.col >= absStart && c.col < absEnd)
+      .map((c) => ({ chord: c.chord, col: c.col - absStart }));
+
+    segments.push({ lyrics: segLyrics, lyricsCol: segLyricsCol, chords: segChords });
+    absStart = absEnd;
+  }
+  return segments;
+}
+
 // ─── SongViewer ───────────────────────────────────────────────────────────────
 
-export function SongViewer({ song }: { song: Song }) {
+export function SongViewer({ song, editHref }: { song: Song; editHref?: string }) {
   const [transpose, setTranspose] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
@@ -75,6 +145,38 @@ export function SongViewer({ song }: { song: Song }) {
   const [beginnerMode, setBeginnerMode] = useState(false);
   const [focusMode, , toggleFocusMode] = useFocusMode();
   const sectionsRef = useRef<HTMLDivElement>(null);
+  const probeRef = useRef<HTMLSpanElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [chWidth, setChWidth] = useState(0);
+
+  // Track container width so we can word-wrap lines that don't fit.
+  useEffect(() => {
+    const el = sectionsRef.current;
+    if (!el) return;
+    const update = () => setContainerWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Measure real monospace char width from a 10-char probe at the active font
+  // size. More reliable than an em multiplier — handles Cyrillic widths and the
+  // specific mono stack we're rendering with.
+  useLayoutEffect(() => {
+    const el = probeRef.current;
+    if (!el) return;
+    const w = el.getBoundingClientRect().width / 10;
+    if (w > 0) setChWidth(w);
+  }, [fontSize, containerWidth]);
+
+  // Available columns per row. Fall back to a conservative em estimate until
+  // the probe measurement lands, so wrap starts working on the first paint
+  // rather than deferring to post-mount measurement.
+  const effChWidth = chWidth || fontSize * 0.62;
+  const charsPerRow = containerWidth
+    ? Math.max(12, Math.floor(containerWidth / effChWidth) - 1)
+    : Infinity;
 
   const toggleBeginner = () => {
     trigger("light");
@@ -146,7 +248,8 @@ export function SongViewer({ song }: { song: Song }) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const isSpace = e.code === "Space" || e.key === " ";
       const isF = e.code === "KeyF";
-      if (!isSpace && !isF) return;
+      const isT = e.code === "KeyT";
+      if (!isSpace && !isF && !isT) return;
       const t = e.target as HTMLElement | null;
       if (t) {
         const tag = t.tagName;
@@ -155,6 +258,7 @@ export function SongViewer({ song }: { song: Song }) {
       e.preventDefault();
       if (isSpace) handleScrollToggle();
       else if (isF) toggleFocusMode();
+      else if (isT) toggleTool("tuner");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -174,6 +278,23 @@ export function SongViewer({ song }: { song: Song }) {
     trigger("light");
     setExpandedTool((prev) => (prev === tool ? null : tool));
   };
+
+  // Mobile bottom sheet — houses beginner toggle, transpose, font size, tuner,
+  // chord diagrams, and (for admins) edit. Closes on backdrop tap or Escape.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSheetOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sheetOpen]);
 
   // Fade mask on the chord list — recomputes when chords, voicings, or transpose change
   // (voicing switches can change row count; transpose can change chord names).
@@ -223,7 +344,7 @@ export function SongViewer({ song }: { song: Song }) {
       >
         {/* ── LEFT: Chord diagrams + Transpose/Capo (sticky) ────────────── */}
         <aside
-          className={`${focusMode ? "hidden" : "hidden lg:flex"} flex-col self-start sticky top-6 gap-3 min-h-0`}
+          className={`${focusMode ? "hidden" : "hidden lg:flex"} flex-col self-start sticky top-6 gap-4 min-h-0`}
           style={{ maxHeight: "calc(100vh - 3rem)" }}
         >
           {beginnerButton}
@@ -261,52 +382,254 @@ export function SongViewer({ song }: { song: Song }) {
 
         {/* ── CENTER: Lyrics ───────────────────────────────────────────────── */}
         <div>
-          {/* Mobile: beginner toggle above chord panel */}
-          <div className="lg:hidden mb-3">{beginnerButton}</div>
+          {/* Mobile: trigger button opens bottom sheet with all controls */}
+          <button
+            type="button"
+            onClick={() => { trigger("light"); setSheetOpen(true); }}
+            className="lg:hidden mb-4 w-full te-surface rounded-2xl px-4 py-3 flex items-center justify-between"
+          >
+            <span
+              className="text-[10px] font-bold tracking-widest uppercase"
+              style={{ color: "var(--text-muted)", opacity: 0.6 }}
+            >
+              Інструменти
+            </span>
+            <ChevronUp size={14} style={{ color: "var(--text-muted)" }} />
+          </button>
 
-          {/* Mobile: collapsible chord panel */}
-          <details className="lg:hidden mb-4 te-surface rounded-2xl group">
-            <summary className="cursor-pointer select-none list-none px-4 py-3 flex items-center justify-between">
-              <span
-                className="text-[10px] font-bold tracking-widest uppercase"
-                style={{ color: "var(--text-muted)", opacity: 0.6 }}
+          {/* Bottom sheet */}
+          {sheetOpen && (
+            <div
+              className="lg:hidden fixed inset-0 z-50"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Інструменти"
+            >
+              {/* Backdrop */}
+              <div
+                onClick={() => setSheetOpen(false)}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.4)",
+                  backdropFilter: "blur(2px)",
+                }}
+              />
+              {/* Sheet panel */}
+              <div
+                className="absolute left-0 right-0 bottom-0 te-surface flex flex-col"
+                style={{
+                  borderTopLeftRadius: "1.25rem",
+                  borderTopRightRadius: "1.25rem",
+                  maxHeight: "85vh",
+                  paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                  animation: "dz-sheet-up 200ms ease",
+                }}
               >
-                Акорди ({song.chords.length})
-              </span>
-              <ChevronDown
-                size={14}
-                className="transition-transform group-open:rotate-180"
-                style={{ color: "var(--text-muted)" }}
-              />
-            </summary>
-            <div className="px-4 pb-4">
-              <div className="mb-3"><InstrumentSwitch /></div>
-              <ChordPanel
-                chords={song.chords}
-                transpose={transpose}
-                voicingState={voicingState}
-                diagramWidth={140}
-                diagramHeight={175}
-                noBarreMode={noBarreMode}
-              />
-            </div>
-          </details>
+                {/* Drag handle + header */}
+                <div className="flex flex-col items-center pt-2 pb-1 flex-shrink-0">
+                  <span
+                    style={{
+                      width: 36,
+                      height: 4,
+                      borderRadius: 2,
+                      background: "var(--text-muted)",
+                      opacity: 0.3,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+                  <span
+                    className="text-[10px] font-bold tracking-widest uppercase"
+                    style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                  >
+                    Інструменти
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSheetOpen(false)}
+                    aria-label="Закрити"
+                    className="te-icon-btn te-icon-btn-sm"
+                  >
+                    <ChevronDown size={16} strokeWidth={2} />
+                  </button>
+                </div>
+                <div className="overflow-y-auto px-4 pb-5 pt-1 flex flex-col gap-3" style={{ WebkitOverflowScrolling: "touch" }}>
+                <style jsx>{`
+                  @keyframes dz-sheet-up {
+                    from { transform: translateY(100%); }
+                    to { transform: translateY(0); }
+                  }
+                `}</style>
+              {/* Beginner mode */}
+              <button
+                type="button"
+                onClick={toggleBeginner}
+                className="w-full flex items-center gap-2 px-3 py-2 transition-colors"
+                style={{
+                  borderRadius: "0.75rem",
+                  background: beginnerMode ? "rgba(255,136,0,0.10)" : "transparent",
+                  border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                }}
+              >
+                <Sparkles
+                  size={14}
+                  strokeWidth={2}
+                  style={{ color: beginnerMode ? "var(--orange)" : "var(--text-muted)", flexShrink: 0 }}
+                />
+                <span
+                  className="text-[12px] font-bold flex-1 text-left"
+                  style={{ color: beginnerMode ? "var(--orange)" : "var(--text)" }}
+                >
+                  Для новачка
+                </span>
+                <ToggleKnob active={beginnerMode} />
+              </button>
 
-          {/* Song sections */}
-          <div ref={sectionsRef} className="space-y-2">
-            {song.sections.map((section: SongSection, sIdx: number) => (
-              <div key={sIdx} className="te-surface rounded-2xl overflow-hidden">
-                {section.label && (
-                  <div className="px-4 pt-3 pb-1">
+              {/* Font size */}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
+                  Розмір тексту
+                </span>
+                <div className="flex items-center gap-2">
+                  <AdjusterButton
+                    onClick={() => setFontSize((p) => Math.max(12, p - 2))}
+                    aria-label="Менший текст"
+                  >
+                    <AArrowDown size={16} strokeWidth={2} />
+                  </AdjusterButton>
+                  <span
+                    className="font-mono font-bold text-sm"
+                    style={{ color: "var(--text)", minWidth: 24, textAlign: "center" }}
+                  >
+                    {fontSize}
+                  </span>
+                  <AdjusterButton
+                    onClick={() => setFontSize((p) => Math.min(28, p + 2))}
+                    aria-label="Більший текст"
+                  >
+                    <AArrowUp size={16} strokeWidth={2} />
+                  </AdjusterButton>
+                </div>
+              </div>
+
+              {/* Tuner */}
+              <TeButton
+                shape="pill"
+                onClick={() => toggleTool("tuner")}
+                active={expandedTool === "tuner"}
+                icon={Music}
+                iconSize={14}
+                className="w-full py-2 text-xs font-bold justify-center"
+                style={{
+                  borderRadius: "1rem",
+                  color: expandedTool === "tuner" ? "var(--orange)" : "var(--text-muted)",
+                }}
+              >
+                Тюнер
+              </TeButton>
+              {expandedTool === "tuner" && (
+                <div className="max-w-sm mx-auto w-full">
+                  <TunerWidget onClose={() => setExpandedTool(null)} />
+                </div>
+              )}
+
+              {/* Chords */}
+              <div className="mt-2 pt-3" style={{ borderTop: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <span
+                    className="text-[10px] font-bold tracking-widest uppercase"
+                    style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                  >
+                    Акорди ({song.chords.length})
+                  </span>
+                </div>
+                {/* Transpose */}
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
+                    Транспонування
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон">
+                      <ChevronDown size={16} strokeWidth={2} />
+                    </AdjusterButton>
                     <span
-                      className="text-[9px] font-bold tracking-widest uppercase opacity-40"
-                      style={{ color: "var(--text-muted)" }}
+                      className="font-mono font-bold text-sm"
+                      style={{ color: "var(--text)", minWidth: 24, textAlign: "center" }}
+                    >
+                      {transpose > 0 ? `+${transpose}` : transpose}
+                    </span>
+                    <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон">
+                      <ChevronUp size={16} strokeWidth={2} />
+                    </AdjusterButton>
+                  </div>
+                </div>
+                <div className="mb-3"><InstrumentSwitch /></div>
+                <ChordPanel
+                  chords={song.chords}
+                  transpose={transpose}
+                  voicingState={voicingState}
+                  diagramWidth={140}
+                  diagramHeight={175}
+                  noBarreMode={noBarreMode}
+                />
+              </div>
+
+              {/* Edit (admin only) */}
+              {editHref && (
+                <TeButton
+                  shape="pill"
+                  href={editHref}
+                  icon={Pencil}
+                  iconSize={14}
+                  className="w-full py-2 text-xs font-bold justify-center"
+                  style={{ borderRadius: "1rem", color: "var(--orange)" }}
+                >
+                  Редагувати
+                </TeButton>
+              )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Song sections — single unified block */}
+          <div
+            ref={sectionsRef}
+            className="-mx-4 px-4 overflow-x-hidden md:mx-0 md:px-4 md:py-3 md:rounded-2xl md:te-surface"
+          >
+            {/* Hidden probe — measures actual monospace char width at current font size */}
+            <span
+              ref={probeRef}
+              aria-hidden
+              className="font-mono"
+              style={{
+                position: "absolute",
+                visibility: "hidden",
+                whiteSpace: "pre",
+                fontSize: `${fontSize}px`,
+                pointerEvents: "none",
+              }}
+            >
+              абвгдеєжзи
+            </span>
+            {song.sections.map((section: SongSection, sIdx: number) => (
+              <div key={sIdx} className={sIdx > 0 ? "mt-8" : ""}>
+                {section.label && (
+                  <div className="mb-4 flex items-center gap-3">
+                    <span
+                      className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap"
+                      style={{ color: "var(--text-muted)", opacity: 0.75 }}
                     >
                       {section.label}
                     </span>
+                    <span
+                      className="flex-1 h-px"
+                      style={{ background: "var(--border, rgba(0,0,0,0.08))" }}
+                    />
                   </div>
                 )}
-                <div className="px-4 pb-3 pt-1 space-y-1">
+                <div className="space-y-1">
                   {/* Tab block (collapsible) */}
                   {section.tab && (
                     <details className="group">
@@ -339,53 +662,98 @@ export function SongViewer({ song }: { song: Song }) {
                       </div>
                     </details>
                   )}
-                  {section.lines.map((line, i) => {
-                    const hasChords = line.chords.length > 0;
-                    const hasLyrics = line.lyrics.length > 0;
-                    return (
+                  {(() => {
+                    // Pre-compute all segments so each line knows if the previous
+                    // one wrapped — wrapped lines get a bigger top margin below
+                    // to visually separate the next chord/lyric pair from the
+                    // trailing continuation row.
+                    const perLine = section.lines.map((line) => {
+                      const chordsMeta = line.chords.map((c) => ({
+                        chord: c.chord,
+                        col: c.col,
+                        len: transposeChord(c.chord, transpose).length,
+                      }));
+                      return wrapLine(line, chordsMeta, charsPerRow);
+                    });
+                    return section.lines.map((_, i) => {
+                      const segments = perLine[i];
+                      const prevWrapped = i > 0 && perLine[i - 1].length > 1;
+                      return (
                       <div
                         key={i}
                         className="font-mono"
                         style={{
                           fontSize: `${fontSize}px`,
-                          lineHeight: 1.4,
-                          whiteSpace: "pre",
                           color: "var(--text)",
+                          marginTop: prevWrapped ? 14 : 0,
                         }}
                       >
-                        {hasChords && (
-                          <div style={{ position: "relative", height: `${fontSize * 1.3}px` }}>
-                            {line.chords.map(({ chord, col }, j) => {
-                              const tr = transposeChord(chord, transpose);
-                              return (
+                        {segments.map((seg, sIdx) => {
+                          const hasChords = seg.chords.length > 0;
+                          const hasLyrics = seg.lyrics.length > 0;
+                          const isWrap = sIdx > 0;
+                          return (
+                            <div
+                              key={sIdx}
+                              style={{
+                                position: "relative",
+                                lineHeight: 1.4,
+                                whiteSpace: "pre",
+                                marginTop: isWrap ? 2 : 0,
+                              }}
+                            >
+                              {isWrap && (
                                 <span
-                                  key={j}
+                                  aria-hidden
                                   style={{
                                     position: "absolute",
-                                    left: `${col}ch`,
-                                    top: 0,
-                                    color: "var(--orange)",
-                                    fontWeight: 700,
-                                    letterSpacing: "-0.02em",
+                                    left: "-1.1ch",
+                                    top: hasChords ? `${fontSize * 1.3}px` : 0,
+                                    color: "var(--text-muted)",
+                                    opacity: 0.4,
+                                    fontWeight: 400,
                                   }}
                                 >
-                                  <ChordHover chord={tr} voicingState={voicingState}>
-                                    {tr}
-                                  </ChordHover>
+                                  ↳
                                 </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {hasLyrics && (
-                          <div style={{ fontWeight: 450 }}>
-                            {" ".repeat(line.lyricsCol)}
-                            {line.lyrics}
-                          </div>
-                        )}
+                              )}
+                              {hasChords && (
+                                <div style={{ position: "relative", height: `${fontSize * 1.3}px`, whiteSpace: "pre" }}>
+                                  {seg.chords.map(({ chord, col }, j) => {
+                                    const tr = transposeChord(chord, transpose);
+                                    return (
+                                      <span
+                                        key={j}
+                                        style={{
+                                          position: "absolute",
+                                          left: `${col}ch`,
+                                          top: 0,
+                                          color: "var(--orange)",
+                                          fontWeight: 700,
+                                          letterSpacing: "-0.02em",
+                                        }}
+                                      >
+                                        <ChordHover chord={tr} voicingState={voicingState}>
+                                          {tr}
+                                        </ChordHover>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {hasLyrics && (
+                                <div style={{ fontWeight: 450, whiteSpace: "pre" }}>
+                                  {" ".repeat(seg.lyricsCol)}
+                                  {seg.lyrics}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
-                  })}
+                    });
+                  })()}
                 </div>
               </div>
             ))}
@@ -394,7 +762,7 @@ export function SongViewer({ song }: { song: Song }) {
 
         {/* ── RIGHT: Controls (sticky) ─────────────────────────────────────── */}
         <aside className={`${focusMode ? "hidden" : "hidden lg:block"} self-start sticky top-6`}>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {/* Font size + Tuner toggle row */}
             <div className="flex gap-2">
               <TeButton
@@ -421,10 +789,11 @@ export function SongViewer({ song }: { song: Song }) {
                 active={expandedTool === "tuner"}
                 icon={Music}
                 iconSize={14}
+                title="Тюнер — клавіша T"
                 className="flex-1 py-2 text-xs font-bold"
                 style={{ borderRadius: "1rem", color: expandedTool === "tuner" ? "var(--orange)" : "var(--text-muted)" }}
               >
-                Тюнер
+                Тюнер (T)
               </TeButton>
             </div>
             {expandedTool === "tuner" && (
@@ -433,7 +802,7 @@ export function SongViewer({ song }: { song: Song }) {
 
             {/* Auto scroll */}
             <ControlBlock label="Прокрутка">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <AdjusterButton onClick={() => handleScrollSpeed(-1)} aria-label="Повільніше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
                 <span
                   className="font-mono font-bold text-sm"
@@ -446,22 +815,25 @@ export function SongViewer({ song }: { song: Song }) {
               <TeButton
                 shape="pill"
                 onClick={handleScrollToggle}
+                title={scrollSpeed > 0 ? "Зупинити прокрутку — клавіша Пробіл" : "Почати прокрутку — клавіша Пробіл"}
                 className="w-full py-1.5 text-xs font-bold"
                 style={{
                   borderRadius: "0.5rem",
                   color: scrollSpeed > 0 ? "var(--orange)" : "var(--text-muted)",
                 }}
               >
-                {scrollSpeed > 0 ? "■ Стоп" : "▶ Старт"}
+                {scrollSpeed > 0 ? "■ Стоп (Пробіл)" : "▶ Старт (Пробіл)"}
               </TeButton>
             </ControlBlock>
 
-            {/* Rhythm / metronome */}
-            <RhythmPlayer
-              strumming={song.strumming ?? ["D", "D", "U", "U", "D", "U"]}
-              tempo={song.tempo ?? 90}
-              timeSignature={song.timeSignature ?? "4/4"}
-            />
+            {/* Rhythm / metronome — показуємо тільки якщо темп і патерн вказані вручну */}
+            {song.tempo && song.strumming && song.strumming.length > 0 && (
+              <RhythmPlayer
+                strumming={song.strumming}
+                tempo={song.tempo}
+                timeSignature={song.timeSignature ?? "4/4"}
+              />
+            )}
 
             {/* Audio player */}
             {song.youtubeId && (
@@ -475,78 +847,115 @@ export function SongViewer({ song }: { song: Song }) {
         </aside>
       </div>
 
-      {/* ── Mobile controls bar ──────────────────────────────────────────────── */}
-      <div className="lg:hidden mt-6 grid grid-cols-2 gap-3">
-        <ControlBlock label="Транспонування">
-          <div className="flex items-center justify-between">
-            <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><ChevronDown size={16} strokeWidth={2} /></AdjusterButton>
-            <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-              {transpose > 0 ? `+${transpose}` : transpose}
-            </span>
-            <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><ChevronUp size={16} strokeWidth={2} /></AdjusterButton>
-          </div>
-        </ControlBlock>
+      {/* Mobile scroll FAB — fades to transparent while auto-scrolling idle */}
+      <ScrollFab
+        scrollSpeed={scrollSpeed}
+        onToggle={handleScrollToggle}
+        onSpeedChange={handleScrollSpeed}
+      />
 
-        <ControlBlock label="Прокрутка">
-          <div className="flex items-center justify-between mb-2">
-            <AdjusterButton onClick={() => handleScrollSpeed(-1)} aria-label="Повільніше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
-            <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-              {scrollSpeed}
-            </span>
-            <AdjusterButton onClick={() => handleScrollSpeed(1)} aria-label="Швидше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
-          </div>
-          <TeButton
-            shape="pill"
-            onClick={handleScrollToggle}
-            className="w-full py-1.5 text-xs font-bold"
-            style={{
-              borderRadius: "0.5rem",
-              color: scrollSpeed > 0 ? "var(--orange)" : "var(--text-muted)",
-            }}
-          >
-            {scrollSpeed > 0 ? "■ Стоп" : "▶ Старт"}
-          </TeButton>
-        </ControlBlock>
-      </div>
+    </div>
+  );
+}
 
-      {/* Mobile font size + tuner toggle row */}
-      <div className="lg:hidden mt-3 flex gap-2">
-        <TeButton
-          shape="pill"
-          onClick={() => setFontSize((p) => Math.max(12, p - 2))}
-          aria-label="Менший текст"
-          icon={AArrowDown}
-          iconSize={16}
-          className="py-2.5 font-bold"
-          style={{ borderRadius: "1rem", color: "var(--text-muted)", minWidth: 44 }}
-        />
-        <TeButton
-          shape="pill"
-          onClick={() => setFontSize((p) => Math.min(28, p + 2))}
-          aria-label="Більший текст"
-          icon={AArrowUp}
-          iconSize={16}
-          className="py-2.5 font-bold"
-          style={{ borderRadius: "1rem", color: "var(--text-muted)", minWidth: 44 }}
-        />
-        <TeButton
-          shape="pill"
-          onClick={() => toggleTool("tuner")}
-          active={expandedTool === "tuner"}
-          icon={Music}
-          iconSize={14}
-          className="flex-1 py-2.5 text-xs font-bold"
-          style={{ borderRadius: "1rem", color: expandedTool === "tuner" ? "var(--orange)" : "var(--text-muted)" }}
+// ─── Mobile auto-scroll FAB ───────────────────────────────────────────────────
+// Single floating button, mobile-only. Idle: visible. Auto-scroll active: fades
+// to transparent after 2.5s of no user interaction. Any touch/wheel wakes it
+// back up so the user can reach stop/speed controls without hunting.
+function ScrollFab({
+  scrollSpeed,
+  onToggle,
+  onSpeedChange,
+}: {
+  scrollSpeed: number;
+  onToggle: () => void;
+  onSpeedChange: (delta: number) => void;
+}) {
+  const [dimmed, setDimmed] = useState(false);
+  const { trigger } = useHaptics();
+
+  useEffect(() => {
+    if (scrollSpeed === 0) {
+      setDimmed(false);
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const wake = () => {
+      setDimmed(false);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setDimmed(true), 2500);
+    };
+    wake();
+    const onTouch = () => wake();
+    const onWheel = () => wake();
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("touchmove", onTouch, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("touchmove", onTouch);
+      window.removeEventListener("wheel", onWheel);
+    };
+  }, [scrollSpeed]);
+
+  const active = scrollSpeed > 0;
+
+  return (
+    <div
+      className="lg:hidden fixed z-40 flex items-center gap-2"
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+        right: 16,
+        opacity: dimmed ? 0 : 1,
+        pointerEvents: dimmed ? "none" : "auto",
+        transition: "opacity 500ms ease",
+      }}
+    >
+      {active && (
+        <div
+          className="te-surface flex items-center gap-1 px-2 py-1"
+          style={{ borderRadius: 999 }}
         >
-          Тюнер
-        </TeButton>
-      </div>
-      {expandedTool === "tuner" && (
-        <div className="lg:hidden mt-3 max-w-sm mx-auto">
-          <TunerWidget onClose={() => setExpandedTool(null)} />
+          <AdjusterButton
+            onClick={() => { trigger("light"); onSpeedChange(-1); }}
+            aria-label="Повільніше"
+          >
+            <Minus size={12} strokeWidth={2.5} />
+          </AdjusterButton>
+          <span
+            className="font-mono font-bold text-xs"
+            style={{ color: "var(--text)", minWidth: 14, textAlign: "center" }}
+          >
+            {scrollSpeed}
+          </span>
+          <AdjusterButton
+            onClick={() => { trigger("light"); onSpeedChange(1); }}
+            aria-label="Швидше"
+          >
+            <Plus size={12} strokeWidth={2.5} />
+          </AdjusterButton>
         </div>
       )}
-
+      <button
+        type="button"
+        onClick={() => { trigger("medium"); onToggle(); }}
+        aria-label={active ? "Зупинити прокрутку" : "Почати прокрутку"}
+        className="te-pill-btn flex items-center justify-center"
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          color: active ? "var(--orange)" : "var(--text)",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+        }}
+      >
+        {active ? (
+          <Pause size={20} strokeWidth={2.2} fill="currentColor" />
+        ) : (
+          <Play size={20} strokeWidth={2.2} fill="currentColor" style={{ marginLeft: 2 }} />
+        )}
+      </button>
     </div>
   );
 }

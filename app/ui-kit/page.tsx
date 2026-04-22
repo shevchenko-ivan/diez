@@ -432,6 +432,168 @@ export default function UIKitPage() {
             </Row>
           </Section>
 
+          {/* Experimental — Geekstrange push button (comparison only) */}
+          <Section title="Experimental — Geekstrange push button">
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 16, maxWidth: 620, lineHeight: 1.5 }}>
+              Порівняльний зразок iз{" "}
+              <a
+                href="https://codepen.io/Geekstrange/pen/ogjjZEy"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--orange)", textDecoration: "underline" }}
+              >
+                CodePen Geekstrange
+              </a>
+              . Кольори адаптовано до нашої теплої палітри. Не поширюється по сайту — тільки для живого порівняння з поточним{" "}
+              <code style={{ fontSize: "0.7rem", background: "var(--surface-dk)", padding: "1px 5px", borderRadius: 4 }}>.te-pill-btn</code>.
+            </p>
+            <Row gap={4}>
+              <Cell>
+                <button className="geek-btn">
+                  <span className="geek-btn-outer">
+                    <span className="geek-btn-inner">
+                      <span>Зберегти пісню</span>
+                    </span>
+                  </span>
+                </button>
+                <Label>label only · md</Label>
+              </Cell>
+              <Cell>
+                <button className="geek-btn">
+                  <span className="geek-btn-outer">
+                    <span className="geek-btn-inner">
+                      <span style={{ color: "var(--orange)", WebkitBackgroundClip: "initial", backgroundClip: "initial", backgroundImage: "none" }}>+ Створити</span>
+                    </span>
+                  </span>
+                </button>
+                <Label>orange label</Label>
+              </Cell>
+              <Cell>
+                <button className="geek-btn">
+                  <span className="geek-btn-outer">
+                    <span className="geek-btn-inner">
+                      <span style={{ color: "var(--red)", WebkitBackgroundClip: "initial", backgroundClip: "initial", backgroundImage: "none" }}>Видалити</span>
+                    </span>
+                  </span>
+                </button>
+                <Label>danger label</Label>
+              </Cell>
+              <Cell>
+                <button className="geek-btn">
+                  <span className="geek-btn-outer">
+                    <span className="geek-btn-inner">
+                      <span>Натисни</span>
+                    </span>
+                  </span>
+                </button>
+                <Label>.geek-btn</Label>
+              </Cell>
+            </Row>
+
+            <style>{`
+              .geek-btn {
+                all: unset;
+                cursor: pointer;
+                -webkit-tap-highlight-color: rgba(0,0,0,0);
+                position: relative;
+                display: inline-block;
+                font-size: 0.78rem;
+                border-radius: 999vw;
+                background-color: #B8B1A0;
+                box-shadow:
+                  -0.12em -0.12em 0.18em -0.075em rgba(50, 45, 35, 0.15),
+                  0.03em 0.03em 0.08em 0 rgba(50, 45, 35, 0.08);
+              }
+              .geek-btn::after {
+                content: "";
+                position: absolute;
+                z-index: 0;
+                width: calc(100% + 0.3em);
+                height: calc(100% + 0.3em);
+                top: -0.15em;
+                left: -0.15em;
+                border-radius: inherit;
+                background: linear-gradient(-135deg, rgba(50, 45, 35, 0.25), transparent 20%, transparent 100%);
+                filter: blur(0.0125em);
+                opacity: 0.2;
+                mix-blend-mode: multiply;
+              }
+              .geek-btn-outer {
+                position: relative;
+                z-index: 1;
+                display: block;
+                border-radius: inherit;
+                transition: box-shadow 300ms ease;
+                will-change: box-shadow;
+                box-shadow:
+                  0 0.04em 0.08em -0.01em rgba(50, 45, 35, 0.35),
+                  0 0.01em 0.02em -0.01em rgba(50, 45, 35, 0.2),
+                  0.1em 0.22em 0.18em -0.02em rgba(50, 45, 35, 0.15);
+              }
+              .geek-btn:hover .geek-btn-outer {
+                box-shadow:
+                  0 0 0 0 rgba(50, 45, 35, 0.35),
+                  0 0 0 0 rgba(50, 45, 35, 0.2),
+                  0 0 0 0 rgba(50, 45, 35, 0.15);
+              }
+              .geek-btn-inner {
+                position: relative;
+                z-index: 1;
+                display: block;
+                border-radius: inherit;
+                padding: 0.7em 1.4em;
+                background-image: linear-gradient(135deg, #F5F1E7, #CAC4B7);
+                transition:
+                  box-shadow 300ms ease,
+                  clip-path 250ms ease,
+                  background-image 250ms ease,
+                  transform 250ms ease;
+                will-change: box-shadow, clip-path, background-image, transform;
+                overflow: clip;
+                clip-path: inset(0 0 0 0 round 999vw);
+                box-shadow:
+                  0 0 0 0 inset rgba(50, 45, 35, 0.06),
+                  -0.04em -0.04em 0.06em 0 inset rgba(50, 45, 35, 0.12),
+                  0 0 0 0 inset rgba(50, 45, 35, 0.06),
+                  0 0 0.06em 0.2em inset rgba(255, 248, 232, 0.4),
+                  0.025em 0.05em 0.1em 0 inset #FBF7ED,
+                  0.1em 0.1em 0.12em inset rgba(255, 248, 232, 0.3),
+                  -0.06em -0.22em 0.3em 0.12em inset rgba(50, 45, 35, 0.14);
+              }
+              .geek-btn:hover .geek-btn-inner {
+                clip-path: inset(
+                  clamp(1px, 0.0625em, 2px) clamp(1px, 0.0625em, 2px)
+                    clamp(1px, 0.0625em, 2px) clamp(1px, 0.0625em, 2px) round 999vw
+                );
+                box-shadow:
+                  0.04em 0.06em 0.12em 0 inset rgba(50, 45, 35, 0.14),
+                  -0.02em -0.02em 0.06em 0.02em inset rgba(50, 45, 35, 0.08),
+                  0.1em 0.12em 0.2em 0 inset rgba(50, 45, 35, 0.08),
+                  0 0 0.05em 0.35em inset rgba(255, 248, 232, 0.25),
+                  0 0 0 0 inset #FBF7ED,
+                  0.1em 0.1em 0.12em inset rgba(255, 248, 232, 0.3),
+                  -0.04em -0.08em 0.2em 0.08em inset rgba(50, 45, 35, 0.06);
+              }
+              .geek-btn .geek-btn-inner span {
+                position: relative;
+                z-index: 4;
+                font-family: inherit;
+                letter-spacing: -0.03em;
+                font-weight: 600;
+                color: rgba(0, 0, 0, 0);
+                background-image: linear-gradient(135deg, #3E3A32, #65605A);
+                -webkit-background-clip: text;
+                background-clip: text;
+                transition: transform 250ms ease;
+                display: block;
+                will-change: transform;
+                text-shadow: rgba(30, 25, 15, 0.1) 0 0 0.1em;
+              }
+              .geek-btn:hover .geek-btn-inner span { transform: scale(0.975); }
+              .geek-btn:active .geek-btn-inner { transform: scale(0.975); }
+            `}</style>
+          </Section>
+
           {/* Knobs ─ rotary primitive ─────────────────────────────────────── */}
           <Section title="Knobs — .te-knob (rotary / continuous)">
             <Row gap={4}>

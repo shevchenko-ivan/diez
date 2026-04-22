@@ -49,16 +49,16 @@
 /* ── Teenage Engineering / OP-1 design system ─────────────────────────────── */
 
 :root {
-  --bg:           #F2F2F2;
-  --surface:      #F8F8F8;
-  --surface-hi:   #FFFFFF;
-  --surface-dk:   #EBEBEB;
+  --bg:           #E4DFD5;
+  --surface:      #EDE8DE;
+  --surface-hi:   #F5F1E7;
+  --surface-dk:   #D5D0C5;
   --panel:        #1A1917;
   --panel-text:   #C8F500;
 
-  --text:         #4A4A4A;
-  --text-mid:     #6B6560;
-  --text-muted:   #9C9C9C;
+  --text:         #3E3A32;
+  --text-mid:     #65605A;
+  --text-muted:   #94907F;
 
   --accent:       #FF8800; /* New vibrant orange */
   --orange:       #FF8800;
@@ -89,6 +89,21 @@
   /* Transitions */
   --t-press:   70ms  ease;
   --t-release: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── ToggleKnob tokens (consumed by shared/components/ToggleKnob.tsx) ──
+     Light theme: warm bronze bezel + cream highlights, dark socket.       */
+  --toggle-rim-top:      #8A8475;
+  --toggle-rim-bottom:   #F5F1E7;
+  --toggle-body-top:     #948D7C;
+  --toggle-body-bottom:  #F5F1E7;
+  --toggle-edge-hi:      #F5F1E7;
+  --toggle-edge-lo:      #8A8475;
+  --toggle-socket-top:   #7E7868;
+  --toggle-socket-bottom:#F5F1E7;
+  --toggle-socket-bg:    #75705F;
+  --toggle-knob-top:     #F5F1E7;
+  --toggle-knob-bottom:  #948D7C;
+  --toggle-knob-inner:   #D5D0C5;
 }
 
 @layer base {
@@ -117,6 +132,20 @@
   .te-surface {
     background: var(--surface);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical);
+  }
+
+  /* Desktop-only variant — lets mobile components go full-bleed. */
+  @media (min-width: 768px) {
+    .md\:te-surface {
+      background: var(--surface);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical);
+    }
+    [data-theme="dark"] .md\:te-surface {
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03), var(--sh-physical);
+    }
+    [data-theme="light"] .md\:te-surface {
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical);
+    }
   }
 
   /* Inside cards/insets, drop the outer button ring (ring is for site bg only) */
@@ -152,9 +181,9 @@
     border-radius: 50%;
     cursor: pointer;
     background: radial-gradient(circle at 35% 35%,
-      #ffffff 0%,
-      #f8f8f8 50%,
-      #e8e8e8 100%
+      #F5F1E7 0%,
+      #E8E2D3 50%,
+      #C8C1B1 100%
     );
     box-shadow: var(--sh-physical);
     border: 1px solid rgba(0,0,0,0.05);
@@ -196,7 +225,7 @@
     Embossed segmented control (as in reference image)
   */
   .te-control-pill {
-    background: #eef0f2;
+    background: #D5D0C5;
     padding: 3px;
     border-radius: 999px;
     display: inline-flex;
@@ -209,7 +238,7 @@
   }
 
   .te-control-pill-btn {
-    background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+    background: linear-gradient(180deg, #F5F1E7 0%, #E8E2D3 100%);
     border: none;
     cursor: pointer;
     display: flex;
@@ -245,7 +274,7 @@
   }
 
   .te-control-pill-btn:active {
-    background: #f0f2f5;
+    background: #D0CBC0;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.12);
     transform: scale(0.97);
   }
@@ -353,7 +382,7 @@
     height: 44px;
     border-radius: 50%;
     /* Outer rim — very subtle, just a hint of tonal change under the cap */
-    background: linear-gradient(180deg, #f5f3ef 0%, #e2dfd9 100%);
+    background: linear-gradient(180deg, #DFDACE 0%, #C4BEB0 100%);
     color: var(--text-mid);
     cursor: pointer;
     border: none;
@@ -374,9 +403,9 @@
     border-radius: 50%;
     pointer-events: none;
     background: radial-gradient(circle at 40% 30%,
-      #ffffff 0%,
-      #fafaf7 60%,
-      #ebe9e4 100%
+      #F5F1E7 0%,
+      #E8E2D3 60%,
+      #CFC9BB 100%
     );
     box-shadow:
       inset 0  1px 1px rgba(255,255,255,0.9),
@@ -460,9 +489,9 @@
     height: 128px;
     border-radius: 999px;
     background: linear-gradient(180deg,
-      #ffffff 0%,
-      #f4f4f4 50%,
-      #e4e4e4 100%
+      #F5F1E7 0%,
+      #E6E0D4 50%,
+      #CBC5B8 100%
     );
     cursor: pointer;
     border: none;
@@ -523,7 +552,7 @@
     min-height: 38px;
     border: none;
     border-radius: 999px;
-    background: linear-gradient(180deg, #ffffff 0%, #f5f5f5 100%);
+    background: linear-gradient(180deg, #F2EEE3 0%, #DFDACE 100%);
     color: var(--text);
     font-weight: 600;
     font-size: 0.78rem;
@@ -709,6 +738,20 @@
     --sh-physical-pressed:
       inset  3px  3px  8px rgba(0,0,0,0.70),
       inset -2px -2px  6px rgba(255,255,255,0.03);
+
+    /* ToggleKnob — dark variant (flat charcoal, subtle rim, deep socket) */
+    --toggle-rim-top:      #3A3842;
+    --toggle-rim-bottom:   #15141A;
+    --toggle-body-top:     #3A3842;
+    --toggle-body-bottom:  #1A191D;
+    --toggle-edge-hi:      #2A2830;
+    --toggle-edge-lo:      #0D0C10;
+    --toggle-socket-top:   #0D0C10;
+    --toggle-socket-bottom:#2A2830;
+    --toggle-socket-bg:    #131217;
+    --toggle-knob-top:     #54525A;
+    --toggle-knob-bottom:  #2A2830;
+    --toggle-knob-inner:   #3A3842;
   }
 }
 
@@ -863,6 +906,20 @@
   --sh-physical-pressed:
     inset  3px  3px  8px rgba(0,0,0,0.70),
     inset -2px -2px  6px rgba(255,255,255,0.03);
+
+  /* ToggleKnob — dark variant (flat charcoal, subtle rim, deep socket) */
+  --toggle-rim-top:      #3A3842;
+  --toggle-rim-bottom:   #15141A;
+  --toggle-body-top:     #3A3842;
+  --toggle-body-bottom:  #1A191D;
+  --toggle-edge-hi:      #2A2830;
+  --toggle-edge-lo:      #0D0C10;
+  --toggle-socket-top:   #0D0C10;
+  --toggle-socket-bottom:#2A2830;
+  --toggle-socket-bg:    #131217;
+  --toggle-knob-top:     #54525A;
+  --toggle-knob-bottom:  #2A2830;
+  --toggle-knob-inner:   #3A3842;
 }
 
 /* ── 2. Manual dark: component overrides ─────────────────────────────────── */
@@ -973,16 +1030,16 @@
 /* ── 3. Manual light: restore defaults when OS is dark ───────────────────── */
 /* [data-theme="light"] re-declares the original :root values so they override @media */
 [data-theme="light"] {
-  --bg:           #F2F2F2;
-  --surface:      #F8F8F8;
-  --surface-hi:   #FFFFFF;
-  --surface-dk:   #EBEBEB;
+  --bg:           #E4DFD5;
+  --surface:      #EDE8DE;
+  --surface-hi:   #F5F1E7;
+  --surface-dk:   #D5D0C5;
   --panel:        #1A1917;
   --panel-text:   #C8F500;
 
-  --text:         #4A4A4A;
-  --text-mid:     #6B6560;
-  --text-muted:   #9C9C9C;
+  --text:         #3E3A32;
+  --text-mid:     #65605A;
+  --text-muted:   #94907F;
 
   --sh-socket:
     inset  2px  2px  5px rgba(0,0,0,0.08),
@@ -997,6 +1054,20 @@
   --sh-physical-pressed:
     inset  3px  3px  7px rgba(0,0,0,0.06),
     inset -2px -2px  6px rgba(255,255,255,0.8);
+
+  /* ToggleKnob — light variant (warm bronze bezel + cream, dark socket) */
+  --toggle-rim-top:      #8A8475;
+  --toggle-rim-bottom:   #F5F1E7;
+  --toggle-body-top:     #948D7C;
+  --toggle-body-bottom:  #F5F1E7;
+  --toggle-edge-hi:      #F5F1E7;
+  --toggle-edge-lo:      #8A8475;
+  --toggle-socket-top:   #7E7868;
+  --toggle-socket-bottom:#F5F1E7;
+  --toggle-socket-bg:    #75705F;
+  --toggle-knob-top:     #F5F1E7;
+  --toggle-knob-bottom:  #948D7C;
+  --toggle-knob-inner:   #D5D0C5;
 }
 [data-theme="light"] .te-surface { box-shadow: 0 0 0 1px rgba(0,0,0,0.02), var(--sh-physical); }
 [data-theme="light"] .te-pressable:hover {
@@ -1007,7 +1078,7 @@
 }
 [data-theme="light"] .te-pressable:active { box-shadow: var(--sh-physical-pressed); }
 [data-theme="light"] .te-control-pill {
-  background: #eef0f2;
+  background: #ECE4CC;
   box-shadow:
     inset 0 2px 5px rgba(0,0,0,0.08),
     inset 0 1px 1px rgba(0,0,0,0.05),
@@ -1015,13 +1086,13 @@
   border-color: rgba(0,0,0,0.02);
 }
 [data-theme="light"] .te-control-pill-btn {
-  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  background: linear-gradient(180deg, #F5F1E7 0%, #E8E2D3 100%);
   box-shadow: 0 4px 6px rgba(0,0,0,0.05), inset 0 1px 0 #fff;
 }
 [data-theme="light"] .te-control-pill-btn:not(:last-child)::after { background: rgba(0,0,0,0.08); }
 
 [data-theme="light"] .te-control-pill-btn:active {
-  background: #f0f2f5;
+  background: #D0CBC0;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.12);
 }
 [data-theme="light"] .te-key-dark {
@@ -1031,7 +1102,7 @@
     -2px -2px  5px rgba(255,255,255,0.06);
 }
 [data-theme="light"] .te-icon-btn {
-  background: linear-gradient(180deg, #f5f3ef 0%, #e2dfd9 100%);
+  background: linear-gradient(180deg, #DFDACE 0%, #C4BEB0 100%);
   color: var(--text-mid);
   box-shadow:
      0 1px 1px rgba(0,0,0,0.05),
@@ -1040,9 +1111,9 @@
 }
 [data-theme="light"] .te-icon-btn::before {
   background: radial-gradient(circle at 40% 30%,
-    #ffffff 0%,
-    #fafaf7 60%,
-    #ebe9e4 100%
+    #F5F1E7 0%,
+    #E8E2D3 60%,
+    #CFC9BB 100%
   );
   box-shadow:
     inset 0  1px 1px rgba(255,255,255,0.9),
@@ -1097,9 +1168,9 @@
 }
 [data-theme="light"] .te-knob {
   background: radial-gradient(circle at 35% 35%,
-    #ffffff 0%,
-    #f8f8f8 50%,
-    #e8e8e8 100%
+    #FFFBEE 0%,
+    #F7F1DE 50%,
+    #E4DBBF 100%
   );
   box-shadow: var(--sh-physical);
   border-color: rgba(0,0,0,0.05);
@@ -1109,9 +1180,9 @@
 }
 [data-theme="light"] .te-dial {
   background: linear-gradient(180deg,
-    #ffffff 0%,
-    #f4f4f4 50%,
-    #e4e4e4 100%
+    #F5F1E7 0%,
+    #E6E0D4 50%,
+    #CBC5B8 100%
   );
   box-shadow:
      0 10px 18px rgba(0,0,0,0.10),
@@ -1142,7 +1213,7 @@
     inset 0 0 0 1px rgba(0,0,0,0.05);
 }
 [data-theme="light"] .te-pill-btn {
-  background: linear-gradient(180deg, #ffffff 0%, #f5f5f5 100%);
+  background: linear-gradient(180deg, #F2EEE3 0%, #DFDACE 100%);
   color: var(--text);
   box-shadow:
      0 1px 1px rgba(0,0,0,0.05),
@@ -1171,3 +1242,178 @@
 /* Footer link hover */
 [data-theme="dark"] .footer-link:hover { color: var(--text) !important; }
 [data-theme="light"] .footer-link:hover { color: var(--text) !important; }
+
+/* ── Skeuomorphic buttons ─────────────────────────────────────────────────── */
+/* Ported from a flat-bezel CodePen design, colours remapped to our warm
+   beige-cream palette. The CSS below wins over every earlier .te-pill-btn /
+   .te-icon-btn rule (both :root and [data-theme="light"] blocks) via combined
+   selectors, so the stack consolidates here. Dark theme is untouched. */
+
+.te-pill-btn,
+[data-theme="light"] .te-pill-btn,
+.te-icon-btn,
+[data-theme="light"] .te-icon-btn {
+  background: linear-gradient(to top, #CAC4B7 0%, #F5F1E7 80%, #FBF7ED 100%);
+  border: 1px solid #8A847590;
+  color: var(--text);
+  text-shadow: 0 1px #F5F1E7;
+  box-shadow:
+    0 2px 5px 1px #F8F4EA,
+    0 4px 7px #786E5A40,
+    0 -2px 4px #BDB7A7,
+    0 -5px 6px #FBF7ED,
+    inset 0 0 2px #BDB7A7;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* Hide the pseudo cap that was baked into .te-icon-btn — the skeuomorphic
+   look is already carried by the single-element gradient + shadow stack. */
+.te-icon-btn::before,
+[data-theme="light"] .te-icon-btn::before {
+  display: none;
+}
+
+.te-pill-btn:hover:not(:disabled),
+[data-theme="light"] .te-pill-btn:hover:not(:disabled),
+.te-icon-btn:hover:not(:disabled),
+[data-theme="light"] .te-icon-btn:hover:not(:disabled) {
+  box-shadow:
+    0 2px 5px 1px #F8F4EA,
+    0 4px 7px #786E5A40,
+    0 -2px 4px #BDB7A7,
+    0 -5px 6px #FBF7ED,
+    inset 0 0 3px 3px #BDB7A7;
+  transform: none;
+}
+
+.te-pill-btn:hover:not(:disabled) > *,
+.te-icon-btn:hover:not(:disabled) > * {
+  transform: scale(0.975);
+  transition: transform 0.2s ease;
+}
+
+.te-pill-btn:active:not(:disabled),
+[data-theme="light"] .te-pill-btn:active:not(:disabled),
+.te-icon-btn:active:not(:disabled),
+[data-theme="light"] .te-icon-btn:active:not(:disabled) {
+  box-shadow:
+    0 2px 5px 1px #F8F4EA,
+    0 4px 7px #786E5A40,
+    0 -2px 4px #BDB7A7,
+    0 -5px 6px #FBF7ED,
+    inset 0 0 5px 3px #8E887A,
+    inset 0 0 30px #9E998B;
+  transform: none;
+}
+
+.te-pill-btn:active:not(:disabled) > *,
+.te-icon-btn:active:not(:disabled) > * {
+  transform: scale(0.95);
+}
+
+/* Keyboard-focus pulse — orange tint instead of the source's blue. */
+@keyframes te-btn-focus {
+  from {
+    box-shadow:
+      0 2px 5px 1px #F8F4EA,
+      0 4px 7px #786E5A40,
+      0 -2px 4px #BDB7A7,
+      0 -5px 6px #FBF7ED,
+      inset 0 0 10px 0px rgba(255, 136, 0, 0.55);
+  }
+  to {
+    box-shadow:
+      0 2px 5px 1px #F8F4EA,
+      0 4px 7px #786E5A40,
+      0 -2px 4px #BDB7A7,
+      0 -5px 6px #FBF7ED,
+      inset 0 0 3px 3px #BDB7A7;
+  }
+}
+
+.te-pill-btn:focus-visible:not(:active):not(:disabled),
+.te-icon-btn:focus-visible:not(:active):not(:disabled) {
+  animation: te-btn-focus 0.9s alternate infinite;
+  outline: none;
+}
+
+.te-pill-btn:disabled,
+.te-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Skeuomorphic buttons — DARK theme ───────────────────────────────────────
+   Instead of mirroring the light "embossed plate" look (which doesn't read on
+   dark bg), dark theme switches to an "inset plate with ring" aesthetic:
+   - flat dark fill, no gradient halos
+   - thin light border-top as a top edge highlight
+   - 2px outline as the sunken-ring around the button
+   - hover/active deepens bg + adds inset shadow for a pressed-in feel        */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .te-pill-btn,
+  :root:not([data-theme="light"]) .te-icon-btn {
+    background: #252327;
+    background-image: none;
+    border: none;
+    border-top: 1px solid #3A3842;
+    outline: 2px solid #131217;
+    color: var(--text);
+    text-shadow: none;
+    box-shadow: none;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  :root:not([data-theme="light"]) .te-pill-btn:hover:not(:disabled),
+  :root:not([data-theme="light"]) .te-icon-btn:hover:not(:disabled) {
+    background-color: #211F24;
+    border-top-color: #322F38;
+    box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.35);
+  }
+  :root:not([data-theme="light"]) .te-pill-btn:active:not(:disabled),
+  :root:not([data-theme="light"]) .te-icon-btn:active:not(:disabled) {
+    background-color: #1C1A1F;
+    border-top: none;
+    box-shadow: inset 0 0 12px 1px rgba(0, 0, 0, 0.55);
+  }
+}
+
+[data-theme="dark"] .te-pill-btn,
+[data-theme="dark"] .te-icon-btn {
+  background: #252327;
+  background-image: none;
+  border: none;
+  border-top: 1px solid #3A3842;
+  outline: 2px solid #131217;
+  color: var(--text);
+  text-shadow: none;
+  box-shadow: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+[data-theme="dark"] .te-pill-btn:hover:not(:disabled),
+[data-theme="dark"] .te-icon-btn:hover:not(:disabled) {
+  background-color: #211F24;
+  border-top-color: #322F38;
+  box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .te-pill-btn:active:not(:disabled),
+[data-theme="dark"] .te-icon-btn:active:not(:disabled) {
+  background-color: #1C1A1F;
+  border-top: none;
+  box-shadow: inset 0 0 12px 1px rgba(0, 0, 0, 0.55);
+}
+
+/* Keyboard-focus pulse — dark inset orange tint. */
+@keyframes te-btn-focus-dark {
+  from { box-shadow: inset 0 0 10px 1px rgba(255, 136, 0, 0.55); }
+  to   { box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.5); }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .te-pill-btn:focus-visible:not(:active):not(:disabled),
+  :root:not([data-theme="light"]) .te-icon-btn:focus-visible:not(:active):not(:disabled) {
+    animation: te-btn-focus-dark 0.9s alternate infinite;
+  }
+}
+[data-theme="dark"] .te-pill-btn:focus-visible:not(:active):not(:disabled),
+[data-theme="dark"] .te-icon-btn:focus-visible:not(:active):not(:disabled) {
+  animation: te-btn-focus-dark 0.9s alternate infinite;
+}

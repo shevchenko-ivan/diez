@@ -6,6 +6,7 @@ import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, L
 import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
 import { TeButton } from "@/shared/components/TeButton";
+import { useHaptics } from "@/shared/hooks/useHaptics";
 
 const NAV_LINKS = [
   { href: "/",                  label: "Головна" },
@@ -24,6 +25,12 @@ export function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [navUser, setNavUser] = useState<NavUser | null | "loading">("loading");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { trigger } = useHaptics();
+
+  const closeDropdown = () => {
+    trigger("light");
+    setDropdownOpen(false);
+  };
 
   useEffect(() => {
     const sb = createClient();
@@ -164,21 +171,21 @@ export function Navbar() {
                   </div>
 
                   <div className="py-1">
-                    <Link href="/add" onClick={() => setDropdownOpen(false)}
+                    <Link href="/add" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--orange)" }}
                     >
                       <Plus size={15} style={{ color: "var(--orange)" }} /> Створити пісню
                     </Link>
 
-                    <Link href="/profile" onClick={() => setDropdownOpen(false)}
+                    <Link href="/profile" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--text)" }}
                     >
                       <User size={15} style={{ color: "var(--text-muted)" }} /> Профіль
                     </Link>
 
-                    <Link href="/profile/lists" onClick={() => setDropdownOpen(false)}
+                    <Link href="/profile/lists" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--text)" }}
                     >
@@ -186,7 +193,7 @@ export function Navbar() {
                     </Link>
 
                     {isAdmin && (
-                      <Link href="/admin" onClick={() => setDropdownOpen(false)}
+                      <Link href="/admin" onClick={closeDropdown}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                         style={{ color: "var(--text)" }}
                       >
@@ -196,7 +203,7 @@ export function Navbar() {
                     )}
 
                     {isAdmin && (
-                      <Link href="/ui-kit" onClick={() => setDropdownOpen(false)}
+                      <Link href="/ui-kit" onClick={closeDropdown}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                         style={{ color: "var(--text)" }}
                       >
@@ -207,7 +214,7 @@ export function Navbar() {
                   </div>
 
                   <div className="border-t py-1" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-                    <button onClick={signOut}
+                    <button onClick={() => { trigger("warning"); signOut(); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--text-muted)" }}
                     >
@@ -247,7 +254,7 @@ export function Navbar() {
             </Link>
           ))}
 
-          <div className="flex flex-col gap-1 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+          <div className="flex flex-col gap-2 pt-3 mt-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
             <TeButton shape="pill" href="/add" className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>
               <Plus size={14} /> Створити пісню
             </TeButton>

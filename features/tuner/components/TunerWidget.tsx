@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Check, X } from "lucide-react";
+import { Mic, Check, X } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
 
 /* ── Data ──────────────────────────────────────────────────────────────────── */
@@ -164,7 +164,6 @@ function MiniGauge({
 /* ── TunerWidget ───────────────────────────────────────────────────────────── */
 
 export function TunerWidget({ onClose }: { onClose: () => void }) {
-  const [active, setActive] = useState(false);
   const [noteName, setNoteName] = useState<string | null>(null);
   const [cents, setCents] = useState(0);
   const [strIdx, setStrIdx] = useState<number | null>(null);
@@ -238,7 +237,6 @@ export function TunerWidget({ onClose }: { onClose: () => void }) {
       src.connect(an);
       analyserRef.current = an;
       bufRef.current = new Float32Array(an.fftSize);
-      setActive(true);
       rafRef.current = requestAnimationFrame(detect);
     } catch {
       setError("Не вдалося отримати доступ до мікрофона.");
@@ -256,13 +254,17 @@ export function TunerWidget({ onClose }: { onClose: () => void }) {
     stableCountRef.current = 0;
     smoothCentsRef.current = 0;
     lastDetectRef.current = 0;
-    setActive(false);
     setNoteName(null);
     setStrIdx(null);
     setCents(0);
   }, []);
 
-  useEffect(() => () => stop(), [stop]);
+  // Auto-start mic on mount; stop on unmount.
+  useEffect(() => {
+    start();
+    return () => stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const inTune = noteName !== null && Math.abs(cents) <= 5;
 
@@ -417,34 +419,32 @@ export function TunerWidget({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      {/* Mic button */}
-      <div style={{ display: "flex", justifyContent: "center", padding: "4px 8px 10px" }}>
-        <TeButton
-          shape="pill"
-          onClick={active ? stop : start}
-          icon={active ? MicOff : Mic}
-          iconSize={13}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "8px 20px",
-            fontSize: "10px",
-            fontWeight: 700,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            borderRadius: "999px",
-            ...(!active ? { color: "var(--text)" } : {}),
-          }}
-        >
-          {active ? "Вимкнути" : "Мікрофон"}
-        </TeButton>
-      </div>
-
       {error && (
-        <p style={{ fontSize: "11px", color: "#ef4444", textAlign: "center", padding: "0 8px 8px" }}>
-          {error}
-        </p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "4px 8px 10px" }}>
+          <p style={{ fontSize: "11px", color: "#ef4444", textAlign: "center" }}>
+            {error}
+          </p>
+          <TeButton
+            shape="pill"
+            onClick={start}
+            icon={Mic}
+            iconSize={13}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 20px",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              borderRadius: "999px",
+              color: "var(--text)",
+            }}
+          >
+            Спробувати ще
+          </TeButton>
+        </div>
       )}
     </div>
   );

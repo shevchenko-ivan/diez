@@ -28,18 +28,12 @@ export function RhythmBlock({ initialEnabled, children }: Props) {
         </button>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: enabled ? "1fr" : "0fr",
-          transition: "grid-template-rows 220ms ease, margin-top 220ms ease",
-          marginTop: enabled ? 24 : 0,
-        }}
-      >
-        <div style={{ overflow: "hidden", minHeight: 0 }}>
-          <div className="space-y-4">{children}</div>
-        </div>
-      </div>
+      {/* Explicit flag so the server action knows whether the user wants rhythm. */}
+      <input type="hidden" name="rhythm_enabled" value={enabled ? "on" : ""} />
+
+      {enabled && (
+        <div className="space-y-4 mt-6">{children}</div>
+      )}
     </div>
   );
 }

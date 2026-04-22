@@ -57,7 +57,7 @@ export default async function AdminPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
           <StatCard icon={<Eye size={18} />} label="Опубліковано" value={stats.published} color="var(--orange)" href="/admin/songs" />
-          <StatCard icon={<EyeOff size={18} />} label="Чернетки" value={stats.drafts} color="#6366f1" href="/admin/songs" />
+          <StatCard icon={<EyeOff size={18} />} label="Чернетки" value={stats.drafts} color="#6366f1" href="/admin/songs?tab=draft" />
           <StatCard icon={<Archive size={18} />} label="В архіві" value={stats.archived} color="var(--text-muted)" href="/admin/songs?tab=archived" />
           <StatCard icon={<Users size={18} />} label="Виконавці" value={stats.artists} color="#10b981" href="/admin/artists" />
         </div>

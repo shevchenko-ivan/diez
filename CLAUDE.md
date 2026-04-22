@@ -1,81 +1,78 @@
 # Diez — Project Context
 
 ## Product
-Diez is a Ukrainian web platform for searching, viewing, and later contributing guitar chords.
+Diez is a Ukrainian web platform for searching, viewing, and contributing guitar chords.
 UI language: Ukrainian (buttons, labels, status text — all in Ukrainian).
 
 ## Current priority
-Post-launch polish. Batch 3 complete. Backend + deploy done.
+Post-launch polish: cover enrichment, lyrics search, artist dedupe, per-page tweaks.
+MVP is live at `https://diez-ten.vercel.app`.
 
 ---
 
-## MVP goals
-- Fast song search
-- Readable song page with chords
-- Artist pages
-- Admin moderation
-- Auth + RLS
-- Replace mock data with Supabase
-- Move mock content into seed
+## Working principles
+- Be concise and practical
+- Prefer simple production-ready solutions
+- Do not introduce unnecessary abstractions
+- Preserve project consistency — check existing components before creating new ones
+- UI texts — Ukrainian
 
 ---
 
-## Do not change now
-- Do not redesign UI
-- Do not add new product features
-- Do not add audio search, transpose, tuner, metronome, playlists, AI recognition
-- Do not over-engineer profile/dashboard
-- Do not change the data model or migrations
+## Routes (actual)
+
+Public:
+- `/` — home
+- `/about`, `/privacy`, `/terms`
+- `/songs`, `/songs/[slug]`
+- `/artists`, `/artists/[slug]`
+- `/chords` — chord identifier
+- `/tuner` — guitar tuner (Web Audio)
+- `/lists/[slug]` — public playlist view
+- `/ui-kit` — internal design system demo
+
+Auth:
+- `/auth/login`, `/auth/sign-up`, `/auth/sign-up-success`
+- `/auth/forgot-password`, `/auth/update-password`, `/auth/error`
+
+User:
+- `/profile`, `/profile/lists`, `/profile/lists/[id]`
+- `/add` — submit a song
+
+Admin (`profiles.is_admin = true`):
+- `/admin` — dashboard
+- `/admin/artists`, `/admin/artists/new`, `/admin/artists/edit`
+- `/admin/songs`, `/admin/songs/edit`, `/admin/songs/variants/new`
 
 ---
 
-## Approved routing
-- /
-- /songs
-- /songs/[slug]
-- /artists
-- /artists/[slug]
-- /auth/login
-- /auth/sign-up
-- /profile
-- /add
-- /admin
+## Data model
 
----
+### Tables
+- **profiles** — 1:1 mirror of `auth.users` (auto-created via `on_auth_user_created` trigger). Holds `is_admin` boolean.
+- **artists** — `id, slug, name, photo_url, bio, genre, aliases text[], archived_at, spotify_*`, popularity fields. `aliases` has a GIN index for name-variant lookup.
+- **songs** — `id, slug, title, artist (text, not FK), album, genre, key, capo, tempo, difficulty, chords text[], sections jsonb, strumming text[], views, cover_image, cover_color, youtube_id, time_signature, status, submitted_by, reviewed_by, reviewed_at, primary_variant_id (NOT NULL FK → song_variants), lyrics_text (trigger-populated), created_at, updated_at`.
+- **song_variants** — alternative arrangements of the same song. `songs.primary_variant_id` points to the default.
+- **playlists** — user collections (`private | unlisted | public`). One default per user.
+- **playlist_songs** — song↔playlist link with position, optional variant_id, added_at.
 
-## Data model (actual)
-
-Tables:
-- profiles
-- songs
-- saved_songs
-
-> ⚠️ Таблиці `artists` в схемі немає — артист зберігається як текстове поле `songs.artist`.
-
-### Song status values
+### Enums
 ```
-published | draft | archived
-```
-
-### Admin gate
-```ts
-profiles.is_admin = true  // boolean field
+songs.status: draft | pending | published | rejected | archived
+difficulty:    easy  | medium  | hard
 ```
 
 ### Notes
-- `profiles` 1:1 with `auth.users`, створюється автоматично через тригер `on_auth_user_created`
-- `songs.sections` stored as JSONB (sections + chords parsed from `[Am]` syntax)
-- Supabase project ID: `gcrjfhwpgpzsqftsbped`
-- Production URL: `https://diez-ten.vercel.app`
-- Defer: albums, ratings, tags, comments, versioning, social features
+- `songs.sections` stored as JSONB (parsed from `[Am]` lyrics syntax).
+- `songs.lyrics_text` is denormalized via trigger (migration 017) and GIN-indexed for trigram search. Activated only when `q.length ≥ 3`.
+- Artist `aliases` drives: slug resolver, search query expansion, SEO `alternateName`, Deezer photo lookup. See `memory/project_artist_dedupe_aliases.md`.
+- Supabase project ID: `gcrjfhwpgpzsqftsbped`.
 
----
-
-## Auth and permissions
-- Guests: browse published content only
-- Authenticated users: save songs, submit songs
-- Admins: moderate songs, manage content
-- Access control via RLS + `is_admin` check in server actions
+### Auth & permissions
+- Guests: browse published content only.
+- Authenticated: save songs into playlists, submit songs.
+- Admins: moderate songs, manage artists, edit variants.
+- Enforced via RLS + `is_admin` check in server actions.
 
 ---
 
@@ -83,71 +80,68 @@ profiles.is_admin = true  // boolean field
 
 ```
 app/          routing and page composition only
-features/     user actions and business flows
-entities/     domain entities and types
-shared/       reusable UI, utils, Supabase clients
+features/     user actions and business flows (song, artist, playlist, song-submit, …)
+entities/     domain entities and shared types
+shared/       reusable UI, hooks, utils
 lib/supabase/
   client.ts   browser client
-  server.ts   server component client
+  server.ts   server-component client (cookies)
   admin.ts    service-role client (SUPABASE_SERVICE_ROLE_KEY)
+scripts/      local-only import / enrichment / audit scripts (in .gitignore)
 ```
 
----
-
-## Implementation status
-
-### ✅ Done (Batch 1–2 + Deploy)
-- Schema + migrations (001, 002) — applied in prod
-- RLS policies (public reads, admin reads)
-- `lib/supabase/admin.ts` — service-role client
-- `features/song/actions/admin.ts` — createSong, updateSongStatus, deleteSong
-- `/add` — song creation form with genre/key selects, `[Am]` lyrics parsing → JSONB
-- `/admin` — dashboard with real stats, status badges, publish/archive/delete actions
-- Auth: registration + email confirmation
-- Profile auto-created via trigger on sign-up
-- Search working
-- `SUPABASE_SERVICE_ROLE_KEY` в Vercel (Production only)
-- `is_admin = true` встановлено для власника
-- MVP live: `https://diez-ten.vercel.app`
-
-### ✅ Done (Batch 3 — complete)
-- `.te-inset` і `.te-pressable` додані в `globals.css`
-- Всі 4 auth форми переписані з shadcn/ui на TE design system
-- `forgot-password` і `update-password` сторінки отримали Navbar + фон
-- Фікс редіректу `update-password` → `/profile`
-- `PageShell`, `PageHeader` — unified app shell і page headers
-- `AdminTable`, `DifficultyBadge`, `FormField`, `EmptyState`, `LoadingState`, `ErrorState`, `StatusBadge` — shared компоненти
-- `SongCard` — прибрано фейковий рейтинг, уніфіковано мітки складності
-- `not-found.tsx` — 404 сторінка
-- `/auth/error` — переписано на TE design system, українською
-- Home page metadata — title, description, OpenGraph
-
-### ⏳ Low priority (post-launch)
-- Seed реальних пісень
+### Server actions
+- `features/song/actions/admin.ts` — createSong, updateSong, updateSongStatus, deleteSong, bulk*, createVariant / updateVariant / setPrimaryVariant / deleteVariant.
+- `features/artist/actions/admin.ts` — createArtist, updateArtist, updateArtistPhoto, archive/restore/delete + bulk.
+- `features/playlist/actions/playlists.ts` — getMyPlaylists, createPlaylist, setSongPlaylists, reorderPlaylistSongs, getSavedSlugs / getSavedVariantId.
 
 ---
 
-## Batch 3 scope — UI consistency pass
+## Migrations (numbered, applied in prod)
 
-Goal: make existing UI minimal but coherent. No redesign — align patterns across pages.
-
-1. ✅ App shell + page headers
-2. ✅ Button variants — `te-btn-orange` уніфікований в auth формах
-3. ✅ Form patterns — auth форми на TE design system
-4. ✅ Status chips/badges — `StatusBadge` (5 станів) + `DifficultyBadge`
-5. ✅ Table/list row patterns — `AdminTable`, `AdminTh`, `AdminTr`
-6. ✅ Card/detail patterns — `SongCard`, `ArtistCard`
-7. ✅ Loading / empty / error states — `LoadingState`, `EmptyState`, `ErrorState`
-8. ✅ Admin UI consistency — dashboard, таблиці, форми уніфіковані
+| #   | Purpose |
+|-----|---------|
+| 001 | Base types (song_status, difficulty), profiles, songs, saved_songs |
+| 002 | Admin read policy for songs |
+| 003 | `artists` table + slug/name/photo_url/bio/genre |
+| 004 | `artists.archived_at` soft-delete |
+| 005 | `songs.time_signature` ('4/4' default) |
+| 006 | `playlists` + `playlist_songs` (replaces `saved_songs`) |
+| 007 | Search indexes (title/artist trigram, status+views, status+created_at) |
+| 008 | `song_variants` + `songs.primary_variant_id` |
+| 009 | `playlist_songs.variant_id` |
+| 010 | `increment_views` RPC |
+| 011 | `primary_variant_id` NULL → NOT NULL |
+| 013 | `artists.spotify_*` fields |
+| 014 | popularity tracking fields |
+| 015 | source/view telemetry (scrubbed of vendor names) |
+| 016 | `artists.aliases text[]` + GIN index |
+| 017 | `songs.lyrics_text` trigger + trigram GIN |
 
 ---
 
-## Working style
-- Be concise and practical
-- Prefer simple production-ready solutions
-- Do not introduce unnecessary abstractions
-- Preserve project consistency
-- When in doubt — check existing components before creating new ones
+## Scope guardrails
+
+Post-launch defaults — do NOT do these unless user explicitly asks:
+- Do not redesign existing pages.
+- Do not change the data model or add migrations for features not discussed.
+- Do not introduce new heavy abstractions (ORM, state libraries, design system replacements).
+- Do not over-engineer `/profile` or `/admin`.
+
+Active features (may be extended):
+- Tuner (`/tuner`) — Web Audio + procedural Three.js.
+- Chord identifier (`/chords`).
+- Playlists + public shared lists.
+- Song variants.
+
+---
+
+## Gotchas — see `memory/` for full notes
+- **Supabase 1000-row cap** → always paginate via `.range()`. Slugs ≠ `slugify(name)` — use `getArtistSlugByName()`. `jsonb::text` is not IMMUTABLE, can't be a GENERATED column. PostgREST `.or()` needs `%,()` escaped.
+- **UA keyboard layout** → shortcuts use `e.code` (KeyK/KeyJ/KeyL), not `e.key`.
+- **Scripts in `/scripts/`** are gitignored. Import / enrichment / audit helpers live here. Don't publish them, don't mention vendor names in commits or migrations.
+- **Cover enrichment pipeline** (4 steps): Deezer-track → iTunes → artist-photo fallback → Deezer-artist search. ~98.5% coverage.
+- **Memory index**: `memory/MEMORY.md`.
 
 ---
 

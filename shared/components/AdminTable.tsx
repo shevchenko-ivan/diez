@@ -42,12 +42,17 @@ export function AdminTable({
 export function AdminTh({
   children,
   className = "",
+  title,
 }: {
   children?: React.ReactNode;
   className?: string;
+  title?: string;
 }) {
   return (
-    <th className={`px-4 py-3 font-bold tracking-wider text-xs uppercase ${className}`}>
+    <th
+      className={`px-4 py-3 font-bold tracking-wider text-xs uppercase ${className}`}
+      title={title}
+    >
       {children}
     </th>
   );

@@ -1,15 +1,19 @@
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
+
+// Song pages are admin-editable — force fresh fetch on every request so
+// edits to tempo/strumming/variants appear immediately without fighting
+// Next.js's route-level and fetch-level caches.
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getSongBySlug, getSongsByArtist, applyVariant } from "@/features/song/services/songs";
 import { getSavedSlugs, getSavedVariantId } from "@/features/playlist/actions/playlists";
 import { type Song } from "@/features/song/types";
-import { Navbar } from "@/shared/components/Navbar";
 import { SongActions } from "@/features/song/components/SongActions";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
-import { Eye, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
 import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
@@ -122,31 +126,34 @@ export default async function SongPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Navbar />
+      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
 
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pb-20">
-
-        {/* ── Header (single row, centered title) ─────────────────────── */}
-        <div className="te-surface mb-4 grid items-center" style={{ borderRadius: "1.25rem", padding: "0.4rem 1rem", gridTemplateColumns: "1fr auto 1fr" }}>
+        {/* ── Header (single row, centered title, no surface) ─────────── */}
+        <div className="mb-4 grid items-center" style={{ padding: "0.4rem 0", gridTemplateColumns: "1fr auto 1fr" }}>
           {/* Left: Back */}
           <BackButton fallback="/songs" />
 
-          {/* Center: Title + meta inline */}
-          <div className="flex items-center justify-center gap-2 px-4 flex-wrap">
+          {/* Center: Title + meta — stacks on mobile, inline on md+ */}
+          <div className="flex flex-col md:flex-row items-center justify-center md:gap-2 px-2 md:px-4 min-w-0">
             <Link
               href={`/artists/${artistSlug}`}
-              className="hover:underline whitespace-nowrap"
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text-muted)", lineHeight: 1.2 }}
+              className="hover:underline truncate max-w-full"
+              style={{ fontSize: "0.8rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.1 }}
             >
               {song.artist}
             </Link>
-            <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>·</span>
-            <h1
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2, whiteSpace: "nowrap" }}
-            >
-              {song.title}
-            </h1>
-            <DifficultyBadge difficulty={song.difficulty} />
+            <span className="hidden md:inline" style={{ color: "var(--text-muted)", opacity: 0.3 }}>·</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <h1
+                className="truncate"
+                style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}
+              >
+                {song.title}
+              </h1>
+              <span className="hidden md:inline-flex">
+                <DifficultyBadge difficulty={song.difficulty} />
+              </span>
+            </div>
           </div>
 
           {/* Right: Actions */}
@@ -158,21 +165,23 @@ export default async function SongPage({
               />
             )}
             {songId && (
-              <TeButton
-                href={`/admin/songs/edit?id=${songId}&from=song`}
-                title="Редагувати"
-                style={{ width: 36, height: 36, color: "var(--orange)" }}
-              >
-                <Pencil size={14} />
-              </TeButton>
+              <span className="hidden lg:inline-flex">
+                <TeButton
+                  href={`/admin/songs/edit?id=${songId}&from=song`}
+                  title="Редагувати"
+                  style={{ width: 36, height: 36, color: "var(--orange)" }}
+                >
+                  <Pencil size={14} />
+                </TeButton>
+              </span>
             )}
-            <FocusModeToggle />
+            <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
             <SongActions slug={song.slug} isSaved={savedSlugs.has(song.slug)} variantId={song.activeVariantId} />
           </div>
         </div>
 
         {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
-        <SongViewer song={song} />
+        <SongViewer song={song} editHref={songId ? `/admin/songs/edit?id=${songId}&from=song` : undefined} />
 
 
         {/* ── Other songs by this artist ────────────────────────────────── */}
