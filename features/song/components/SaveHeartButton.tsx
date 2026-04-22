@@ -125,6 +125,7 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
 
 function AuthRequiredModal({ onClose }: { onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
+  const { trigger } = useHaptics();
 
   useEffect(() => {
     setMounted(true);
