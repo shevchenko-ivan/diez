@@ -22,11 +22,12 @@ export function BackButton({ fallback = "/", label = "Назад" }: Props) {
   return (
     <button
       onClick={handleClick}
-      className="inline-flex items-center gap-0.5 text-xs"
-      style={{ color: "var(--text-muted)", fontWeight: 400 }}
+      aria-label={label}
+      title={label}
+      className="te-icon-btn"
+      style={{ width: 36, height: 36, color: "var(--text-muted)" }}
     >
-      <ChevronLeft size={12} strokeWidth={2.5} />
-      {label}
+      <ChevronLeft size={16} strokeWidth={2.2} />
     </button>
   );
 }

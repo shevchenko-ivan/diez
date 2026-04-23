@@ -5,11 +5,11 @@ import { PageShell } from "@/shared/components/PageShell";
 import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
-import { ArrowLeft, Pencil } from "lucide-react";
-import Link from "next/link";
+import { Pencil } from "lucide-react";
 import Image from "next/image";
 import { ArtistSongsList } from "./ArtistSongsList";
 import { TeButton } from "@/shared/components/TeButton";
+import { BackButton } from "@/shared/components/BackButton";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -93,9 +93,9 @@ export default async function ArtistPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Link href="/artists" className="inline-flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
-        <ArrowLeft size={14} /> Виконавці
-      </Link>
+      <div className="mb-8">
+        <BackButton fallback="/artists" label="Виконавці" />
+      </div>
 
         <div className="te-surface p-8 mb-12" style={{ borderRadius: "2rem" }}>
           <div className="flex flex-col md:flex-row items-center gap-8">

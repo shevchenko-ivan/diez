@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Search } from "lucide-react";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
 import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
@@ -204,9 +205,9 @@ export function HeroSearch() {
 
   return (
     <div ref={wrapRef} className="relative max-w-lg w-full">
-      <form onSubmit={submit} className="flex items-center gap-3 w-full">
+      <form onSubmit={submit} className="flex items-center gap-2 w-full">
         <div
-          className="te-inset flex-1 flex items-center gap-3 px-4 py-3"
+          className="te-inset flex-1 flex items-center gap-2 px-3 py-3"
           style={{ borderRadius: "999px" }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
@@ -232,13 +233,27 @@ export function HeroSearch() {
           />
         </div>
 
-        <TeButton
-          shape="pill"
-          type="submit"
-          className="px-5 py-3 text-xs font-bold tracking-widest shrink-0"
-        >
-          ЗНАЙТИ
-        </TeButton>
+        {/* Mobile: icon-only */}
+        <span className="md:hidden shrink-0">
+          <TeButton
+            shape="pill"
+            type="submit"
+            icon={Search}
+            aria-label="Знайти"
+            title="Знайти"
+          />
+        </span>
+        {/* Desktop: text label */}
+        <span className="hidden md:inline-flex shrink-0">
+          <TeButton
+            shape="pill"
+            type="submit"
+            aria-label="Знайти"
+            className="px-5 py-3 text-xs font-bold tracking-widest"
+          >
+            ЗНАЙТИ
+          </TeButton>
+        </span>
       </form>
 
       {showDropdown && (

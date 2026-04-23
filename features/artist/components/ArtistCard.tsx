@@ -17,12 +17,12 @@ export function ArtistCard({ name, genre, songsCount, color, image, slug }: Arti
     <HapticLink
       href={href}
       className="te-surface te-pressable flex flex-col"
-      style={{ borderRadius: "1.25rem" }}
+      style={{ borderRadius: "0.85rem" }}
     >
       {/* Image area */}
       <div
         className="w-full aspect-square relative overflow-hidden"
-        style={{ borderRadius: "1.25rem 1.25rem 0 0" }}
+        style={{ borderRadius: "0.85rem 0.85rem 0 0" }}
       >
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element

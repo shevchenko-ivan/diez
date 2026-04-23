@@ -4,8 +4,7 @@ import { EmptyState } from "@/shared/components/EmptyState";
 import { getArtistSongCounts, getArtistPopularity } from "@/features/song/services/songs";
 import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { BackButton } from "@/shared/components/BackButton";
 
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",
@@ -64,16 +63,14 @@ export default async function ArtistsPage() {
   return (
     <PageShell>
       <div className="relative flex items-center mb-6 -mt-2">
-        <Link href="/" className="inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-70" style={{ color: "var(--text-muted)" }}>
-          <ArrowLeft size={14} /> Назад
-        </Link>
+        <BackButton fallback="/" />
         <h1 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold uppercase tracking-wider">Виконавці</h1>
       </div>
 
       {artists.length === 0 ? (
         <EmptyState message="Виконавців ще немає в каталозі." />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
           {artists.map((artist) => (
             <ArtistCard key={artist.slug} {...artist} />
           ))}

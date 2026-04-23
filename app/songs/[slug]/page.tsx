@@ -138,22 +138,19 @@ export default async function SongPage({
             <Link
               href={`/artists/${artistSlug}`}
               className="hover:underline truncate max-w-full"
-              style={{ fontSize: "0.8rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.1 }}
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.2 }}
             >
               {song.artist}
             </Link>
-            <span className="hidden md:inline" style={{ color: "var(--text-muted)", opacity: 0.3 }}>·</span>
-            <div className="flex items-center gap-2 min-w-0">
-              <h1
-                className="truncate"
-                style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}
-              >
-                {song.title}
-              </h1>
-              <span className="hidden md:inline-flex">
-                <DifficultyBadge difficulty={song.difficulty} />
-              </span>
-            </div>
+            <span className="hidden md:inline-flex">
+              <DifficultyBadge difficulty={song.difficulty} />
+            </span>
+            <h1
+              className="truncate"
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}
+            >
+              {song.title}
+            </h1>
           </div>
 
           {/* Right: Actions */}

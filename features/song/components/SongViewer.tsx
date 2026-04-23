@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Music, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Play, Pause, Pencil } from "lucide-react";
+import { Music, Gauge, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Play, Pause, Pencil } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
@@ -74,18 +74,24 @@ type LineSegment = {
   lyrics: string;
   lyricsCol: number;
   chords: { chord: string; col: number }[];
+  inlineChords?: boolean;
+  marker?: string;
 };
 
 function wrapLine(
-  line: { lyrics: string; lyricsCol: number; chords: { chord: string; col: number }[] },
+  line: { lyrics: string; lyricsCol: number; chords: { chord: string; col: number }[]; inlineChords?: boolean; marker?: string },
   chords: { chord: string; col: number; len: number }[],
   charsPerRow: number,
 ): LineSegment[] {
+  // Marker chips are tiny and never wrap — emit as a single segment.
+  if (line.marker) {
+    return [{ lyrics: "", lyricsCol: 0, chords: [], marker: line.marker }];
+  }
   const lyricsEnd = line.lyricsCol + line.lyrics.length;
   const chordsEnd = chords.reduce((m, c) => Math.max(m, c.col + c.len), 0);
   const total = Math.max(lyricsEnd, chordsEnd);
   if (total <= charsPerRow || charsPerRow === Infinity) {
-    return [{ lyrics: line.lyrics, lyricsCol: line.lyricsCol, chords: line.chords }];
+    return [{ lyrics: line.lyrics, lyricsCol: line.lyricsCol, chords: line.chords, inlineChords: line.inlineChords }];
   }
 
   const segments: LineSegment[] = [];
@@ -129,7 +135,7 @@ function wrapLine(
       .filter((c) => c.col >= absStart && c.col < absEnd)
       .map((c) => ({ chord: c.chord, col: c.col - absStart }));
 
-    segments.push({ lyrics: segLyrics, lyricsCol: segLyricsCol, chords: segChords });
+    segments.push({ lyrics: segLyrics, lyricsCol: segLyricsCol, chords: segChords, inlineChords: line.inlineChords });
     absStart = absEnd;
   }
   return segments;
@@ -153,7 +159,12 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
   useEffect(() => {
     const el = sectionsRef.current;
     if (!el) return;
-    const update = () => setContainerWidth(el.clientWidth);
+    const update = () => {
+      const cs = getComputedStyle(el);
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padR = parseFloat(cs.paddingRight) || 0;
+      setContainerWidth(Math.max(0, el.clientWidth - padL - padR));
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -283,7 +294,12 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
   // chord diagrams, and (for admins) edit. Closes on backdrop tap or Escape.
   const [sheetOpen, setSheetOpen] = useState(false);
   useEffect(() => {
-    if (!sheetOpen) return;
+    if (!sheetOpen) {
+      // Auto-collapse tools (e.g. tuner) when the sheet is closed — otherwise
+      // the mic stays live in the background.
+      setExpandedTool(null);
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSheetOpen(false);
     };
@@ -454,41 +470,33 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                     <ChevronDown size={16} strokeWidth={2} />
                   </button>
                 </div>
-                <div className="overflow-y-auto px-4 pb-5 pt-1 flex flex-col gap-3" style={{ WebkitOverflowScrolling: "touch" }}>
+                <div className="overflow-y-auto px-4 pb-5 pt-1 flex flex-col gap-5" style={{ WebkitOverflowScrolling: "touch" }}>
                 <style jsx>{`
                   @keyframes dz-sheet-up {
                     from { transform: translateY(100%); }
                     to { transform: translateY(0); }
                   }
                 `}</style>
-              {/* Beginner mode */}
-              <button
-                type="button"
-                onClick={toggleBeginner}
-                className="w-full flex items-center gap-2 px-3 py-2 transition-colors"
+              {/* Audio player (compact) — at top */}
+              {song.youtubeId && (
+                <div className="pb-3" style={{ borderBottom: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
+                  <SongPlayer
+                    youtubeId={song.youtubeId}
+                    title={song.title}
+                    artist={song.artist}
+                    compact
+                  />
+                </div>
+              )}
+              {/* Font size */}
+              <div
+                className="flex items-center justify-between gap-3 px-3 py-2"
                 style={{
                   borderRadius: "0.75rem",
-                  background: beginnerMode ? "rgba(255,136,0,0.10)" : "transparent",
                   border: "1px solid var(--border, rgba(0,0,0,0.06))",
                 }}
               >
-                <Sparkles
-                  size={14}
-                  strokeWidth={2}
-                  style={{ color: beginnerMode ? "var(--orange)" : "var(--text-muted)", flexShrink: 0 }}
-                />
-                <span
-                  className="text-[12px] font-bold flex-1 text-left"
-                  style={{ color: beginnerMode ? "var(--orange)" : "var(--text)" }}
-                >
-                  Для новачка
-                </span>
-                <ToggleKnob active={beginnerMode} />
-              </button>
-
-              {/* Font size */}
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
+                <span className="text-xs font-bold" style={{ color: "var(--text)" }}>
                   Розмір тексту
                 </span>
                 <div className="flex items-center gap-2">
@@ -518,7 +526,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 shape="pill"
                 onClick={() => toggleTool("tuner")}
                 active={expandedTool === "tuner"}
-                icon={Music}
+                icon={Gauge}
                 iconSize={14}
                 className="w-full py-2 text-xs font-bold justify-center"
                 style={{
@@ -536,17 +544,39 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
 
               {/* Chords */}
               <div className="mt-2 pt-3" style={{ borderTop: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
-                <div className="flex items-center justify-between mb-3">
+                {/* Beginner mode */}
+                <button
+                  type="button"
+                  onClick={toggleBeginner}
+                  className="mb-3 w-full flex items-center gap-2 px-3 py-2 transition-colors"
+                  style={{
+                    borderRadius: "0.75rem",
+                    background: beginnerMode ? "rgba(255,136,0,0.10)" : "transparent",
+                    border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                  }}
+                >
+                  <Sparkles
+                    size={14}
+                    strokeWidth={2}
+                    style={{ color: beginnerMode ? "var(--orange)" : "var(--text-muted)", flexShrink: 0 }}
+                  />
                   <span
-                    className="text-[10px] font-bold tracking-widest uppercase"
-                    style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                    className="text-[12px] font-bold flex-1 text-left"
+                    style={{ color: beginnerMode ? "var(--orange)" : "var(--text)" }}
                   >
-                    Акорди ({song.chords.length})
+                    Без баре
                   </span>
-                </div>
+                  <ToggleKnob active={beginnerMode} />
+                </button>
                 {/* Transpose */}
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
+                <div
+                  className="mb-3 flex items-center justify-between gap-3 px-3 py-2"
+                  style={{
+                    borderRadius: "0.75rem",
+                    border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                  }}
+                >
+                  <span className="text-xs font-bold" style={{ color: "var(--text)" }}>
                     Транспонування
                   </span>
                   <div className="flex items-center gap-2">
@@ -569,11 +599,22 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                   chords={song.chords}
                   transpose={transpose}
                   voicingState={voicingState}
-                  diagramWidth={140}
-                  diagramHeight={175}
+                  diagramWidth={92}
+                  diagramHeight={115}
                   noBarreMode={noBarreMode}
                 />
               </div>
+
+              {/* Rhythm / metronome */}
+              {song.tempo && song.strumming && song.strumming.length > 0 && (
+                <div className="mt-2 pt-3" style={{ borderTop: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
+                  <RhythmPlayer
+                    strumming={song.strumming}
+                    tempo={song.tempo}
+                    timeSignature={song.timeSignature ?? "4/4"}
+                  />
+                </div>
+              )}
 
               {/* Edit (admin only) */}
               {editHref && (
@@ -596,7 +637,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
           {/* Song sections — single unified block */}
           <div
             ref={sectionsRef}
-            className="-mx-4 px-4 overflow-x-hidden md:mx-0 md:px-4 md:py-3 md:rounded-2xl md:te-surface"
+            className="-mx-4 pl-4 pr-5 overflow-x-hidden md:mx-0 md:px-4 md:py-3 md:rounded-2xl md:te-surface"
           >
             {/* Hidden probe — measures actual monospace char width at current font size */}
             <span
@@ -689,7 +730,24 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                         }}
                       >
                         {segments.map((seg, sIdx) => {
-                          const hasChords = seg.chords.length > 0;
+                          if (seg.marker) {
+                            return (
+                              <div key={sIdx} className="flex items-center gap-3 my-2">
+                                <span
+                                  className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap"
+                                  style={{ color: "var(--text-muted)", opacity: 0.75 }}
+                                >
+                                  {seg.marker}
+                                </span>
+                                <span
+                                  className="flex-1 h-px"
+                                  style={{ background: "var(--border, rgba(0,0,0,0.08))" }}
+                                />
+                              </div>
+                            );
+                          }
+                          const inlineMode = !!seg.inlineChords;
+                          const hasChords = !inlineMode && seg.chords.length > 0;
                           const hasLyrics = seg.lyrics.length > 0;
                           const isWrap = sIdx > 0;
                           return (
@@ -741,10 +799,83 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                                   })}
                                 </div>
                               )}
-                              {hasLyrics && (
+                              {hasLyrics && !inlineMode && (
                                 <div style={{ fontWeight: 450, whiteSpace: "pre" }}>
                                   {" ".repeat(seg.lyricsCol)}
                                   {seg.lyrics}
+                                  {/* Wrap continuation: if a chord sits past the
+                                      lyric end (over empty space), run a faint
+                                      baseline dotted line to the end of the row
+                                      so the chord visually belongs to THIS row,
+                                      not the next one. */}
+                                  {isWrap && (() => {
+                                    const lyricsEnd = seg.lyricsCol + seg.lyrics.length;
+                                    const chordsMaxCol = seg.chords.reduce((m, c) => {
+                                      const len = transposeChord(c.chord, transpose).length;
+                                      return Math.max(m, c.col + len);
+                                    }, 0);
+                                    if (chordsMaxCol <= lyricsEnd + 1) return null;
+                                    const rowEnd = Number.isFinite(charsPerRow) ? charsPerRow : chordsMaxCol;
+                                    const gap = Math.max(0, rowEnd - lyricsEnd);
+                                    if (gap < 2) return null;
+                                    // Spaced-dot pattern ". . . ." — sits on
+                                    // baseline, exactly 2ch per pair, so it
+                                    // never overflows charsPerRow (avoids the
+                                    // scrollbar-ResizeObserver feedback loop).
+                                    const pairs = Math.floor(gap / 2);
+                                    return (
+                                      <span
+                                        aria-hidden
+                                        style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                                      >
+                                        {". ".repeat(pairs)}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
+                              )}
+                              {hasLyrics && inlineMode && (
+                                <div style={{ fontWeight: 450, whiteSpace: "pre" }}>
+                                  {" ".repeat(seg.lyricsCol)}
+                                  {(() => {
+                                    // Walk the lyric string, wrapping chord-token
+                                    // substrings (at their `col` positions) in an
+                                    // orange span. Offsets are relative to
+                                    // segment start (lyrics without leading pad).
+                                    const parts: React.ReactNode[] = [];
+                                    const sorted = [...seg.chords].sort((a, b) => a.col - b.col);
+                                    let cursor = 0;
+                                    sorted.forEach(({ chord, col }, j) => {
+                                      const localStart = col - seg.lyricsCol;
+                                      const tr = transposeChord(chord, transpose);
+                                      // chord substring length in source may
+                                      // differ from transposed name — use the
+                                      // original un-transposed source length.
+                                      const srcLen = seg.lyrics.slice(localStart).match(/^\S+/)?.[0].length ?? tr.length;
+                                      if (localStart > cursor) {
+                                        parts.push(seg.lyrics.slice(cursor, localStart));
+                                      }
+                                      parts.push(
+                                        <span
+                                          key={j}
+                                          style={{
+                                            color: "var(--orange)",
+                                            fontWeight: 700,
+                                            letterSpacing: "-0.02em",
+                                          }}
+                                        >
+                                          <ChordHover chord={tr} voicingState={voicingState}>
+                                            {tr}
+                                          </ChordHover>
+                                        </span>
+                                      );
+                                      cursor = localStart + srcLen;
+                                    });
+                                    if (cursor < seg.lyrics.length) {
+                                      parts.push(seg.lyrics.slice(cursor));
+                                    }
+                                    return parts;
+                                  })()}
                                 </div>
                               )}
                             </div>
@@ -787,7 +918,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 shape="pill"
                 onClick={() => toggleTool("tuner")}
                 active={expandedTool === "tuner"}
-                icon={Music}
+                icon={Gauge}
                 iconSize={14}
                 title="Тюнер — клавіша T"
                 className="flex-1 py-2 text-xs font-bold"
@@ -903,32 +1034,26 @@ function ScrollFab({
 
   return (
     <div
-      className="lg:hidden fixed z-40 flex items-center gap-2"
+      className="lg:hidden fixed z-40 te-surface flex flex-col gap-2"
       style={{
-        bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-        right: 16,
+        right: 0,
+        bottom: 0,
+        borderTopLeftRadius: "1.25rem",
+        borderTopRightRadius: 0,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+        padding: "8px 10px",
+        paddingRight: "calc(env(safe-area-inset-right, 0px) + 10px)",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+        boxShadow:
+          "-1px -1px 3px rgba(0,0,0,0.14), inset 1px 1px 4px rgba(255,255,255,0.55), inset -1px -1px 0 rgba(0,0,0,0.05)",
         opacity: dimmed ? 0 : 1,
         pointerEvents: dimmed ? "none" : "auto",
         transition: "opacity 500ms ease",
       }}
     >
       {active && (
-        <div
-          className="te-surface flex items-center gap-1 px-2 py-1"
-          style={{ borderRadius: 999 }}
-        >
-          <AdjusterButton
-            onClick={() => { trigger("light"); onSpeedChange(-1); }}
-            aria-label="Повільніше"
-          >
-            <Minus size={12} strokeWidth={2.5} />
-          </AdjusterButton>
-          <span
-            className="font-mono font-bold text-xs"
-            style={{ color: "var(--text)", minWidth: 14, textAlign: "center" }}
-          >
-            {scrollSpeed}
-          </span>
+        <div className="flex justify-end">
           <AdjusterButton
             onClick={() => { trigger("light"); onSpeedChange(1); }}
             aria-label="Швидше"
@@ -937,25 +1062,61 @@ function ScrollFab({
           </AdjusterButton>
         </div>
       )}
-      <button
-        type="button"
-        onClick={() => { trigger("medium"); onToggle(); }}
-        aria-label={active ? "Зупинити прокрутку" : "Почати прокрутку"}
-        className="te-pill-btn flex items-center justify-center"
+      <div className="flex items-end gap-2">
+      {active && (
+        <div
+          className="te-inset flex items-center px-1 py-1"
+          style={{ borderRadius: 999 }}
+        >
+          <AdjusterButton
+            onClick={() => { trigger("light"); onSpeedChange(-1); }}
+            aria-label="Повільніше"
+          >
+            <Minus size={12} strokeWidth={2.5} />
+          </AdjusterButton>
+        </div>
+      )}
+      {/* Play-button socket — a recessed "well" the button sits inside, like
+          the silver reference. The surrounding ring makes the button read as
+          a physical component rather than a floating circle. */}
+      <div
+        className="te-inset flex items-center justify-center"
         style={{
-          width: 56,
-          height: 56,
+          width: 64,
+          height: 64,
           borderRadius: "50%",
-          color: active ? "var(--orange)" : "var(--text)",
-          boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+          padding: 0,
         }}
       >
-        {active ? (
-          <Pause size={20} strokeWidth={2.2} fill="currentColor" />
-        ) : (
-          <Play size={20} strokeWidth={2.2} fill="currentColor" style={{ marginLeft: 2 }} />
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={() => { trigger("medium"); onToggle(); }}
+          aria-label={active ? "Зупинити прокрутку" : "Почати прокрутку"}
+          className="te-pill-btn flex flex-col items-center justify-center"
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: "50%",
+            color: active ? "var(--orange)" : "var(--text)",
+            gap: 1,
+          }}
+        >
+          {active ? (
+            <>
+              <Pause size={16} strokeWidth={2.2} fill="currentColor" />
+              <span
+                className="font-mono font-bold"
+                style={{ fontSize: 10, lineHeight: 1, color: "var(--text)" }}
+              >
+                {scrollSpeed}
+              </span>
+            </>
+          ) : (
+            <Play size={20} strokeWidth={2.2} fill="currentColor" style={{ marginLeft: 2 }} />
+          )}
+        </button>
+      </div>
+      </div>
     </div>
   );
 }

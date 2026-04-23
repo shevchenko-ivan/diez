@@ -28,8 +28,8 @@ function lookupChordForInstrument(chord: string, instrument: Instrument): ChordD
 
 const VB_W = 80;
 const VB_H = 100;
-const STRING_LEFT = 20;
-const STRING_RIGHT = 70;
+const STRING_LEFT = 15;
+const STRING_RIGHT = 65;
 const FRET_TOP = 26;
 const FRET_BOTTOM = 90;
 const NUM_FRETS = 4;
@@ -498,7 +498,7 @@ function VoicingSwitcher({
 }) {
   if (total <= 1) return null;
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: -4, width: "100%", paddingLeft: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: -4, width: "100%" }}>
       <button
         onClick={() =>
           setVoicingIdx((prev) => ({

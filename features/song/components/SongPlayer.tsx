@@ -16,6 +16,8 @@ interface SongPlayerProps {
   youtubeId: string;
   title: string;
   artist: string;
+  /** Compact horizontal layout: play/pause + waveform + time. No LCD, no skip buttons. */
+  compact?: boolean;
 }
 
 function formatTime(sec: number) {
@@ -32,7 +34,7 @@ function getBars(seed: string, count = 42): number[] {
   });
 }
 
-export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
+export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPlayerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YT.Player | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -177,6 +179,70 @@ export function SongPlayer({ youtubeId, title, artist }: SongPlayerProps) {
       ? "transform 0.1s ease"
       : "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)",
   };
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3">
+        {/* Hidden YouTube mount */}
+        <div
+          ref={mountRef}
+          style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        />
+        {/* Play / Pause */}
+        <TeButton
+          onClick={togglePlay}
+          disabled={!ready}
+          aria-label={playing ? "Пауза" : "Грати"}
+          title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
+          style={{
+            width: 44, height: 44,
+            color: "var(--orange)",
+            opacity: ready ? 1 : 0.35,
+            cursor: ready ? "pointer" : "default",
+            flexShrink: 0,
+            ...playBtnStyle,
+          }}
+        >
+          {playing ? <PauseIcon /> : <PlayIcon />}
+        </TeButton>
+        {/* Waveform + times */}
+        <div className="flex-1 min-w-0">
+          <div
+            className="relative cursor-pointer"
+            style={{ height: 28 }}
+            onClick={seekClick}
+            title="Клікни для перемотки"
+          >
+            <div className="absolute inset-0 flex items-end gap-[2px]">
+              {bars.map((h, i) => {
+                const isPast = i / bars.length < progress;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      flex: 1,
+                      height: `${h}%`,
+                      borderRadius: 2,
+                      background: isPast ? "var(--orange)" : "var(--surface-dk)",
+                      transition: "background 0.15s ease",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="font-mono" style={{ fontSize: "0.58rem", color: "var(--text-muted)" }}>
+              {formatTime(current)}
+            </span>
+            <span className="font-mono" style={{ fontSize: "0.58rem", color: "var(--text-muted)" }}>
+              {formatTime(duration)}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

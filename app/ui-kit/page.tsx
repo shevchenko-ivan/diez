@@ -861,16 +861,16 @@ export default function UIKitPage() {
 
           {/* Search bar */}
           <Section title="Search Bar — input + action">
-            <div className="te-inset flex items-center gap-3 px-4 py-3 rounded-full max-w-md">
+            <div className="te-inset flex items-center gap-2 pl-4 pr-2 py-2 rounded-full max-w-xl">
               <Search size={14} strokeWidth={2} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
               <input
-                className="field-input flex-1"
+                className="field-input flex-1 min-w-0"
                 placeholder="Шукайте: Океан Ельзи, Бумбокс..."
                 style={{ color: "var(--text)" }}
               />
-              <button className="te-btn-orange px-4 py-1.5 text-xs font-bold uppercase tracking-widest flex-shrink-0">
+              <TeButton shape="pill" size="sm" tone="orange" className="flex-shrink-0">
                 Знайти
-              </button>
+              </TeButton>
             </div>
           </Section>
 
