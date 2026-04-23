@@ -38,6 +38,15 @@ export default function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
+        {/* Auto-hide scrollbars: add `is-scrolling` to <html> while the user
+            is actively scrolling, remove it 800ms after motion stops. CSS
+            uses this class to reveal the track/thumb. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var h=document.documentElement,t;function on(){h.classList.add('is-scrolling');clearTimeout(t);t=setTimeout(function(){h.classList.remove('is-scrolling');},50);}window.addEventListener('scroll',on,{passive:true,capture:true});window.addEventListener('wheel',on,{passive:true});window.addEventListener('touchmove',on,{passive:true});})();",
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -36,11 +36,14 @@ export function SongCard({ ...props }: SongCardProps) {
     <HapticLink
       href={href}
       hapticType="strum"
-      className="te-surface te-pressable flex flex-col group relative overflow-hidden"
-      style={{ borderRadius: "1.25rem" }}
+      className="te-card-thick te-pressable flex flex-col group relative"
+      style={{ borderRadius: "1.5rem", padding: "10px" }}
     >
-      {/* --- MEDIA ZONE --- */}
-      <div className="w-full aspect-[4/3] relative overflow-hidden bg-[var(--surface)] border-b border-[rgba(0,0,0,0.05)]">
+      {/* --- MEDIA ZONE (recessed "well") --- */}
+      <div
+        className="te-card-well w-full aspect-[4/3] relative overflow-hidden"
+        style={{ borderRadius: "1rem" }}
+      >
         {/* Cover */}
         {props.coverImage ? (
           <Image
@@ -76,26 +79,14 @@ export function SongCard({ ...props }: SongCardProps) {
       </div>
 
       {/* --- META ZONE --- */}
-      <div className="flex flex-col p-3.5 gap-1.5 flex-1">
-        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1" style={{ color: "var(--text)" }}>
-          {props.title}
+      <div className="flex flex-col px-2 pt-2.5 pb-1 gap-1.5 flex-1">
+        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1 flex items-center gap-1.5" style={{ color: "var(--text)" }}>
+          <span className="line-clamp-1">{props.title}</span>
+          <DifficultyBadge difficulty={props.difficulty} />
         </h3>
-        <p className="font-medium text-[11px] line-clamp-1 mb-1" style={{ color: "var(--text-muted)", opacity: 0.8 }}>
+        <p className="font-medium text-[11px] line-clamp-1" style={{ color: "var(--text-muted)", opacity: 0.8 }}>
           {props.artist}
         </p>
-        
-        {/* Badges / Stats Row */}
-        <div className="flex items-center gap-1.5 mt-auto flex-wrap">
-          <DifficultyBadge difficulty={props.difficulty} />
-          {props.chords.length > 0 && (
-            <>
-              <span className="opacity-30 text-[10px]" style={{ color: "var(--text-muted)" }}>•</span>
-              <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
-                {props.chords.length} ак.
-              </span>
-            </>
-          )}
-        </div>
       </div>
     </HapticLink>
   );

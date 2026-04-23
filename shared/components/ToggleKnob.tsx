@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { useHaptics } from "@/shared/hooks/useHaptics";
+
 // Framed pill toggle — a slightly-rounded square button with a 3×4 grip-dot
 // pattern slides inside a dark inset track, all wrapped in a cream bezel.
 // Active state lights the track orange.
@@ -20,6 +23,15 @@ export function ToggleKnob({ active, width, height = 26 }: ToggleKnobProps) {
   // wrapper = track(1.5em) + 2 × padding(0.125em) = 1.75em
   const em = height / 1.75;
   const W = width ?? em * 3.25; // track 3em + 2 × padding 0.125em
+
+  // Fire the two-pulse toggle haptic when `active` flips — skip the initial
+  // mount so SSR hydration / initial render doesn't vibrate.
+  const { toggle } = useHaptics();
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    toggle();
+  }, [active, toggle]);
 
   return (
     <span
