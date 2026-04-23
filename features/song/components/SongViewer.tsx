@@ -1034,24 +1034,40 @@ function ScrollFab({
 
   return (
     <div
-      className="lg:hidden fixed z-40 te-surface flex flex-col gap-2"
+      className="lg:hidden fixed z-40 flex flex-col"
       style={{
         right: 0,
         bottom: 0,
-        borderTopLeftRadius: "1.25rem",
-        borderTopRightRadius: 0,
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
-        padding: "8px 10px",
-        paddingRight: "calc(env(safe-area-inset-right, 0px) + 10px)",
-        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
-        boxShadow:
-          "-1px -1px 3px rgba(0,0,0,0.14), inset 1px 1px 4px rgba(255,255,255,0.55), inset -1px -1px 0 rgba(0,0,0,0.05)",
+        padding: "8px 8px 6px 8px",
+        rowGap: 12,
+        paddingRight: "calc(env(safe-area-inset-right, 0px) + 8px)",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)",
         opacity: dimmed ? 0 : 1,
+        transform: dimmed ? "translate(40px, 40px)" : "translate(0, 0)",
         pointerEvents: dimmed ? "none" : "auto",
-        transition: "opacity 500ms ease",
+        transition: "opacity 900ms ease, transform 900ms ease",
+        isolation: "isolate",
       }}
     >
+      {/*
+        L-shaped dock background — pure CSS. Two rounded rectangles (right
+        column + bottom row) provide the outer convex 20px corners; a small
+        radial-gradient square fills the inner angle with a 20px concave arc.
+        Parent wrapper has `filter: drop-shadow` so the outer shadow follows
+        the full L silhouette. See `.scrollfab-bg` in globals.css.
+      */}
+      {/*
+        Asymmetric L silhouette — neck (plus column) is 20px narrower
+        than play and foot (minus row) is 20px shorter than play. Play's
+        top-left gets a 20px border-radius so the concave arc lands
+        tangent to neck's left edge and foot's top edge — one smooth
+        curve through the whole bend, no step/shelf artifacts.
+      */}
+      <span className="scrollfab-bg" aria-hidden>
+        <span className="scrollfab-bg-neck" aria-hidden />
+        <span className="scrollfab-bg-play" aria-hidden />
+        <span className="scrollfab-bg-foot" aria-hidden />
+      </span>
       {/* TEMP: force-expanded for screenshot — restore `{active && ...}` guards
           around +/- rows to re-hide them when scrollSpeed === 0. */}
       <div className="flex justify-end">
@@ -1062,58 +1078,40 @@ function ScrollFab({
           <Plus size={12} strokeWidth={2.5} />
         </AdjusterButton>
       </div>
-      <div className="flex items-end gap-2">
-      <div
-        className="te-inset flex items-center px-1 py-1"
-        style={{ borderRadius: 999 }}
+      <div className="flex items-end" style={{ columnGap: 12 }}>
+      <AdjusterButton
+        onClick={() => { trigger("light"); onSpeedChange(-1); }}
+        aria-label="Повільніше"
       >
-        <AdjusterButton
-          onClick={() => { trigger("light"); onSpeedChange(-1); }}
-          aria-label="Повільніше"
-        >
-          <Minus size={12} strokeWidth={2.5} />
-        </AdjusterButton>
-      </div>
-      {/* Play-button socket — a recessed "well" the button sits inside, like
-          the silver reference. The surrounding ring makes the button read as
-          a physical component rather than a floating circle. */}
-      <div
-        className="te-inset flex items-center justify-center"
+        <Minus size={12} strokeWidth={2.5} />
+      </AdjusterButton>
+      <button
+        type="button"
+        onClick={() => { trigger("medium"); onToggle(); }}
+        aria-label={active ? "Зупинити прокрутку" : "Почати прокрутку"}
+        className="te-pill-btn flex flex-col items-center justify-center"
         style={{
-          width: 64,
-          height: 64,
+          width: 48,
+          height: 48,
           borderRadius: "50%",
-          padding: 0,
+          color: active ? "var(--orange)" : "var(--text)",
+          gap: 1,
         }}
       >
-        <button
-          type="button"
-          onClick={() => { trigger("medium"); onToggle(); }}
-          aria-label={active ? "Зупинити прокрутку" : "Почати прокрутку"}
-          className="te-pill-btn flex flex-col items-center justify-center"
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: "50%",
-            color: active ? "var(--orange)" : "var(--text)",
-            gap: 1,
-          }}
-        >
-          {active ? (
-            <>
-              <Pause size={16} strokeWidth={2.2} fill="currentColor" />
-              <span
-                className="font-mono font-bold"
-                style={{ fontSize: 10, lineHeight: 1, color: "var(--text)" }}
-              >
-                {scrollSpeed}
-              </span>
-            </>
-          ) : (
-            <Play size={20} strokeWidth={2.2} fill="currentColor" style={{ marginLeft: 2 }} />
-          )}
-        </button>
-      </div>
+        {active ? (
+          <>
+            <Pause size={14} strokeWidth={2.2} fill="currentColor" />
+            <span
+              className="font-mono font-bold"
+              style={{ fontSize: 9, lineHeight: 1, color: "var(--text)" }}
+            >
+              {scrollSpeed}
+            </span>
+          </>
+        ) : (
+          <Play size={16} strokeWidth={2.2} fill="currentColor" style={{ marginLeft: 1 }} />
+        )}
+      </button>
       </div>
     </div>
   );

@@ -59,6 +59,7 @@
   --text:         #3E3A32;
   --text-mid:     #65605A;
   --text-muted:   #94907F;
+  --border:       rgba(0, 0, 0, 0.08);
 
   --accent:       #FF8800; /* New vibrant orange */
   --orange:       #FF8800;
@@ -183,6 +184,77 @@
       inset 0 12px 22px rgba(0,0,0,0.7),
       inset 0 2px 3px rgba(0,0,0,0.5),
       0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  /*
+    ── scrollfab-bg ──────────────────────────────────────────────────────────
+    Asymmetric L-shaped dock background for the mobile ScrollFab.
+
+    The play column (col-w × row-h) is the full box around the 52px play
+    button (8/6 flex padding). The neck (plus column above play) is 20px
+    narrower on the left, and the foot (minus row left of play) is 20px
+    shorter on top — that tightens the bg around the smaller +/- buttons
+    without touching play's own breathing room.
+
+    The 20px step on each arm is exactly 10px convex (play's top-left)
+    + 10px concave fillet. Both arcs share a tangent point, so the
+    transition into the neck/foot reads as a single smooth curve rather
+    than a step. Parent `filter: drop-shadow` traces the composed silhouette.
+  */
+  .scrollfab-bg {
+    --bg: var(--surface);
+    --col-w: 64px;       /* play column:  48 + 8 left + 8 right */
+    --row-h: 62px;       /* play row:     48 + 8 top  + 6 bottom */
+    --neck-w: 48px;      /* plus column: col-w − 16 (step = carve radius) */
+    --foot-h: 46px;      /* minus row:   row-h − 16 (step = carve radius) */
+    --corner: 16px;      /* both outer convex radius AND inner concave carve */
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    filter: drop-shadow(-1px -1px 3px rgba(0, 0, 0, 0.14));
+  }
+  .scrollfab-bg > span {
+    position: absolute;
+  }
+  /* Plus column — outer top-left rounded */
+  .scrollfab-bg-neck {
+    top: 0;
+    right: 0;
+    width: var(--neck-w);
+    bottom: var(--row-h);
+    background: var(--bg);
+    border-top-left-radius: var(--corner);
+  }
+  /* Play box — background is a radial-gradient that CARVES a 20px
+     quarter-disc out of its top-left corner. The arc's center of
+     curvature sits on the L's inner corner (top-left of play), so
+     from the L-bend side the curve reads as a concave nook rather
+     than a convex bulge. Arc tangents match neck's left edge at
+     (x=−neck-w, y=−row-h) and foot's top edge at (x=−col-w, y=−foot-h)
+     — one smooth concave sweep, no notches. */
+  .scrollfab-bg-play {
+    bottom: 0;
+    right: 0;
+    width: var(--col-w);
+    height: var(--row-h);
+    background: radial-gradient(
+      circle var(--corner) at top left,
+      transparent 0 calc(var(--corner) - 0.5px),
+      var(--bg) var(--corner)
+    );
+  }
+  /* Minus row — outer top-left rounded */
+  .scrollfab-bg-foot {
+    bottom: 0;
+    left: 0;
+    right: var(--col-w);
+    height: var(--foot-h);
+    background: var(--bg);
+    border-top-left-radius: var(--corner);
+  }
+  [data-theme="dark"] .scrollfab-bg {
+    filter: drop-shadow(-1px -1px 3px rgba(0, 0, 0, 0.4));
   }
 
   /* Desktop-only variant — lets mobile components go full-bleed. */
@@ -887,6 +959,7 @@ html[data-theme="dark"] {
     --text:         #E4E0DA;
     --text-mid:     #A09A94;
     --text-muted:   #8E8A92;
+    --border:       rgba(255, 255, 255, 0.1);
 
     --sh-socket:
       inset  2px  2px  6px rgba(0,0,0,0.70),
@@ -1055,6 +1128,7 @@ html[data-theme="dark"] {
   --text:         #E4E0DA;
   --text-mid:     #A09A94;
   --text-muted:   #8E8A92;
+  --border:       rgba(255, 255, 255, 0.1);
 
   --sh-socket:
     inset  2px  2px  6px rgba(0,0,0,0.70),
@@ -1203,6 +1277,7 @@ html[data-theme="dark"] {
   --text:         #3E3A32;
   --text-mid:     #65605A;
   --text-muted:   #94907F;
+  --border:       rgba(0, 0, 0, 0.08);
 
   --sh-socket:
     inset  2px  2px  5px rgba(0,0,0,0.08),
