@@ -1052,30 +1052,28 @@ function ScrollFab({
         transition: "opacity 500ms ease",
       }}
     >
-      {active && (
-        <div className="flex justify-end">
-          <AdjusterButton
-            onClick={() => { trigger("light"); onSpeedChange(1); }}
-            aria-label="Швидше"
-          >
-            <Plus size={12} strokeWidth={2.5} />
-          </AdjusterButton>
-        </div>
-      )}
-      <div className="flex items-end gap-2">
-      {active && (
-        <div
-          className="te-inset flex items-center px-1 py-1"
-          style={{ borderRadius: 999 }}
+      {/* TEMP: force-expanded for screenshot — restore `{active && ...}` guards
+          around +/- rows to re-hide them when scrollSpeed === 0. */}
+      <div className="flex justify-end">
+        <AdjusterButton
+          onClick={() => { trigger("light"); onSpeedChange(1); }}
+          aria-label="Швидше"
         >
-          <AdjusterButton
-            onClick={() => { trigger("light"); onSpeedChange(-1); }}
-            aria-label="Повільніше"
-          >
-            <Minus size={12} strokeWidth={2.5} />
-          </AdjusterButton>
-        </div>
-      )}
+          <Plus size={12} strokeWidth={2.5} />
+        </AdjusterButton>
+      </div>
+      <div className="flex items-end gap-2">
+      <div
+        className="te-inset flex items-center px-1 py-1"
+        style={{ borderRadius: 999 }}
+      >
+        <AdjusterButton
+          onClick={() => { trigger("light"); onSpeedChange(-1); }}
+          aria-label="Повільніше"
+        >
+          <Minus size={12} strokeWidth={2.5} />
+        </AdjusterButton>
+      </div>
       {/* Play-button socket — a recessed "well" the button sits inside, like
           the silver reference. The surrounding ring makes the button read as
           a physical component rather than a floating circle. */}
