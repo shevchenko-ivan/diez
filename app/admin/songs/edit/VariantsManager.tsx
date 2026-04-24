@@ -32,7 +32,7 @@ function formatDate(iso: string): string {
 
 export function VariantsManager({ songId, songSlug, primaryVariantId, variants }: Props) {
   return (
-    <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+    <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
           Варіанти ({variants.length})

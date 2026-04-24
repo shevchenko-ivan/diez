@@ -413,35 +413,44 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
             <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />
           </button>
 
-          {/* Bottom sheet */}
-          {sheetOpen && (
+          {/* Bottom sheet — always mounted to keep embedded YouTube player alive
+              across open/close (music keeps playing after closing the sheet). */}
+          <div
+            className="lg:hidden fixed inset-0 z-50"
+            role="dialog"
+            aria-modal={sheetOpen}
+            aria-hidden={!sheetOpen}
+            aria-label="Інструменти"
+            style={{
+              pointerEvents: sheetOpen ? "auto" : "none",
+              visibility: sheetOpen ? "visible" : "hidden",
+              transition: "visibility 200ms",
+            }}
+          >
+            {/* Backdrop */}
             <div
-              className="lg:hidden fixed inset-0 z-50"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Інструменти"
+              onClick={() => setSheetOpen(false)}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0.4)",
+                backdropFilter: "blur(2px)",
+                opacity: sheetOpen ? 1 : 0,
+                transition: "opacity 200ms ease",
+              }}
+            />
+            {/* Sheet panel */}
+            <div
+              className="absolute left-0 right-0 bottom-0 te-surface flex flex-col"
+              style={{
+                borderTopLeftRadius: "1.25rem",
+                borderTopRightRadius: "1.25rem",
+                maxHeight: "85vh",
+                paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                transform: sheetOpen ? "translateY(0)" : "translateY(100%)",
+                transition: "transform 220ms ease",
+              }}
             >
-              {/* Backdrop */}
-              <div
-                onClick={() => setSheetOpen(false)}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.4)",
-                  backdropFilter: "blur(2px)",
-                }}
-              />
-              {/* Sheet panel */}
-              <div
-                className="absolute left-0 right-0 bottom-0 te-surface flex flex-col"
-                style={{
-                  borderTopLeftRadius: "1.25rem",
-                  borderTopRightRadius: "1.25rem",
-                  maxHeight: "85vh",
-                  paddingBottom: "env(safe-area-inset-bottom, 0px)",
-                  animation: "dz-sheet-up 200ms ease",
-                }}
-              >
                 {/* Drag handle + header */}
                 <div className="flex flex-col items-center pt-2 pb-1 flex-shrink-0">
                   <span
@@ -470,7 +479,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                     <X size={16} strokeWidth={2} />
                   </button>
                 </div>
-                <div className="overflow-y-auto px-4 pb-5 pt-1 flex flex-col gap-5" style={{ WebkitOverflowScrolling: "touch" }}>
+                <div className="overflow-y-auto px-4 pb-5 pt-4 flex flex-col gap-5" style={{ WebkitOverflowScrolling: "touch" }}>
                 <style jsx>{`
                   @keyframes dz-sheet-up {
                     from { transform: translateY(100%); }
@@ -488,39 +497,6 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                   />
                 </div>
               )}
-              {/* Font size */}
-              <div
-                className="flex items-center justify-between gap-3 px-3 py-2"
-                style={{
-                  borderRadius: "0.75rem",
-                  border: "1px solid var(--border, rgba(0,0,0,0.06))",
-                }}
-              >
-                <span className="text-xs font-bold" style={{ color: "var(--text)" }}>
-                  Розмір тексту
-                </span>
-                <div className="flex items-center gap-2">
-                  <AdjusterButton
-                    onClick={() => setFontSize((p) => Math.max(12, p - 2))}
-                    aria-label="Менший текст"
-                  >
-                    <AArrowDown size={16} strokeWidth={2} />
-                  </AdjusterButton>
-                  <span
-                    className="font-mono font-bold text-sm"
-                    style={{ color: "var(--text)", minWidth: 24, textAlign: "center" }}
-                  >
-                    {fontSize}
-                  </span>
-                  <AdjusterButton
-                    onClick={() => setFontSize((p) => Math.min(28, p + 2))}
-                    aria-label="Більший текст"
-                  >
-                    <AArrowUp size={16} strokeWidth={2} />
-                  </AdjusterButton>
-                </div>
-              </div>
-
               {/* Tuner */}
               <TeButton
                 shape="pill"
@@ -543,7 +519,24 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               )}
 
               {/* Chords */}
-              <div className="mt-2 pt-3" style={{ borderTop: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
+              <div>
+                {/* Rhythm / metronome — sits above everything */}
+                {song.tempo && song.strumming && song.strumming.length > 0 && (
+                  <div
+                    className="mb-3 px-3 py-2"
+                    style={{
+                      borderRadius: "0.75rem",
+                      border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                    }}
+                  >
+                    <RhythmPlayer
+                      strumming={song.strumming}
+                      tempo={song.tempo}
+                      timeSignature={song.timeSignature ?? "4/4"}
+                      bare
+                    />
+                  </div>
+                )}
                 {/* Beginner mode */}
                 <button
                   type="button"
@@ -605,16 +598,38 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 />
               </div>
 
-              {/* Rhythm / metronome */}
-              {song.tempo && song.strumming && song.strumming.length > 0 && (
-                <div className="mt-2 pt-3" style={{ borderTop: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
-                  <RhythmPlayer
-                    strumming={song.strumming}
-                    tempo={song.tempo}
-                    timeSignature={song.timeSignature ?? "4/4"}
-                  />
+              {/* Font size — under chord diagrams, above Edit */}
+              <div
+                className="flex items-center justify-between gap-3 px-3 py-2"
+                style={{
+                  borderRadius: "0.75rem",
+                  border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                }}
+              >
+                <span className="text-xs font-bold" style={{ color: "var(--text)" }}>
+                  Розмір тексту
+                </span>
+                <div className="flex items-center gap-2">
+                  <AdjusterButton
+                    onClick={() => setFontSize((p) => Math.max(12, p - 2))}
+                    aria-label="Менший текст"
+                  >
+                    <AArrowDown size={16} strokeWidth={2} />
+                  </AdjusterButton>
+                  <span
+                    className="font-mono font-bold text-sm"
+                    style={{ color: "var(--text)", minWidth: 24, textAlign: "center" }}
+                  >
+                    {fontSize}
+                  </span>
+                  <AdjusterButton
+                    onClick={() => setFontSize((p) => Math.min(28, p + 2))}
+                    aria-label="Більший текст"
+                  >
+                    <AArrowUp size={20} strokeWidth={2} />
+                  </AdjusterButton>
                 </div>
-              )}
+              </div>
 
               {/* Edit (admin only) */}
               {editHref && (
@@ -632,7 +647,6 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 </div>
               </div>
             </div>
-          )}
 
           {/* Song sections — single unified block */}
           <div

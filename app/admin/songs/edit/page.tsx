@@ -114,11 +114,6 @@ function serializeSections(data: unknown): string {
 }
 
 const GENRES = ["Рок", "Поп-рок", "Поп", "Інді", "Фолк", "Реп", "Електронна", "Шансон", "Народна", "Інше"];
-const DIFFICULTIES = [
-  { value: "easy", label: "Легка" },
-  { value: "medium", label: "Середня" },
-  { value: "hard", label: "Складна" },
-];
 const STATUSES = [
   { value: "published", label: "Опубліковано" },
   { value: "draft", label: "Чернетка" },
@@ -234,7 +229,7 @@ export default async function EditSongPage({
           />
 
           {/* ── Мета пісні ──────────────────────────────────────────────── */}
-          <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+          <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>
             <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
               Мета пісні
             </h2>
@@ -266,11 +261,7 @@ export default async function EditSongPage({
                     {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </FormField>
-                <FormField label="Складність">
-                  <select name="difficulty" defaultValue={song.difficulty ?? "easy"} className="field-input" style={{ color: "var(--text)" }}>
-                    {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-                  </select>
-                </FormField>
+                <input type="hidden" name="difficulty" value={song.difficulty ?? "easy"} />
                 <FormField label="Статус">
                   <select name="status" defaultValue={song.status ?? "draft"} className="field-input" style={{ color: "var(--text)" }}>
                     {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -369,7 +360,7 @@ export default async function EditSongPage({
           </RhythmBlock>
 
           {/* ── Текст з акордами + один сабміт ───────────────────────── */}
-          <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
+          <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>
             <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
               Текст з акордами
             </h2>

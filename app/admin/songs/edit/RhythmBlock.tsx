@@ -12,7 +12,7 @@ export function RhythmBlock({ initialEnabled, children }: Props) {
   const [enabled, setEnabled] = useState(initialEnabled);
 
   return (
-    <div className="te-surface p-8 md:p-10 mb-6" style={{ borderRadius: "2rem" }}>
+    <div className="te-surface p-5 md:p-6 mb-6" style={{ borderRadius: "2rem" }}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
           Ритм

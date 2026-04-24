@@ -13,6 +13,8 @@ interface RhythmPlayerProps {
   strumming: Strum[];
   tempo: number;
   timeSignature?: string;
+  /** When true, skip the te-surface ControlBlock wrapper (for nested contexts). */
+  bare?: boolean;
 }
 
 // Slots per measure = numerator × 2 (since each beat = 2 slots: down + up).
@@ -25,7 +27,7 @@ function slotsPerMeasure(ts: string): number {
 // Sidebar metronome + strumming visualizer. Plays the pattern at the chosen
 // BPM and highlights the active stroke so the user can feel the beat while
 // practising along with the song.
-export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "4/4" }: RhythmPlayerProps) {
+export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "4/4", bare = false }: RhythmPlayerProps) {
   const measureLen = slotsPerMeasure(timeSignature);
   const { trigger } = useHaptics();
   const [playing, setPlaying] = useState(false);
@@ -123,8 +125,8 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
     setTempo((t) => Math.max(40, Math.min(240, t + delta)));
   };
 
-  return (
-    <ControlBlock label="Метроном">
+  const body = (
+    <>
       {/* Strum row */}
       <div className="flex flex-wrap items-center justify-center gap-0.5 mb-2">
         {strumming.map((hit, i) => {
@@ -215,6 +217,79 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
           </>
         )}
       </TeButton>
-    </ControlBlock>
+    </>
   );
+
+  if (bare) {
+    const strumRow = (
+      <div className="flex items-center justify-center gap-0.5">
+        {strumming.map((hit, i) => {
+          const isDown = hit.startsWith("D");
+          const isMute = hit.endsWith("x");
+          const active = activeIndex === i;
+          const isAccent = i % measureLen === 0;
+          return (
+            <span
+              key={i}
+              className="flex items-center justify-center rounded-md transition-all relative"
+              style={{
+                width: 18,
+                height: 20,
+                fontSize: isAccent ? 15 : 13,
+                fontWeight: isAccent ? 900 : 700,
+                color: active ? "var(--orange)" : isAccent || isDown ? "var(--text)" : "var(--text-muted)",
+                opacity: isMute ? 0.5 : 1,
+                background: active ? "rgba(255,136,0,0.18)" : isAccent ? "rgba(255,136,0,0.06)" : "transparent",
+                transform: active ? (isAccent ? "scale(1.3)" : "scale(1.2)") : "scale(1)",
+              }}
+            >
+              {isDown ? "↓" : "↑"}
+              {isAccent && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: 3,
+                    height: 3,
+                    borderRadius: "50%",
+                    background: "var(--orange)",
+                  }}
+                />
+              )}
+            </span>
+          );
+        })}
+      </div>
+    );
+
+    return (
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-bold shrink-0" style={{ color: "var(--text)" }}>Метроном</span>
+        <div className="flex items-center gap-1 shrink-0">
+          <AdjusterButton onClick={() => adjustTempo(-5)} aria-label="Повільніше">
+            <Minus size={12} strokeWidth={2.5} />
+          </AdjusterButton>
+          <div className="font-mono font-bold text-xs tabular-nums" style={{ color: "var(--text)", minWidth: 24, textAlign: "center" }}>
+            {tempo}
+          </div>
+          <AdjusterButton onClick={() => adjustTempo(5)} aria-label="Швидше">
+            <Plus size={12} strokeWidth={2.5} />
+          </AdjusterButton>
+        </div>
+        <div className="flex-1 min-w-0">{strumRow}</div>
+        <TeButton
+          shape="pill"
+          onClick={togglePlay}
+          title={playing ? "Зупинити метроном — клавіша M" : "Запустити метроном — клавіша M"}
+          className="shrink-0 px-3 py-1.5 text-xs font-bold"
+          style={{ borderRadius: "0.5rem", color: playing ? "var(--orange)" : "var(--text-muted)" }}
+        >
+          {playing ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />}
+        </TeButton>
+      </div>
+    );
+  }
+  return <ControlBlock label="Метроном">{body}</ControlBlock>;
 }

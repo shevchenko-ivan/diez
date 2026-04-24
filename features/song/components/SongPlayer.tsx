@@ -92,6 +92,10 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      // Pause before destroy — destroy alone sometimes leaves audio playing
+      // for a beat on mobile (iframe teardown is async).
+      try { playerRef.current?.pauseVideo?.(); } catch {}
+      try { playerRef.current?.stopVideo?.(); } catch {}
       playerRef.current?.destroy();
     };
   }, [initPlayer]);
@@ -188,25 +192,8 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
           ref={mountRef}
           style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
         />
-        {/* Play / Pause */}
-        <TeButton
-          onClick={togglePlay}
-          disabled={!ready}
-          aria-label={playing ? "Пауза" : "Грати"}
-          title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
-          style={{
-            width: 44, height: 44,
-            color: "var(--orange)",
-            opacity: ready ? 1 : 0.35,
-            cursor: ready ? "pointer" : "default",
-            flexShrink: 0,
-            ...playBtnStyle,
-          }}
-        >
-          {playing ? <PauseIcon /> : <PlayIcon />}
-        </TeButton>
         {/* Waveform + times */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pt-2">
           <div
             className="relative cursor-pointer"
             style={{ height: 28 }}
@@ -240,6 +227,23 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
             </span>
           </div>
         </div>
+        {/* Play / Pause — right side for reachable tap target */}
+        <TeButton
+          onClick={togglePlay}
+          disabled={!ready}
+          aria-label={playing ? "Пауза" : "Грати"}
+          title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
+          style={{
+            width: 44, height: 44,
+            color: "var(--orange)",
+            opacity: ready ? 1 : 0.35,
+            cursor: ready ? "pointer" : "default",
+            flexShrink: 0,
+            ...playBtnStyle,
+          }}
+        >
+          {playing ? <PauseIcon /> : <PlayIcon />}
+        </TeButton>
       </div>
     );
   }
