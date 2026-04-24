@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Music, Gauge, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Play, Pause, Pencil } from "lucide-react";
+import { Music, Gauge, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Play, Pause, Pencil, X } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
@@ -410,7 +410,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
             >
               Інструменти
             </span>
-            <ChevronUp size={14} style={{ color: "var(--text-muted)" }} />
+            <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />
           </button>
 
           {/* Bottom sheet */}
@@ -467,7 +467,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                     aria-label="Закрити"
                     className="te-icon-btn te-icon-btn-sm"
                   >
-                    <ChevronDown size={16} strokeWidth={2} />
+                    <X size={16} strokeWidth={2} />
                   </button>
                 </div>
                 <div className="overflow-y-auto px-4 pb-5 pt-1 flex flex-col gap-5" style={{ WebkitOverflowScrolling: "touch" }}>

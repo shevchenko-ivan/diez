@@ -113,7 +113,7 @@ export default async function HomePage() {
         {artists.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Виконавці" href="/artists" />
-            <div className="flex overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none">
+            <div className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none">
               {artists.map((artist) => {
                 const initial = artist.name.charAt(0).toUpperCase();
                 const hue = artist.name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
@@ -122,11 +122,20 @@ export default async function HomePage() {
                   <HapticLink
                     key={artist.slug}
                     href={`/artists/${artist.slug}`}
-                    className="te-surface te-pressable flex-shrink-0 overflow-hidden"
-                    style={{ width: 160, borderRadius: "1.25rem" }}
+                    className="artist-strip-card flex-shrink-0 flex flex-col items-center"
+                    style={{ width: 132, paddingLeft: 6, paddingRight: 6 }}
                   >
-                    {/* Photo */}
-                    <div style={{ width: 160, height: 160, position: "relative", overflow: "hidden" }}>
+                    {/* Photo — round avatar */}
+                    <div
+                      className="artist-strip-avatar te-inset"
+                      style={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        position: "relative",
+                      }}
+                    >
                       {artist.photo_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -145,33 +154,28 @@ export default async function HomePage() {
                             justifyContent: "center",
                           }}
                         >
-                          <span style={{ fontSize: "3rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", letterSpacing: "-0.02em" }}>
+                          <span style={{ fontSize: "2.5rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", letterSpacing: "-0.02em" }}>
                             {initial}
                           </span>
                         </div>
                       )}
                     </div>
-                    {/* Info */}
-                    <div className="px-3 py-2.5">
-                      <p
-                        className="truncate uppercase font-bold"
-                        style={{ fontSize: "0.72rem", letterSpacing: "0.04em", color: "var(--text)" }}
-                      >
-                        {artist.name}
-                      </p>
-                      {artist.genre && (
-                        <p
-                          className="truncate uppercase"
-                          style={{ fontSize: "0.6rem", letterSpacing: "0.06em", color: "var(--text-muted)", marginTop: 2 }}
-                        >
-                          {artist.genre}
-                        </p>
-                      )}
-                    </div>
+                    {/* Name */}
+                    <p
+                      className="truncate uppercase font-bold mt-2 text-center w-full"
+                      style={{ fontSize: "0.72rem", letterSpacing: "0.04em", color: "var(--text)" }}
+                    >
+                      {artist.name}
+                    </p>
                   </HapticLink>
                 );
               })}
             </div>
+            <style>{`
+              .artist-strip-avatar { transition: transform 160ms ease, filter 160ms ease; }
+              .artist-strip-card:hover .artist-strip-avatar { transform: scale(1.05); }
+              .artist-strip-card:active .artist-strip-avatar { transform: scale(0.98); }
+            `}</style>
           </section>
         )}
 

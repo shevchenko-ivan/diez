@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import {
   type ChordDef,
   CHORD_DB,
@@ -589,6 +589,19 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
   const hide = () => {
     timeoutRef.current = setTimeout(() => setOpen(false), 150);
   };
+
+  // Clamp popup horizontally into the viewport after it renders.
+  useLayoutEffect(() => {
+    if (!open || !pos || !popupRef.current) return;
+    const rect = popupRef.current.getBoundingClientRect();
+    const margin = 8;
+    const vw = window.innerWidth;
+    const half = rect.width / 2;
+    let next = pos.left;
+    if (next - half < margin) next = half + margin;
+    if (next + half > vw - margin) next = vw - margin - half;
+    if (Math.abs(next - pos.left) > 0.5) setPos((p) => (p ? { ...p, left: next } : p));
+  }, [open, pos]);
 
   return (
     <span

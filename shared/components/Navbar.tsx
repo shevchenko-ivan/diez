@@ -91,7 +91,7 @@ export function Navbar() {
   const { isDark, toggle } = useTheme();
 
   return (
-    <header className="px-6 py-4">
+    <header className="px-4 md:px-6 pt-4 pb-1 md:pb-4">
       <nav className="max-w-6xl mx-auto flex items-center justify-between gap-4">
 
         {/* Logo */}

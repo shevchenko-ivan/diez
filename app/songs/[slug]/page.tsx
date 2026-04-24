@@ -22,7 +22,6 @@ import { getArtistSlugByName } from "@/features/artist/services/artists";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteFooter } from "@/shared/components/SiteFooter";
-import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
 import { VariantSwitcher } from "@/features/song/components/VariantSwitcher";
 import { Suspense } from "react";
 import { SavedToast } from "@/shared/components/SavedToast";
@@ -142,9 +141,6 @@ export default async function SongPage({
             >
               {song.artist}
             </Link>
-            <span className="hidden md:inline-flex">
-              <DifficultyBadge difficulty={song.difficulty} />
-            </span>
             <h1
               className="truncate"
               style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}

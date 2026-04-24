@@ -28,8 +28,10 @@ async function ListsContent() {
       <PageHeader
         title="Мої списки"
         subtitle="Керуйте збереженими піснями та діліться ними з друзями"
-        action={<CreatePlaylistButton />}
       />
+      <div className="-mt-6 mb-10">
+        <CreatePlaylistButton />
+      </div>
 
       {playlists.length === 0 ? (
         <EmptyState

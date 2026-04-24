@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, X, Youtube } from "lucide-react";
-import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
+import { Search, X, Volume2 } from "lucide-react";
 import { SaveHeartButton } from "@/features/song/components/SaveHeartButton";
 import { EmptyState } from "@/shared/components/EmptyState";
 
@@ -21,13 +20,15 @@ interface Song {
 interface Props {
   songs: Song[];
   savedSlugs: string[];
+  /** Hide the search input for short lists (< 5 songs). */
+  showSearch?: boolean;
 }
 
 function norm(s: string) {
   return s.toLowerCase().replace(/[`'’ʼ"«»„"]/g, "").trim();
 }
 
-export function ArtistSongsList({ songs, savedSlugs }: Props) {
+export function ArtistSongsList({ songs, savedSlugs, showSearch = true }: Props) {
   const [q, setQ] = useState("");
   const saved = useMemo(() => new Set(savedSlugs), [savedSlugs]);
 
@@ -39,6 +40,7 @@ export function ArtistSongsList({ songs, savedSlugs }: Props) {
 
   return (
     <>
+      {showSearch && (
       <div className="relative mb-4">
         <Search
           size={16}
@@ -63,6 +65,7 @@ export function ArtistSongsList({ songs, savedSlugs }: Props) {
           </button>
         )}
       </div>
+      )}
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -96,19 +99,18 @@ export function ArtistSongsList({ songs, savedSlugs }: Props) {
                   <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
                 </Link>
                 <span
-                  title={hasPlayer ? "Є відео в плеєрі" : "Без відео"}
-                  aria-label={hasPlayer ? "Є відео в плеєрі" : "Без відео"}
+                  title={hasPlayer ? "Є плеєр з музикою" : "Без плеєра"}
+                  aria-label={hasPlayer ? "Є плеєр з музикою" : "Без плеєра"}
                   className="inline-flex items-center justify-center"
                   style={{
                     width: 28,
                     height: 28,
-                    color: hasPlayer ? "#ff0033" : "var(--text-muted)",
+                    color: hasPlayer ? "var(--orange)" : "var(--text-muted)",
                     opacity: hasPlayer ? 1 : 0.25,
                   }}
                 >
-                  <Youtube size={18} strokeWidth={2} />
+                  <Volume2 size={18} strokeWidth={2} />
                 </span>
-                <DifficultyBadge difficulty={song.difficulty} />
                 <SaveHeartButton
                   slug={song.slug}
                   initialSaved={saved.has(song.slug)}

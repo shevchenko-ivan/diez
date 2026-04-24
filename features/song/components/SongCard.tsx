@@ -7,7 +7,6 @@ import Image from "next/image";
 import { Search } from "lucide-react";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
-import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
 import { SaveHeartButton } from "./SaveHeartButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
@@ -80,9 +79,8 @@ export function SongCard({ ...props }: SongCardProps) {
 
       {/* --- META ZONE --- */}
       <div className="flex flex-col px-2 pt-2.5 pb-1 gap-1.5 flex-1">
-        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1 flex items-center gap-1.5" style={{ color: "var(--text)" }}>
-          <span className="line-clamp-1">{props.title}</span>
-          <DifficultyBadge difficulty={props.difficulty} />
+        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1" style={{ color: "var(--text)" }}>
+          {props.title}
         </h3>
         <p className="font-medium text-[11px] line-clamp-1" style={{ color: "var(--text-muted)", opacity: 0.8 }}>
           {props.artist}
@@ -340,7 +338,6 @@ export function HeroSearch() {
                       <div className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{s.title}</div>
                       <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{s.artist}</div>
                     </div>
-                    <DifficultyBadge difficulty={s.difficulty} />
                   </Link>
                 );
               })}

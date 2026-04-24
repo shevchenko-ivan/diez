@@ -9,7 +9,7 @@ export function PageHeader({ title, subtitle, action }: PageHeaderProps) {
     <div className={`mb-10 ${action ? "flex items-center justify-between gap-4" : ""}`}>
       <div>
         <h1
-          className="text-4xl font-bold mb-2 uppercase tracking-tighter"
+          className="text-2xl md:text-4xl font-bold mb-2 uppercase tracking-tighter"
           style={{ color: "var(--text)" }}
         >
           {title}

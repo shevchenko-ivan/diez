@@ -3,9 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Youtube } from "lucide-react";
+import { Volume2 } from "lucide-react";
 import { type Song } from "@/features/song/types";
-import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
 import { SaveHeartButton } from "@/features/song/components/SaveHeartButton";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { fetchSongsPage } from "./actions";
@@ -77,14 +76,13 @@ export function SongsInfiniteList({
                 <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
               </Link>
               <span
-                title={hasPlayer ? "Є відео в плеєрі" : "Без відео"}
-                aria-label={hasPlayer ? "Є відео в плеєрі" : "Без відео"}
+                title={hasPlayer ? "Є плеєр з музикою" : "Без плеєра"}
+                aria-label={hasPlayer ? "Є плеєр з музикою" : "Без плеєра"}
                 className="inline-flex items-center justify-center"
-                style={{ width: 28, height: 28, color: hasPlayer ? "#ff0033" : "var(--text-muted)", opacity: hasPlayer ? 1 : 0.25 }}
+                style={{ width: 28, height: 28, color: hasPlayer ? "var(--orange)" : "var(--text-muted)", opacity: hasPlayer ? 1 : 0.25 }}
               >
-                <Youtube size={18} strokeWidth={2} />
+                <Volume2 size={18} strokeWidth={2} />
               </span>
-              <DifficultyBadge difficulty={song.difficulty} />
               <SaveHeartButton slug={song.slug} initialSaved={saved.has(song.slug)} variant="bare" size={14} />
             </li>
           );

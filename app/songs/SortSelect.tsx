@@ -29,8 +29,16 @@ export function SortSelect({ value, basePath = "/songs" }: { value: string; base
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="te-inset px-3 py-2 text-xs font-bold outline-none bg-transparent"
-        style={{ borderRadius: "0.75rem", color: "var(--text)" }}
+        className="te-inset pl-3 py-2 text-xs font-bold outline-none bg-transparent appearance-none"
+        style={{
+          borderRadius: "0.75rem",
+          color: "var(--text)",
+          paddingRight: "2rem",
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 0.75rem center",
+        }}
       >
         {SORT_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>

@@ -5,6 +5,7 @@ import { getArtistSongCounts, getArtistPopularity } from "@/features/song/servic
 import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { BackButton } from "@/shared/components/BackButton";
+import { getSavedArtistSlugs, getArtistsWithSavedSongs } from "@/features/playlist/actions/artist-playlists";
 
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",
@@ -33,10 +34,12 @@ function stringToColor(str: string) {
 }
 
 export default async function ArtistsPage() {
-  const [songCount, popularity, dbArtists] = await Promise.all([
+  const [songCount, popularity, dbArtists, savedArtistSlugs, savedArtistNames] = await Promise.all([
     getArtistSongCounts(),
     getArtistPopularity(),
     getAllArtists(),
+    getSavedArtistSlugs(),
+    getArtistsWithSavedSongs(),
   ]);
 
   // Build from artists table — all artists, not just those with songs
@@ -51,11 +54,13 @@ export default async function ArtistsPage() {
         color: stringToColor(a.name),
         image: a.photo_url ?? undefined,
         slug: a.slug,
+        hasSavedSong: savedArtistNames.has(key),
       };
     })
-    // Sort by average source_views desc; artists without songs fall to bottom,
-    // tie-break by name so the order is stable.
+    // Float any artist with a saved song to the top; within each group sort by
+    // average source_views desc, tie-break by name for stable order.
     .sort((a, b) => {
+      if (a.hasSavedSong !== b.hasSavedSong) return a.hasSavedSong ? -1 : 1;
       if (b.avgViews !== a.avgViews) return b.avgViews - a.avgViews;
       return a.name.localeCompare(b.name, "uk");
     });
@@ -71,8 +76,8 @@ export default async function ArtistsPage() {
         <EmptyState message="Виконавців ще немає в каталозі." />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-          {artists.map((artist) => (
-            <ArtistCard key={artist.slug} {...artist} />
+          {artists.map(({ hasSavedSong: _unused, ...artist }) => (
+            <ArtistCard key={artist.slug} {...artist} saved={savedArtistSlugs.has(artist.slug)} />
           ))}
         </div>
       )}

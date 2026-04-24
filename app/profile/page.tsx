@@ -112,7 +112,7 @@ async function ProfileDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
               <Heart size={20} style={{ color: "var(--orange)" }} />
-              Подобається
+              Збережені
             </h3>
             {defaultList && (
               <Link

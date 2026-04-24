@@ -20,4 +20,6 @@ export interface PlaylistSummary {
   isDefault: boolean;
   visibility: PlaylistVisibility;
   hasSong: boolean;
+  /** Total songs in the playlist (not scoped to the current song/artist). */
+  songCount: number;
 }

@@ -36,6 +36,7 @@ export async function getPlaylistsForSong(slug: string): Promise<PlaylistSummary
       isDefault: row.is_default as boolean,
       visibility: row.visibility as PlaylistVisibility,
       hasSong: rels.some((r) => r.song_id === songId),
+      songCount: rels.length,
     };
   });
 }

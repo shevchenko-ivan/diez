@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Link as LinkIcon, Lock, Plus, X } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
+import { SegmentedTabs, type SegmentedTabOption } from "@/shared/components/SegmentedTabs";
 import { createPlaylist } from "../actions/playlists";
 import type { PlaylistVisibility } from "../types";
 
-const VIS_OPTIONS: Array<{ value: PlaylistVisibility; label: string; icon: typeof Lock }> = [
+const VIS_OPTIONS: SegmentedTabOption<PlaylistVisibility>[] = [
   { value: "private", label: "Приватний", icon: Lock },
   { value: "unlisted", label: "За посиланням", icon: LinkIcon },
 ];
@@ -95,6 +96,17 @@ function CreateModal(props: ModalProps) {
         <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>
           Новий список
         </h2>
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
+            Видимість
+          </label>
+          <SegmentedTabs
+            options={VIS_OPTIONS}
+            value={props.visibility}
+            onChange={props.setVisibility}
+            ariaLabel="Видимість списку"
+          />
+        </div>
         <input
           type="text"
           placeholder="Назва"
@@ -105,32 +117,6 @@ function CreateModal(props: ModalProps) {
           className="te-inset px-4 py-3 rounded-xl bg-transparent outline-none text-sm font-medium"
           style={{ color: "var(--text)" }}
         />
-        <div>
-          <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
-            Видимість
-          </label>
-          <div className="flex gap-1">
-            {VIS_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const active = props.visibility === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => props.setVisibility(opt.value)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
-                  style={{
-                    background: active ? "rgba(255,136,0,0.1)" : "transparent",
-                    color: active ? "var(--orange)" : "var(--text-muted)",
-                  }}
-                >
-                  <Icon size={12} strokeWidth={2} />
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
         {props.error && (
           <p className="text-xs" style={{ color: "#e11d48" }}>{props.error}</p>
         )}

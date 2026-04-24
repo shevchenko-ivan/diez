@@ -5,6 +5,8 @@ import { PageShell } from "@/shared/components/PageShell";
 import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
+import { getSavedArtistSlugs } from "@/features/playlist/actions/artist-playlists";
+import { SaveArtistButton } from "@/features/artist/components/SaveArtistButton";
 import { Pencil } from "lucide-react";
 import Image from "next/image";
 import { ArtistSongsList } from "./ArtistSongsList";
@@ -60,6 +62,8 @@ export default async function ArtistPage({
   };
   const songs = await getSongsByArtist(artistName, { sortBy: sortMap[sort] ?? "source_views" });
   const savedSlugs = await getSavedSlugs();
+  const savedArtistSlugs = await getSavedArtistSlugs();
+  const artistSaved = savedArtistSlugs.has(slug);
 
   // Admin check for edit button
   let isAdmin = false;
@@ -93,69 +97,78 @@ export default async function ArtistPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="mb-8">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <BackButton fallback="/artists" label="Виконавці" />
+        {isAdmin && artist?.id && (
+          <TeButton
+            shape="pill"
+            href={`/admin/artists/edit?id=${artist.id}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold"
+            style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
+          >
+            <Pencil size={12} />
+            Редагувати
+          </TeButton>
+        )}
       </div>
 
-        <div className="te-surface p-8 mb-12" style={{ borderRadius: "2rem" }}>
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-32 h-32 rounded-full overflow-hidden te-inset flex-shrink-0 flex items-center justify-center">
+        <div className="te-surface p-4 md:p-5 mb-8 relative" style={{ borderRadius: "1.5rem" }}>
+          <div className="absolute top-3 right-3 md:top-4 md:right-4">
+            <SaveArtistButton
+              artistSlug={slug}
+              artistName={artistName}
+              songsCount={songs.length}
+              initialSaved={artistSaved}
+              variant="bare"
+              size={16}
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden te-inset flex-shrink-0 flex items-center justify-center">
               {artist?.photo_url ? (
                 <Image
                   src={artist.photo_url}
                   alt={artistName}
-                  width={128}
-                  height={128}
+                  width={96}
+                  height={96}
                   className="object-cover w-full h-full"
                 />
               ) : (
-                <span style={{ fontSize: "3.5rem" }}>🎸</span>
+                <span style={{ fontSize: "2.25rem" }}>🎸</span>
               )}
             </div>
-            <div className="flex-1">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-4xl font-bold mb-2 uppercase tracking-tight">{artistName}</h1>
-                  {artist?.aliases && artist.aliases.length > 0 && (
-                    <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
-                      Також відомий як: {artist.aliases.join(", ")}
-                    </p>
-                  )}
-                </div>
-                {isAdmin && artist?.id && (
-                  <TeButton
-                    shape="pill"
-                    href={`/admin/artists/edit?id=${artist.id}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold shrink-0"
-                    style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
-                  >
-                    <Pencil size={12} />
-                    Редагувати
-                  </TeButton>
-                )}
-              </div>
+            <div className="flex-1 min-w-0 pr-10">
+              <h1 className="text-lg md:text-xl font-bold uppercase tracking-tight break-words mb-1">
+                {artistName}
+              </h1>
               {artist?.genre && (
-                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--orange)" }}>
+                <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--orange)" }}>
                   {artist.genre}
                 </p>
               )}
-              {artist?.bio && (
-                <p className="text-sm leading-relaxed max-w-xl" style={{ color: "var(--text-muted)" }}>
-                  {artist.bio}
-                </p>
-              )}
-              <p className="text-xs uppercase tracking-widest mt-2" style={{ color: "var(--text-muted)" }}>
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                 {songs.length} пісень
               </p>
+              {artist?.aliases && artist.aliases.length > 0 && (
+                <p className="text-xs mt-1 truncate" style={{ color: "var(--text-muted)" }}>
+                  Також: {artist.aliases.join(", ")}
+                </p>
+              )}
             </div>
           </div>
+          {artist?.bio && (
+            <p className="text-sm leading-relaxed mt-3" style={{ color: "var(--text-muted)" }}>
+              {artist.bio}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-          <h2 className="text-xl font-bold uppercase tracking-wider">Пісні виконавця</h2>
-          <SortSelect value={sort} basePath={`/artists/${slug}`} />
+          <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Пісні — {artistName}</h2>
+          {songs.length >= 5 && <SortSelect value={sort} basePath={`/artists/${slug}`} />}
         </div>
         <ArtistSongsList
+          showSearch={songs.length >= 5}
           songs={songs.map(s => ({
             slug: s.slug,
             title: s.title,

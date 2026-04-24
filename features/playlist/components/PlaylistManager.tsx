@@ -11,12 +11,11 @@ import {
   Link as LinkIcon,
   Lock,
   Pencil,
-  Share2,
   Trash2,
   X,
 } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
-import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
+import { SegmentedTabs } from "@/shared/components/SegmentedTabs";
 import { toast } from "@/shared/components/Toaster";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import {
@@ -156,10 +155,10 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {/* Header card */}
-      <div className="te-surface p-4" style={{ borderRadius: "1.5rem" }}>
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="te-surface p-4 flex flex-col gap-3" style={{ borderRadius: "1.5rem" }}>
+        <div className="flex items-start gap-3">
           {/* Title */}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             {editingName && !playlist.isDefault ? (
               <input
                 autoFocus
@@ -201,54 +200,42 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
             </p>
           </div>
 
-          {/* Visibility inline */}
-          <div className="flex gap-0.5 te-inset" style={{ borderRadius: "0.75rem", padding: "2px" }}>
-            {VIS_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const active = visibility === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => { trigger("selection"); changeVisibility(opt.value); }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
-                  style={{
-                    borderRadius: "0.5rem",
-                    background: active ? "rgba(255,136,0,0.12)" : "transparent",
-                    color: active ? "var(--orange)" : "var(--text-muted)",
-                  }}
-                >
-                  <Icon size={11} strokeWidth={2} />
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* URL inline */}
-          {canShare && (
-            <div className="te-inset px-2.5 py-1.5 flex items-center gap-2 max-w-[200px]" style={{ borderRadius: "0.75rem" }}>
-              <LinkIcon size={11} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-              <code className="flex-1 text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{shareUrl}</code>
-              <button type="button" onClick={() => { trigger("light"); handleCopy(); }} aria-label="Копіювати" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-              </button>
-            </div>
-          )}
-
           {/* Delete */}
           {!playlist.isDefault && (
-            <button
-              type="button"
-              onClick={() => { trigger("warning"); handleDelete(); }}
+            <TeButton
+              icon={Trash2}
+              size="sm"
+              tone="red"
+              onClick={handleDelete}
               aria-label="Видалити список"
-              className="inline-flex items-center justify-center rounded-full hover:bg-red-500/10 ml-auto"
-              style={{ width: 32, height: 32, color: "#e11d48" }}
-            >
-              <Trash2 size={13} strokeWidth={2} />
-            </button>
+            />
           )}
         </div>
+
+        {/* Visibility — full-width segmented tabs (match /chords instrument switcher) */}
+        <SegmentedTabs
+          options={VIS_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
+          value={visibility}
+          onChange={changeVisibility}
+          ariaLabel="Видимість"
+        />
+
+        {/* URL — full-width input + separate copy button */}
+        {canShare && (
+          <div className="flex items-center gap-2 w-full">
+            <div className="te-inset px-3 py-2 flex items-center gap-2 flex-1 min-w-0" style={{ borderRadius: "0.75rem" }}>
+              <LinkIcon size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+              <code className="flex-1 min-w-0 text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{shareUrl}</code>
+            </div>
+            <TeButton
+              icon={copied ? Check : Copy}
+              size="sm"
+              onClick={handleCopy}
+              aria-label="Копіювати"
+              active={copied}
+            />
+          </div>
+        )}
       </div>
 
       {/* Songs list */}
@@ -299,16 +286,13 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
                 <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
               </Link>
-              <DifficultyBadge difficulty={song.difficulty} />
-              <button
-                type="button"
-                onClick={() => { trigger("warning"); removeSong(song.id); }}
+              <TeButton
+                icon={X}
+                size="sm"
+                tone="red"
+                onClick={() => removeSong(song.id)}
                 aria-label="Прибрати"
-                className="inline-flex items-center justify-center rounded-full hover:bg-red-500/10"
-                style={{ width: 32, height: 32, color: "var(--text-muted)" }}
-              >
-                <X size={14} strokeWidth={2} />
-              </button>
+              />
             </li>
           ))}
         </ul>
