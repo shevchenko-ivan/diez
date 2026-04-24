@@ -89,8 +89,9 @@ export async function getArtistsWithSavedSongs(): Promise<Set<string>> {
 
   if (error || !data) return new Set();
   const out = new Set<string>();
-  for (const row of data as Array<{ song: { artist: string } | null }>) {
-    const name = (row.song?.artist ?? "").trim().toLowerCase();
+  for (const row of data as unknown as Array<{ song: { artist: string } | { artist: string }[] | null }>) {
+    const song = Array.isArray(row.song) ? row.song[0] : row.song;
+    const name = (song?.artist ?? "").trim().toLowerCase();
     if (name) out.add(name);
   }
   return out;
