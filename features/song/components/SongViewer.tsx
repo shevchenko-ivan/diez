@@ -1056,10 +1056,9 @@ function ScrollFab({
         rowGap: 12,
         paddingRight: "calc(env(safe-area-inset-right, 0px) + 8px)",
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)",
-        opacity: dimmed ? 0 : 1,
-        transform: dimmed ? "translate(40px, 40px)" : "translate(0, 0)",
-        pointerEvents: dimmed ? "none" : "auto",
-        transition: "opacity 900ms ease, transform 900ms ease",
+        opacity: dimmed ? 0.35 : 1,
+        pointerEvents: "auto",
+        transition: "opacity 600ms ease",
         isolation: "isolate",
       }}
     >

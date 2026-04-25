@@ -3,13 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, MicOff, Check } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
-import dynamic from "next/dynamic";
-
-const GuitarHeadstock3D = dynamic(
-  () => import("./GuitarHeadstock3D").then((m) => m.GuitarHeadstock3D),
-  { ssr: false },
-);
-
 /* ── Data ──────────────────────────────────────────────────────────────────── */
 
 const STRINGS = [
@@ -531,70 +524,24 @@ export function GuitarTuner() {
           )}
         </div>
 
-        {/* ── Headstock + string buttons ────────────────────────── */}
+        {/* ── String buttons ─────────────────────────────────────── */}
         <div
           style={{
-            position: "relative",
-            height: "320px",
-            padding: "0 12px 16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            padding: "16px 12px 24px",
           }}
         >
-          {/* 3D model as full background */}
-          <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-            <GuitarHeadstock3D />
-          </div>
-
-          {/* String buttons overlaid on sides */}
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              height: "100%",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "0 4px",
-              pointerEvents: "none",
-            }}
-          >
-            {/* Left: D, A, E */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "16px",
-                pointerEvents: "auto",
-              }}
-            >
-              {[2, 1, 0].map((i) => (
-                <StringCircle
-                  key={i}
-                  index={i}
-                  active={strIdx === i && noteName !== null}
-                  inTune={inTune}
-                />
-              ))}
-            </div>
-
-            {/* Right: G, B, E */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "16px",
-                pointerEvents: "auto",
-              }}
-            >
-              {[3, 4, 5].map((i) => (
-                <StringCircle
-                  key={i}
-                  index={i}
-                  active={strIdx === i && noteName !== null}
-                  inTune={inTune}
-                />
-              ))}
-            </div>
-          </div>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <StringCircle
+              key={i}
+              index={i}
+              active={strIdx === i && noteName !== null}
+              inTune={inTune}
+            />
+          ))}
         </div>
       </div>
 

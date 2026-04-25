@@ -152,10 +152,12 @@ export default async function SongPage({
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5 justify-end">
             {song.variants && song.variants.length > 0 && (
-              <VariantSwitcher
-                variants={song.variants}
-                activeVariantId={song.activeVariantId}
-              />
+              <span className="hidden md:inline-flex">
+                <VariantSwitcher
+                  variants={song.variants}
+                  activeVariantId={song.activeVariantId}
+                />
+              </span>
             )}
             {songId && (
               <span className="hidden lg:inline-flex">
@@ -172,6 +174,16 @@ export default async function SongPage({
             <SongActions slug={song.slug} isSaved={savedSlugs.has(song.slug)} variantId={song.activeVariantId} />
           </div>
         </div>
+
+        {/* Mobile-only variant switcher row (avoids overlap with stacked title) */}
+        {song.variants && song.variants.length > 0 && (
+          <div className="md:hidden flex justify-center mb-4">
+            <VariantSwitcher
+              variants={song.variants}
+              activeVariantId={song.activeVariantId}
+            />
+          </div>
+        )}
 
         {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
         <SongViewer song={song} editHref={songId ? `/admin/songs/edit?id=${songId}&from=song` : undefined} />
