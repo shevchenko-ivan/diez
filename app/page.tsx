@@ -47,7 +47,7 @@ export default async function HomePage() {
   const trending = trendingPage.songs;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 pb-16">

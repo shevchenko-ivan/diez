@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { siteUrl } from "@/lib/utils";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
@@ -28,6 +28,15 @@ export const metadata: Metadata = {
     title: "Diez — Акорди для гітари",
     description: "Дієз — українська платформа гітарних акордів. Пісні з акордами, підбір акордів, тексти пісень.",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // viewport-fit=cover lets the layout extend under the iOS Safari bottom
+  // toolbar so `position: fixed; bottom: 0` lands at the physical screen
+  // bottom and `env(safe-area-inset-bottom)` returns the home-indicator inset.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

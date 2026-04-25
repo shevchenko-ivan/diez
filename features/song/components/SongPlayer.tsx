@@ -58,7 +58,17 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
       videoId: youtubeId,
       width: 1,
       height: 1,
-      playerVars: { autoplay: 0, controls: 0, disablekb: 1, rel: 0, modestbranding: 1 },
+      playerVars: {
+        autoplay: 0,
+        controls: 0,
+        disablekb: 1,
+        rel: 0,
+        modestbranding: 1,
+        // iOS Safari: without playsinline=1 the player forces fullscreen
+        // takeover. We render hidden 1×1 and only want audio.
+        playsinline: 1,
+        origin: typeof window !== "undefined" ? window.location.origin : undefined,
+      },
       events: {
         onReady: () => {
           setDuration(playerRef.current?.getDuration() ?? 0);

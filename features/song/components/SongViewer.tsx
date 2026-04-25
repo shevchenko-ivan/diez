@@ -433,8 +433,11 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               style={{
                 position: "absolute",
                 inset: 0,
-                background: "rgba(0,0,0,0.4)",
+                // Slightly darker so dimming reads even in Firefox <103 where
+                // backdrop-filter is unsupported and the blur is dropped.
+                background: "rgba(0,0,0,0.45)",
                 backdropFilter: "blur(2px)",
+                WebkitBackdropFilter: "blur(2px)",
                 opacity: sheetOpen ? 1 : 0,
                 transition: "opacity 200ms ease",
               }}

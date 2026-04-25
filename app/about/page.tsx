@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-16">
 

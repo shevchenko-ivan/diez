@@ -340,7 +340,16 @@ export function GuitarTuner() {
         video: false,
       });
       streamRef.current = stream;
-      const ctx = new AudioContext();
+      // iOS Safari ≤14 / older Android WebView expose `webkitAudioContext` only.
+      const AC =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AC();
+      // iOS often returns the context in a suspended state — explicitly
+      // resume after the user-gesture mic prompt or no audio data flows.
+      if (ctx.state === "suspended") {
+        try { await ctx.resume(); } catch {}
+      }
       audioCtxRef.current = ctx;
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();

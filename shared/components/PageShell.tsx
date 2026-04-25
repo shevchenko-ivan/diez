@@ -15,7 +15,7 @@ export function PageShell({ children, maxWidth = "6xl", footer = true }: PageShe
 
   return (
     <div
-      className={footer ? "min-h-screen flex flex-col" : "min-h-screen"}
+      className={footer ? "min-h-screen min-h-dvh flex flex-col" : "min-h-screen min-h-dvh"}
       style={{ background: "var(--bg)" }}
     >
       <Navbar />

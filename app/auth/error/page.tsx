@@ -36,7 +36,7 @@ export default function AuthErrorPage({
   searchParams: Promise<{ error: string }>;
 }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center px-6" style={{ background: "var(--bg)" }}>
       <Navbar />
       <div className="w-full max-w-sm te-surface p-10 text-center" style={{ borderRadius: "2rem" }}>
         <div className="text-4xl mb-4">⚠️</div>

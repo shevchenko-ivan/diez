@@ -144,7 +144,7 @@ export default function UIKitPage() {
   const [recording, setRecording] = useState(true);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen min-h-dvh" style={{ background: "var(--bg)" }}>
       {/* Header — physical device top panel */}
       <header
         className="sticky top-0 z-50 flex items-center justify-between gap-6 px-8 py-4"

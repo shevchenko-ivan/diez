@@ -119,7 +119,7 @@ export default async function SongPage({
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Suspense><SavedToast /></Suspense>
       <script
         type="application/ld+json"
