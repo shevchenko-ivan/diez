@@ -1050,12 +1050,10 @@ function ScrollFab({
     <div
       className="lg:hidden fixed z-40 flex flex-col"
       style={{
-        right: 0,
-        bottom: 0,
+        right: "env(safe-area-inset-right, 0px)",
+        bottom: "env(safe-area-inset-bottom, 0px)",
         padding: "8px 8px 6px 8px",
         rowGap: 12,
-        paddingRight: "calc(env(safe-area-inset-right, 0px) + 8px)",
-        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)",
         opacity: dimmed ? 0.35 : 1,
         pointerEvents: "auto",
         transition: "opacity 600ms ease",
