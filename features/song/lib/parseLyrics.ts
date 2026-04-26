@@ -115,6 +115,16 @@ function isChordToken(s: string): boolean {
   return CHORD_TOKEN_RE.test(normalizeChordToken(s));
 }
 
+// Strip a trailing repeat marker like " - 2 рази", " — 3 раза", " x2", "} 2".
+// Used so chord-progression lines such as "|Bbm Bbm|F F| - 2 рази" still
+// classify as chord-only.
+function stripTrailingRepeat(text: string): string {
+  return text
+    .replace(/\s*[}\]]\s*\d+\s*$/u, "")
+    .replace(/\s*[-—]\s*\d+\s*раз[іиаo]?в?\s*\.?\s*$/iu, "")
+    .replace(/\s*[xхX×]\s*\d+\s*$/iu, "");
+}
+
 function isChordOnlyBareLine(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
@@ -140,7 +150,10 @@ function extractChordPositions(line: string): { chord: string; col: number }[] {
       if (isChordToken(m[1])) results.push({ chord: normalizeChordToken(m[1]), col: m.index });
     }
   } else {
-    const re = /\S+/g;
+    // Split on whitespace AND pipe characters. Progressions like
+    // "|Bbm Bbm|F F|" tokenize as Bbm/Bbm/F/F with their original column
+    // positions preserved (the regex tracks index per match).
+    const re = /[^\s|]+/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
       if (isChordToken(m[0])) results.push({ chord: normalizeChordToken(m[0]), col: m.index });
@@ -211,9 +224,11 @@ function parsePlainLine(line: string): ChordLine {
 // (A/B/C/D/E/F/G/H) alone inside prose is almost always just a Cyrillic word
 // letter ("А гуцулку чорноброву", "Е ти ж мене"), not a chord label.
 function hasAnyChordToken(line: string): boolean {
-  const trimmed = line.trim();
+  const trimmed = stripTrailingRepeat(line.trim());
   if (!trimmed) return false;
-  const chordTokens = trimmed.split(/\s+/).filter((t) => isChordToken(t));
+  // Split on whitespace AND pipe characters so progressions written as
+  // "|Bbm Bbm|F F|" tokenize cleanly.
+  const chordTokens = trimmed.split(/[\s|]+/).filter(Boolean).filter((t) => isChordToken(t));
   if (chordTokens.length === 0) return false;
   if (chordTokens.length >= 2) return true;
   return chordTokens.some((t) => t.length >= 2);
@@ -223,7 +238,9 @@ function parseMixedLine(line: string): ChordLine {
   const lyricsCol = leadingMatch ? leadingMatch[1].length : 0;
   const body = line.slice(lyricsCol);
   const chords: { chord: string; col: number }[] = [];
-  const re = /\S+/g;
+  // Match chord tokens delimited by whitespace OR pipe characters, so
+  // "|Bbm Bbm|F F|" yields four chord placements at their original columns.
+  const re = /[^\s|]+/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(body)) !== null) {
     if (isChordToken(m[0])) {
