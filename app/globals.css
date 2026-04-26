@@ -210,10 +210,10 @@
   */
   .scrollfab-bg {
     --bg: var(--surface);
-    --col-w: 64px;       /* play column:  48 + 8 left + 8 right */
-    --row-h: 62px;       /* play row:     48 + 8 top  + 6 bottom */
-    --neck-w: 48px;      /* plus column: col-w − 16 (step = carve radius) */
-    --foot-h: 46px;      /* minus row:   row-h − 16 (step = carve radius) */
+    --col-w: 72px;       /* play column:  48 + 8 left + 16 right */
+    --row-h: 72px;       /* play row:     48 + 8 top  + 16 bottom */
+    --neck-w: 56px;      /* plus column: col-w − 16 (step = carve radius) */
+    --foot-h: 56px;      /* minus row:   row-h − 16 (step = carve radius) */
     --corner: 16px;      /* both outer convex radius AND inner concave carve */
     position: absolute;
     inset: 0;
