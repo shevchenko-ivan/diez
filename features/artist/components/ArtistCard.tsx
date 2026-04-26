@@ -50,9 +50,13 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
         )}
       </HapticLink>
 
-      {/* Name + heart */}
-      <div className="w-full flex items-center justify-center gap-1.5 min-w-0">
-        <HapticLink href={href} className="min-w-0">
+      {/* Name centered under the image; heart floats absolutely on the right
+          so it doesn't affect name centering. */}
+      <div
+        className={`artist-row relative w-full flex items-center justify-center ${saved ? "is-saved" : ""}`}
+        style={{ minHeight: 30 }}
+      >
+        <HapticLink href={href} className="block w-full">
           <p
             className="font-bold text-xs tracking-wide leading-tight uppercase text-center"
             style={{
@@ -68,7 +72,7 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
             {name}
           </p>
         </HapticLink>
-        <div className="shrink-0">
+        <div className="artist-save absolute right-0 top-1/2 -translate-y-1/2">
           <SaveArtistButton
             artistSlug={resolvedSlug}
             artistName={name}
@@ -85,6 +89,21 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
         .artist-avatar { transition: transform 160ms ease; }
         .artist-avatar:hover { transform: scale(1.05); }
         .artist-avatar:active { transform: scale(0.98); }
+        /* Hide heart by default on hover-capable devices; reveal on row hover.
+           Keep it visible whenever the artist is already saved so the user
+           always has a way to un-save without hunting for it. */
+        @media (hover: hover) {
+          .artist-row:not(.is-saved) .artist-save {
+            opacity: 0;
+            transition: opacity 140ms ease;
+            pointer-events: none;
+          }
+          .artist-row:not(.is-saved):hover .artist-save,
+          .artist-row:not(.is-saved):focus-within .artist-save {
+            opacity: 1;
+            pointer-events: auto;
+          }
+        }
       `}</style>
     </div>
   );

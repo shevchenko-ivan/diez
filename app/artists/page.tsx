@@ -50,6 +50,7 @@ export default async function ArtistsPage() {
         name: a.name,
         songsCount: songCount[key] ?? 0,
         avgViews: popularity[key]?.avg ?? 0,
+        totalViews: popularity[key]?.total ?? 0,
         genre: a.genre ?? "",
         color: stringToColor(a.name),
         image: a.photo_url ?? undefined,
@@ -58,10 +59,10 @@ export default async function ArtistsPage() {
       };
     })
     // Float any artist with a saved song to the top; within each group sort by
-    // average source_views desc, tie-break by name for stable order.
+    // total source_views desc (same metric as the home strip), tie-break by name.
     .sort((a, b) => {
       if (a.hasSavedSong !== b.hasSavedSong) return a.hasSavedSong ? -1 : 1;
-      if (b.avgViews !== a.avgViews) return b.avgViews - a.avgViews;
+      if (b.totalViews !== a.totalViews) return b.totalViews - a.totalViews;
       return a.name.localeCompare(b.name, "uk");
     });
 

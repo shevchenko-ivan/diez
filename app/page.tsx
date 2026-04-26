@@ -4,6 +4,7 @@ import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
 import { getArtists } from "@/features/artist/services/artists";
+import { ArtistStrip } from "@/features/artist/components/ArtistStrip";
 import { getSavedSlugs, getMyPlaylists } from "@/features/playlist/actions/playlists";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
 import { SiteFooter } from "@/shared/components/SiteFooter";
@@ -109,73 +110,11 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* ── 3. Виконавці ─────────────────────────────────────────────────── */}
+        {/* ── 3. Виконавці (infinite-scroll horizontal strip) ─────────────── */}
         {artists.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Виконавці" href="/artists" />
-            <div className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none">
-              {artists.map((artist) => {
-                const initial = artist.name.charAt(0).toUpperCase();
-                const hue = artist.name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
-                const placeholderBg = `hsl(${hue}, 40%, 68%)`;
-                return (
-                  <HapticLink
-                    key={artist.slug}
-                    href={`/artists/${artist.slug}`}
-                    className="artist-strip-card flex-shrink-0 flex flex-col items-center"
-                    style={{ width: 132, paddingLeft: 6, paddingRight: 6 }}
-                  >
-                    {/* Photo — round avatar */}
-                    <div
-                      className="artist-strip-avatar te-inset"
-                      style={{
-                        width: 120,
-                        height: 120,
-                        borderRadius: "50%",
-                        overflow: "hidden",
-                        position: "relative",
-                      }}
-                    >
-                      {artist.photo_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={artist.photo_url}
-                          alt={artist.name}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            background: placeholderBg,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <span style={{ fontSize: "2.5rem", fontWeight: 800, color: "rgba(255,255,255,0.85)", letterSpacing: "-0.02em" }}>
-                            {initial}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Name */}
-                    <p
-                      className="truncate uppercase font-bold mt-2 text-center w-full"
-                      style={{ fontSize: "0.72rem", letterSpacing: "0.04em", color: "var(--text)" }}
-                    >
-                      {artist.name}
-                    </p>
-                  </HapticLink>
-                );
-              })}
-            </div>
-            <style>{`
-              .artist-strip-avatar { transition: transform 160ms ease, filter 160ms ease; }
-              .artist-strip-card:hover .artist-strip-avatar { transform: scale(1.05); }
-              .artist-strip-card:active .artist-strip-avatar { transform: scale(0.98); }
-            `}</style>
+            <ArtistStrip initial={artists} initialExhausted={artists.length < 12} />
           </section>
         )}
 
