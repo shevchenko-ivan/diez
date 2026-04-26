@@ -364,9 +364,20 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
           style={{ maxHeight: "calc(100vh - 3rem)" }}
         >
           {beginnerButton}
-          <div className="te-surface p-3 rounded-2xl flex flex-col min-h-0 overflow-hidden">
-            <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
-              <p className="text-[9px] font-bold tracking-widest uppercase opacity-50">Акорди</p>
+
+          {/* Transpose */}
+          <ControlBlock label="Транспонування">
+            <div className="flex items-center justify-between">
+              <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><Minus size={16} strokeWidth={2} /></AdjusterButton>
+              <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
+                {transpose > 0 ? `+${transpose}` : transpose}
+              </span>
+              <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><Plus size={16} strokeWidth={2} /></AdjusterButton>
+            </div>
+          </ControlBlock>
+
+          <div className="te-surface px-3 pt-4 pb-3 rounded-2xl flex flex-col min-h-0 overflow-hidden">
+            <div className="mb-3 flex-shrink-0">
               <InstrumentSwitch />
             </div>
             <div
@@ -382,17 +393,6 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} noBarreMode={noBarreMode} />
             </div>
           </div>
-
-          {/* Transpose */}
-          <ControlBlock label="Транспонування">
-            <div className="flex items-center justify-between">
-              <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><ChevronDown size={16} strokeWidth={2} /></AdjusterButton>
-              <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
-                {transpose > 0 ? `+${transpose}` : transpose}
-              </span>
-              <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><ChevronUp size={16} strokeWidth={2} /></AdjusterButton>
-            </div>
-          </ControlBlock>
 
         </aside>
 
@@ -523,23 +523,21 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
 
               {/* Chords */}
               <div>
-                {/* Rhythm / metronome — sits above everything */}
-                {song.tempo && song.strumming && song.strumming.length > 0 && (
-                  <div
-                    className="mb-3 px-3 py-2"
-                    style={{
-                      borderRadius: "0.75rem",
-                      border: "1px solid var(--border, rgba(0,0,0,0.06))",
-                    }}
-                  >
-                    <RhythmPlayer
-                      strumming={song.strumming}
-                      tempo={song.tempo}
-                      timeSignature={song.timeSignature ?? "4/4"}
-                      bare
-                    />
-                  </div>
-                )}
+                {/* Rhythm / metronome — sits above everything; fallback на вісімку */}
+                <div
+                  className="mb-3 px-3 py-2"
+                  style={{
+                    borderRadius: "0.75rem",
+                    border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                  }}
+                >
+                  <RhythmPlayer
+                    strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
+                    tempo={song.tempo ?? 100}
+                    timeSignature={song.timeSignature ?? "4/4"}
+                    bare
+                  />
+                </div>
                 {/* Beginner mode */}
                 <button
                   type="button"
@@ -577,7 +575,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                   </span>
                   <div className="flex items-center gap-2">
                     <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон">
-                      <ChevronDown size={16} strokeWidth={2} />
+                      <Minus size={16} strokeWidth={2} />
                     </AdjusterButton>
                     <span
                       className="font-mono font-bold text-sm"
@@ -586,7 +584,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                       {transpose > 0 ? `+${transpose}` : transpose}
                     </span>
                     <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон">
-                      <ChevronUp size={16} strokeWidth={2} />
+                      <Plus size={16} strokeWidth={2} />
                     </AdjusterButton>
                   </div>
                 </div>
@@ -672,9 +670,9 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               абвгдеєжзи
             </span>
             {song.sections.map((section: SongSection, sIdx: number) => (
-              <div key={sIdx} className={sIdx > 0 ? "mt-8" : ""}>
+              <div key={sIdx} className={sIdx > 0 ? "mt-5" : ""}>
                 {section.label && (
-                  <div className="mb-4 flex items-center gap-3">
+                  <div className="mb-2 flex items-center gap-3">
                     <span
                       className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap"
                       style={{ color: "var(--text-muted)", opacity: 0.75 }}
@@ -948,40 +946,58 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               <TunerWidget onClose={() => setExpandedTool(null)} />
             )}
 
-            {/* Auto scroll */}
-            <ControlBlock label="Прокрутка">
-              <div className="flex items-center justify-between mb-3">
-                <AdjusterButton onClick={() => handleScrollSpeed(-1)} aria-label="Повільніше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
-                <span
-                  className="font-mono font-bold text-sm"
-                  style={{ color: "var(--text)" }}
+            {/* Auto scroll — compact: +/- only when active */}
+            <ControlBlock label="Автоскрол">
+              {scrollSpeed > 0 ? (
+                <div className="flex items-center justify-between gap-2">
+                  <AdjusterButton onClick={() => handleScrollSpeed(-1)} aria-label="Повільніше"><Minus size={14} strokeWidth={2.5} /></AdjusterButton>
+                  <TeButton
+                    shape="pill"
+                    onClick={handleScrollToggle}
+                    title="Зупинити прокрутку — клавіша Пробіл"
+                    aria-label="Зупинити прокрутку — клавіша Пробіл"
+                    className="flex-1 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5"
+                    style={{ borderRadius: "0.5rem", color: "var(--orange)" }}
+                  >
+                    <Pause size={12} strokeWidth={2.2} fill="currentColor" />
+                    <span className="font-mono">{scrollSpeed}</span>
+                    <span style={{ opacity: 0.7 }}>(Пробіл)</span>
+                  </TeButton>
+                  <AdjusterButton onClick={() => handleScrollSpeed(1)} aria-label="Швидше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
+                </div>
+              ) : (
+                <TeButton
+                  shape="pill"
+                  onClick={handleScrollToggle}
+                  title="Почати прокрутку — клавіша Пробіл"
+                  aria-label="Почати прокрутку — клавіша Пробіл"
+                  className="w-full py-1.5 text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{ borderRadius: "0.5rem", color: "var(--text-muted)" }}
                 >
-                  {scrollSpeed}
-                </span>
-                <AdjusterButton onClick={() => handleScrollSpeed(1)} aria-label="Швидше"><Plus size={14} strokeWidth={2.5} /></AdjusterButton>
-              </div>
-              <TeButton
-                shape="pill"
-                onClick={handleScrollToggle}
-                title={scrollSpeed > 0 ? "Зупинити прокрутку — клавіша Пробіл" : "Почати прокрутку — клавіша Пробіл"}
-                className="w-full py-1.5 text-xs font-bold"
-                style={{
-                  borderRadius: "0.5rem",
-                  color: scrollSpeed > 0 ? "var(--orange)" : "var(--text-muted)",
-                }}
-              >
-                {scrollSpeed > 0 ? "■ Стоп (Пробіл)" : "▶ Старт (Пробіл)"}
-              </TeButton>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <polygon points="3 6 21 6 12 20" />
+                  </svg>
+                  Старт (Пробіл)
+                </TeButton>
+              )}
             </ControlBlock>
 
-            {/* Rhythm / metronome — показуємо тільки якщо темп і патерн вказані вручну */}
-            {song.tempo && song.strumming && song.strumming.length > 0 && (
-              <RhythmPlayer
-                strumming={song.strumming}
-                tempo={song.tempo}
-                timeSignature={song.timeSignature ?? "4/4"}
-              />
-            )}
+            {/* Rhythm / metronome — fallback на «вісімку» при відсутності патерну */}
+            <RhythmPlayer
+              strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
+              tempo={song.tempo ?? 100}
+              timeSignature={song.timeSignature ?? "4/4"}
+            />
 
             {/* Audio player */}
             {song.youtubeId && (
