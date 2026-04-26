@@ -1054,7 +1054,7 @@ function ScrollFab({
       className="lg:hidden fixed z-40 flex flex-col"
       style={{
         right: "env(safe-area-inset-right, 0px)",
-        bottom: "env(safe-area-inset-bottom, 0px)",
+        bottom: 0,
         padding: "8px 8px 6px 8px",
         rowGap: 12,
         opacity: dimmed ? 0.35 : 1,
