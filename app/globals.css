@@ -555,13 +555,18 @@
   .te-icon-btn::before { z-index: -1; }
   .te-icon-btn:active::before { z-index: -1; }
 
-  .te-icon-btn:hover {
-    transform: translateY(-0.5px);
-    box-shadow:
-       0 1px 1px rgba(0,0,0,0.06),
-       0 3px 5px rgba(0,0,0,0.08),
-       0 6px 10px rgba(0,0,0,0.06);
-    transition: box-shadow 140ms ease, transform 140ms ease;
+  /* Scope :hover to actual pointer devices — iOS Safari otherwise leaves
+     the hover styles applied after a tap until the user taps elsewhere,
+     which makes the button look stuck. */
+  @media (hover: hover) {
+    .te-icon-btn:hover {
+      transform: translateY(-0.5px);
+      box-shadow:
+         0 1px 1px rgba(0,0,0,0.06),
+         0 3px 5px rgba(0,0,0,0.08),
+         0 6px 10px rgba(0,0,0,0.06);
+      transition: box-shadow 140ms ease, transform 140ms ease;
+    }
   }
 
   .te-icon-btn:active {
@@ -1063,14 +1068,16 @@ html[data-theme="dark"] {
       inset 0 1px 1.5px rgba(0,0,0,0.40),
       inset 0 -1px 1px rgba(255,255,255,0.04);
   }
-  .te-icon-btn:hover {
-    box-shadow:
-       0 2px 2px rgba(0,0,0,0.55),
-       0 4px 7px rgba(0,0,0,0.45),
-      -1px -1px 2px rgba(255,255,255,0.05),
-      inset 0 0 0 1px rgba(255,255,255,0.05),
-      inset 0 1px 0 rgba(255,255,255,0.06),
-       0 0 0 1px var(--btn-edge, rgba(255,255,255,0.06));
+  @media (hover: hover) {
+    .te-icon-btn:hover {
+      box-shadow:
+         0 2px 2px rgba(0,0,0,0.55),
+         0 4px 7px rgba(0,0,0,0.45),
+        -1px -1px 2px rgba(255,255,255,0.05),
+        inset 0 0 0 1px rgba(255,255,255,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.06),
+         0 0 0 1px var(--btn-edge, rgba(255,255,255,0.06));
+    }
   }
   .te-icon-btn:active {
     box-shadow:

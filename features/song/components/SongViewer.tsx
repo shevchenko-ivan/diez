@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Music, Gauge, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Play, Pause, Pencil, X } from "lucide-react";
+import { Music, Gauge, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Pause, Pencil, X } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
@@ -1127,7 +1127,21 @@ function ScrollFab({
             </span>
           </>
         ) : (
-          <Play size={16} strokeWidth={2.2} fill="currentColor" style={{ marginLeft: 1 }} />
+          // Play triangle rotated to point down — reads as "start, going down"
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            style={{ marginTop: 1 }}
+          >
+            <polygon points="3 6 21 6 12 20" />
+          </svg>
         )}
       </button>
       </div>
