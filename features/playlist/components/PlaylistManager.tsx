@@ -193,7 +193,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
             <p className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
               {songs.length} {pluralSongs(songs.length)}
               {playlist.isDefault && (
-                <span className="ml-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--orange)" }}>
+                <span className="ml-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--orange-text)" }}>
                   Дефолт
                 </span>
               )}
@@ -244,7 +244,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             У цьому списку поки немає пісень.
           </p>
-          <Link href="/songs" className="inline-block mt-3 font-bold underline" style={{ color: "var(--orange)" }}>
+          <Link href="/songs" className="inline-block mt-3 font-bold underline" style={{ color: "var(--orange-text)" }}>
             Знайдіть пісню →
           </Link>
         </div>

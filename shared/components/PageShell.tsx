@@ -19,7 +19,7 @@ export function PageShell({ children, maxWidth = "6xl", footer = true }: PageShe
       style={{ background: "var(--bg)" }}
     >
       <Navbar />
-      <main className={`${footer ? "flex-1" : "pb-20"} ${maxWidthClass} mx-auto w-full px-4 md:px-6 pt-3 md:pt-8 pb-8`}>
+      <main id="main-content" tabIndex={-1} className={`${footer ? "flex-1" : "pb-20"} ${maxWidthClass} mx-auto w-full px-4 md:px-6 pt-3 md:pt-8 pb-8`}>
         {children}
       </main>
       {footer && <SiteFooter />}

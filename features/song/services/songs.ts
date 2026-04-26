@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type SongVariant, type Difficulty, type Strum } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
+import { getTopicBySlug, isNoBarreSong, type Topic } from "../data/topics";
 
 // Public read-only client — no auth needed for published song reads.
 function getClient() {
@@ -119,6 +120,8 @@ export interface SongsPageArgs {
   sortBy?: SortBy;
   offset?: number;
   limit?: number;
+  /** Topic slug from features/song/data/topics.ts; filters to that topic's songs. */
+  topic?: string;
 }
 
 // Returns slug+artist list for sitemap — tiny payload, easily cached.
@@ -216,14 +219,53 @@ async function resolveArtistNamesByAlias(q: string): Promise<string[]> {
   return out;
 }
 
+// Slug list for songs whose chord array contains no barre/sharp chords.
+// Computed once and cached — used by the "beginner" (no-barre) topic filter
+// so the SQL side can stay a simple `slug IN (...)` query.
+const getNoBarreSlugs = unstable_cache(
+  async (): Promise<string[]> => {
+    if (!hasEnvVars) return [];
+    const rows = await fetchAllPublishedSongs<{ slug: string; chords: string[] | null }>(
+      "slug, chords",
+    );
+    return rows.filter((r) => isNoBarreSong(r.chords)).map((r) => r.slug);
+  },
+  ["no-barre-slugs"],
+  { revalidate: 1800, tags: ["songs"] },
+);
+
+// Resolve a Topic into a `slug IN (...)` set so the page query can paginate
+// and sort like any other listing. Returns null when the topic has no
+// matching songs, which the caller renders as an empty result.
+async function resolveTopicSlugs(topic: Topic): Promise<string[] | null> {
+  if (topic.match.kind === "slugs") return topic.match.slugs;
+  if (topic.match.kind === "no-barre") return await getNoBarreSlugs();
+  if (topic.match.kind === "artists") {
+    const { data } = await getClient()
+      .from("songs")
+      .select("slug")
+      .eq("status", "published")
+      .in("artist", topic.match.artists);
+    return ((data ?? []) as { slug: string }[]).map((r) => r.slug);
+  }
+  return null;
+}
+
 export const getSongsPage = unstable_cache(
   async (args: SongsPageArgs = {}): Promise<{ songs: Song[]; total: number }> => {
     if (!hasEnvVars) return { songs: [], total: 0 };
-    const { q = "", difficulty, sortBy = "views", offset = 0, limit = 50 } = args;
+    const { q = "", difficulty, sortBy = "views", offset = 0, limit = 50, topic } = args;
     let qry = getClient()
       .from("songs")
       .select(SONG_LIST_COLUMNS, { count: "exact" })
       .eq("status", "published");
+    if (topic) {
+      const t = getTopicBySlug(topic);
+      if (!t) return { songs: [], total: 0 };
+      const slugs = await resolveTopicSlugs(t);
+      if (!slugs || slugs.length === 0) return { songs: [], total: 0 };
+      qry = qry.in("slug", slugs);
+    }
     if (difficulty) qry = qry.eq("difficulty", difficulty);
     if (q) {
       // Resolve aliases: if the query matches an artist's alias (e.g. "DZIDZIO"),

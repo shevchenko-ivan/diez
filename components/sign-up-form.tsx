@@ -67,6 +67,10 @@ export function SignUpForm() {
               type="email"
               placeholder="you@example.com"
               required
+              aria-required="true"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "signup-error" : undefined}
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-transparent outline-none text-sm font-medium"
@@ -81,6 +85,10 @@ export function SignUpForm() {
               id="password"
               type="password"
               required
+              aria-required="true"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "signup-error" : undefined}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-transparent outline-none text-sm font-medium"
@@ -95,6 +103,10 @@ export function SignUpForm() {
               id="repeat-password"
               type="password"
               required
+              aria-required="true"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "signup-error" : undefined}
+              autoComplete="new-password"
               value={repeatPassword}
               onChange={(e) => setRepeatPassword(e.target.value)}
               className="w-full bg-transparent outline-none text-sm font-medium"
@@ -102,7 +114,7 @@ export function SignUpForm() {
             />
           </div>
         </div>
-        {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
+        {error && <p id="signup-error" role="alert" className="text-sm text-red-500 ml-1">{error}</p>}
         <TeButton
           shape="pill"
           type="submit"

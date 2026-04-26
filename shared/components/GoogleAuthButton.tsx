@@ -38,7 +38,7 @@ export function GoogleAuthButton({ label = "Продовжити з Google" }: {
         <GoogleIcon />
         {isLoading ? "ЗАВАНТАЖЕННЯ..." : label.toUpperCase()}
       </TeButton>
-      {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-500 ml-1">{error}</p>}
     </div>
   );
 }

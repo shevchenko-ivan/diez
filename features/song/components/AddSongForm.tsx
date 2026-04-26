@@ -54,13 +54,15 @@ export function AddSongForm({ artists = [] }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Title */}
         <div className="space-y-2">
-          <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
+          <label htmlFor="add-song-title" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
             Назва пісні *
           </label>
           <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
             <input
+              id="add-song-title"
               name="title"
               required
+              aria-required="true"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Напр. Без бою"
@@ -70,14 +72,14 @@ export function AddSongForm({ artists = [] }: Props) {
           </div>
           {slugPreview && (
             <p className="ml-1 text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
-              slug: <span style={{ color: "var(--orange)" }}>{slugPreview}</span>
+              slug: <span style={{ color: "var(--orange-text)" }}>{slugPreview}</span>
             </p>
           )}
         </div>
 
         {/* Artist autocomplete */}
         <div className="space-y-2">
-          <label className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
+          <label htmlFor="add-song-artist" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
             Виконавець *
           </label>
           <div className="relative">
@@ -91,12 +93,15 @@ export function AddSongForm({ artists = [] }: Props) {
                 />
               )}
               <input
+                id="add-song-artist"
                 ref={inputRef}
                 value={input}
                 onChange={(e) => handleInput(e.target.value)}
                 onFocus={() => input.trim() && setShowSuggestions(true)}
                 onBlur={handleBlur}
                 placeholder="Напр. Океан Ельзи"
+                required
+                aria-required="true"
                 className="w-full bg-transparent outline-none text-sm font-medium"
                 style={{ color: "var(--text)" }}
                 autoComplete="off"
@@ -234,6 +239,7 @@ export function AddSongForm({ artists = [] }: Props) {
 
       <div className="space-y-2">
         <label
+          htmlFor="add-song-lyrics"
           className="text-xs font-bold tracking-widest uppercase ml-1 flex items-baseline justify-between"
           style={{ color: "var(--text-muted)" }}
         >
@@ -244,8 +250,10 @@ export function AddSongForm({ artists = [] }: Props) {
         </label>
         <div className="te-inset p-4" style={{ borderRadius: "1.5rem" }}>
           <textarea
+            id="add-song-lyrics"
             name="lyrics_with_chords"
             required
+            aria-required="true"
             rows={12}
             placeholder={`Куплет 1:\n[Am]Вставай, мила [C]моя, вставай\n[G]Більшого вимагай\n\nПриспів:\n[F]Ти моя, [C]моя земля\n[G]Ти моє тепле [Am]вогнище`}
             className="w-full bg-transparent outline-none text-sm font-medium min-h-[200px] resize-y font-mono leading-relaxed"

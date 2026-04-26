@@ -79,6 +79,11 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
+          {/* Skip link — first focusable element on every page (WCAG 2.4.1).
+              Visually hidden until focused, then anchored to the top-left. */}
+          <a href="#main-content" className="skip-to-content">
+            Перейти до основного вмісту
+          </a>
           {children}
           <Toaster />
         </ThemeProvider>

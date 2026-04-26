@@ -89,7 +89,7 @@ export function SongsInfiniteList({
         })}
       </ul>
       {hasMore && (
-        <div ref={sentinelRef} className="py-8 text-center text-xs" style={{ color: "var(--text-muted)", opacity: 0.6 }}>
+        <div ref={sentinelRef} className="py-8 text-center text-xs" style={{ color: "var(--text-muted)" }}>
           {isPending ? "Завантаження…" : ""}
         </div>
       )}

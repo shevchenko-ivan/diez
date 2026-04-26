@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-16">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-2xl mx-auto w-full px-6 py-16">
 
         <h1
           className="font-bold mb-2"
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
             <p>
               Ви маєте право на доступ, виправлення та видалення ваших персональних даних.
               Для запитів звертайтеся:{" "}
-              <a href="mailto:hello@diez.ua" style={{ color: "var(--orange)" }}>hello@diez.ua</a>.
+              <a href="mailto:hello@diez.ua" style={{ color: "var(--orange-text)" }}>hello@diez.ua</a>.
             </p>
           </section>
 

@@ -38,7 +38,7 @@ async function ListsContent() {
           message="У вас ще немає списків."
           variant="inset"
           action={
-            <Link href="/songs" className="font-bold underline" style={{ color: "var(--orange)" }}>
+            <Link href="/songs" className="font-bold underline" style={{ color: "var(--orange-text)" }}>
               Знайдіть пісню →
             </Link>
           }

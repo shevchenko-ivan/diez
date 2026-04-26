@@ -12,7 +12,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-16">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-2xl mx-auto w-full px-6 py-16">
 
         <h1
           className="font-bold mb-6"
@@ -33,11 +33,11 @@ export default function AboutPage() {
           <p>
             Платформа знаходиться в активному розвитку. Якщо ви хочете додати пісню або
             виправити акорди — скористайтеся формою{" "}
-            <a href="/add" style={{ color: "var(--orange)" }}>«Додати пісню»</a>.
+            <a href="/add" style={{ color: "var(--orange-text)" }}>«Додати пісню»</a>.
           </p>
           <p>
             Питання та пропозиції:{" "}
-            <a href="mailto:hello@diez.ua" style={{ color: "var(--orange)" }}>
+            <a href="mailto:hello@diez.ua" style={{ color: "var(--orange-text)" }}>
               hello@diez.ua
             </a>
           </p>

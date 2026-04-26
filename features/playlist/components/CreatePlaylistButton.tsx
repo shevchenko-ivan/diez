@@ -75,9 +75,13 @@ interface ModalProps {
 function CreateModal(props: ModalProps) {
   return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-playlist-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={props.onCancel}
+      onKeyDown={(e) => { if (e.key === "Escape") props.onCancel(); }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -91,9 +95,9 @@ function CreateModal(props: ModalProps) {
           className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full"
           style={{ width: 28, height: 28, color: "var(--text-muted)", background: "transparent" }}
         >
-          <X size={16} strokeWidth={2} />
+          <X size={16} strokeWidth={2} aria-hidden="true" />
         </button>
-        <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>
+        <h2 id="create-playlist-title" className="text-base font-bold" style={{ color: "var(--text)" }}>
           Новий список
         </h2>
         <div>
@@ -107,18 +111,23 @@ function CreateModal(props: ModalProps) {
             ariaLabel="Видимість списку"
           />
         </div>
+        <label htmlFor="create-playlist-name" className="sr-only">Назва списку</label>
         <input
+          id="create-playlist-name"
           type="text"
           placeholder="Назва"
           value={props.name}
           onChange={(e) => props.setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && props.onCreate()}
+          aria-required="true"
+          aria-invalid={Boolean(props.error)}
+          aria-describedby={props.error ? "create-playlist-error" : undefined}
           autoFocus
           className="te-inset px-4 py-3 rounded-xl bg-transparent outline-none text-sm font-medium"
           style={{ color: "var(--text)" }}
         />
         {props.error && (
-          <p className="text-xs" style={{ color: "#e11d48" }}>{props.error}</p>
+          <p id="create-playlist-error" role="alert" className="text-xs" style={{ color: "#e11d48" }}>{props.error}</p>
         )}
         <TeButton
           shape="pill"

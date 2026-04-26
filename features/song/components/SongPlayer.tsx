@@ -337,11 +337,9 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
         >
           {formatTime(current)}
         </span>
-        <p className="truncate font-bold" style={{ fontSize: "0.72rem", color: "var(--text)" }}>
-          {title}
-        </p>
-        <p className="truncate" style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
-          {artist}
+        <p className="truncate" style={{ fontSize: "0.72rem", color: "var(--text)" }}>
+          <span className="font-bold">{title}</span>
+          <span style={{ color: "var(--text-muted)" }}> — {artist}</span>
         </p>
       </div>
 

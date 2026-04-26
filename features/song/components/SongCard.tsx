@@ -48,7 +48,7 @@ export function SongCard({ ...props }: SongCardProps) {
           <Image
             src={props.coverImage}
             className="object-cover"
-            alt={props.title}
+            alt=""
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
           />
@@ -59,12 +59,6 @@ export function SongCard({ ...props }: SongCardProps) {
               background: `linear-gradient(145deg, ${props.coverColor || '#C8D5E8'}CC, ${props.coverColor || '#C8D5E8'}66)`,
             }}
           />
-        )}
-        
-
-        {/* Save to favorites (вибране) */}
-        {props.slug && (
-          <SaveHeartButton slug={props.slug} initialSaved={props.isSaved} />
         )}
 
         {/* Chords Preview */}
@@ -78,13 +72,24 @@ export function SongCard({ ...props }: SongCardProps) {
       </div>
 
       {/* --- META ZONE --- */}
-      <div className="flex flex-col px-2 pt-2.5 pb-1 gap-1.5 flex-1">
-        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1" style={{ color: "var(--text)" }}>
+      <div className="px-2 pt-3.5 pb-1 flex-1 relative">
+        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1 pr-10" style={{ color: "var(--text)" }}>
           {props.title}
         </h3>
-        <p className="font-medium text-[11px] line-clamp-1" style={{ color: "var(--text-muted)", opacity: 0.8 }}>
+        <p className="text-[13px] tracking-tight leading-tight line-clamp-1 pr-10" style={{ color: "var(--text-muted)" }}>
           {props.artist}
         </p>
+        {props.slug && (
+          <div
+            className={
+              "absolute top-2 right-1 transition-opacity duration-150 focus-within:opacity-100 [@media(hover:none)]:opacity-100 " +
+              (props.isSaved ? "opacity-100" : "opacity-0 group-hover:opacity-100")
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SaveHeartButton slug={props.slug} initialSaved={props.isSaved} variant="bare" size={16} />
+          </div>
+        )}
       </div>
     </HapticLink>
   );
@@ -199,7 +204,7 @@ export function HeroSearch() {
           className="te-inset flex-1 flex items-center gap-2 px-3 py-3"
           style={{ borderRadius: "999px" }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
@@ -261,7 +266,7 @@ export function HeroSearch() {
           )}
           {artists.length > 0 && (
             <div className="py-1">
-              <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)", opacity: 0.6 }}>
+              <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                 Виконавці
               </div>
               {artists.map((a, i) => {
@@ -302,7 +307,7 @@ export function HeroSearch() {
           )}
           {songs.length > 0 && (
             <div className="py-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-              <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)", opacity: 0.6 }}>
+              <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                 Пісні
               </div>
               {songs.map((s, i) => {

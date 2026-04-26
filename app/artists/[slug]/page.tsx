@@ -15,7 +15,6 @@ import { BackButton } from "@/shared/components/BackButton";
 import { siteUrl, hasEnvVars } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SortSelect } from "@/app/songs/SortSelect";
 export async function generateMetadata({
   params,
 }: {
@@ -142,7 +141,7 @@ export default async function ArtistPage({
                 {artistName}
               </h1>
               {artist?.genre && (
-                <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--orange)" }}>
+                <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--orange-text)" }}>
                   {artist.genre}
                 </p>
               )}
@@ -163,12 +162,10 @@ export default async function ArtistPage({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-          <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Пісні — {artistName}</h2>
-          {songs.length >= 5 && <SortSelect value={sort} basePath={`/artists/${slug}`} />}
-        </div>
         <ArtistSongsList
           showSearch={songs.length >= 5}
+          sort={songs.length >= 5 ? sort : undefined}
+          sortBasePath={`/artists/${slug}`}
           songs={songs.map(s => ({
             slug: s.slug,
             title: s.title,

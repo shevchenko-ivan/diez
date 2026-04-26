@@ -58,11 +58,15 @@
 
   --text:         #3E3A32;
   --text-mid:     #65605A;
-  --text-muted:   #94907F;
+  /* WCAG AA: 4.76:1 on --bg, 5.19:1 on --surface. Was #94907F (2.4:1, fail). */
+  --text-muted:   #645F58;
   --border:       rgba(0, 0, 0, 0.08);
 
   --accent:       #FF8800; /* New vibrant orange */
   --orange:       #FF8800;
+  /* AA-compliant orange for body text on light bg (4.7:1 on --bg, 5.0:1 on --surface).
+     Use for inline links/labels in content; keep --orange for icons, glows, borders. */
+  --orange-text:  #9A4A00;
   --navy:         #1A1F3A;
   --tan:          #D1B894;
   --red:          #FF4444;
@@ -504,6 +508,14 @@
     outline: none;
     font-size: 0.875rem;
     font-weight: 500;
+  }
+  /* Visible keyboard-focus ring for inputs that opt out of the default
+     UA outline. Pointer focus stays clean; focus-visible kicks in only
+     for keyboard navigation. */
+  .field-input:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   /*
@@ -1151,6 +1163,8 @@ html[data-theme="dark"] {
   --text-mid:     #A09A94;
   --text-muted:   #8E8A92;
   --border:       rgba(255, 255, 255, 0.1);
+  /* Bright orange reads fine on dark bg (~5.5:1) — keep brand vibrant. */
+  --orange-text:  #FF8800;
 
   --sh-socket:
     inset  2px  2px  6px rgba(0,0,0,0.70),
@@ -1298,7 +1312,8 @@ html[data-theme="dark"] {
 
   --text:         #3E3A32;
   --text-mid:     #65605A;
-  --text-muted:   #94907F;
+  /* WCAG AA: 4.76:1 on --bg, 5.19:1 on --surface. Was #94907F (2.4:1, fail). */
+  --text-muted:   #645F58;
   --border:       rgba(0, 0, 0, 0.08);
 
   --sh-socket:
@@ -1591,9 +1606,11 @@ html[data-theme="dark"] {
   }
 }
 
+/* WCAG 2.2.2: limit pulse to 3 alternations (~2.7s) so it doesn't run forever
+   while the element holds focus. Final keyframe still reads as a focused state. */
 .te-pill-btn:focus-visible:not(:active):not(:disabled),
 .te-icon-btn:focus-visible:not(:active):not(:disabled) {
-  animation: te-btn-focus 0.9s alternate infinite;
+  animation: te-btn-focus 0.9s alternate 3;
   outline: none;
 }
 
@@ -1670,10 +1687,62 @@ html[data-theme="dark"] {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .te-pill-btn:focus-visible:not(:active):not(:disabled),
   :root:not([data-theme="light"]) .te-icon-btn:focus-visible:not(:active):not(:disabled) {
-    animation: te-btn-focus-dark 0.9s alternate infinite;
+    animation: te-btn-focus-dark 0.9s alternate 3;
   }
 }
 [data-theme="dark"] .te-pill-btn:focus-visible:not(:active):not(:disabled),
 [data-theme="dark"] .te-icon-btn:focus-visible:not(:active):not(:disabled) {
-  animation: te-btn-focus-dark 0.9s alternate infinite;
+  animation: te-btn-focus-dark 0.9s alternate 3;
+}
+
+/* ── Playlist fan-card hover ────────────────────────────────────────────────
+   Fanned polaroid covers spread further on hover with a fast-start /
+   slow-end easing (ease-out-quart). Per-card rest/hover transforms are
+   passed through --fan-rest / --fan-hover CSS variables.                    */
+.playlist-fan-cover {
+  transform: var(--fan-rest);
+  transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .playlist-fan-cover {
+  transform: var(--fan-hover);
+}
+
+/* ── Skip-to-content link ────────────────────────────────────────────────────
+   Hidden off-screen until focused via keyboard. WCAG 2.4.1 (Bypass Blocks). */
+.skip-to-content {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.625rem 1rem;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform 150ms ease;
+}
+.skip-to-content:focus,
+.skip-to-content:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* ── prefers-reduced-motion ──────────────────────────────────────────────────
+   Honour OS-level "Reduce motion" by disabling decorative animations and
+   transitions. Functional state changes still happen — they just snap into
+   place instead of easing. WCAG 2.1 SC 2.3.3.                              */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

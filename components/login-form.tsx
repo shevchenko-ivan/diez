@@ -54,6 +54,10 @@ export function LoginForm() {
               type="email"
               placeholder="you@example.com"
               required
+              aria-required="true"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-error" : undefined}
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-transparent outline-none text-sm font-medium"
@@ -77,6 +81,10 @@ export function LoginForm() {
               id="password"
               type="password"
               required
+              aria-required="true"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-error" : undefined}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-transparent outline-none text-sm font-medium"
@@ -84,7 +92,7 @@ export function LoginForm() {
             />
           </div>
         </div>
-        {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
+        {error && <p id="login-error" role="alert" className="text-sm text-red-500 ml-1">{error}</p>}
         <TeButton
           shape="pill"
           type="submit"

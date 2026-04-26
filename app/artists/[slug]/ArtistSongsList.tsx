@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Search, X, Volume2 } from "lucide-react";
 import { SaveHeartButton } from "@/features/song/components/SaveHeartButton";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { SortSelect } from "@/app/songs/SortSelect";
 
 interface Song {
   slug: string;
@@ -22,13 +23,16 @@ interface Props {
   savedSlugs: string[];
   /** Hide the search input for short lists (< 5 songs). */
   showSearch?: boolean;
+  /** Current sort key; when defined, renders SortSelect alongside the search input. */
+  sort?: string;
+  sortBasePath?: string;
 }
 
 function norm(s: string) {
   return s.toLowerCase().replace(/[`'’ʼ"«»„"]/g, "").trim();
 }
 
-export function ArtistSongsList({ songs, savedSlugs, showSearch = true }: Props) {
+export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, sortBasePath }: Props) {
   const [q, setQ] = useState("");
   const saved = useMemo(() => new Set(savedSlugs), [savedSlugs]);
 
@@ -41,28 +45,33 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true }: Props)
   return (
     <>
       {showSearch && (
-      <div className="relative mb-4">
-        <Search
-          size={16}
-          className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none"
-        />
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Пошук пісні…"
-          className="te-inset w-full pl-10 pr-10 py-3 text-sm rounded-xl outline-none"
-          style={{ color: "var(--text)" }}
-        />
-        {q && (
-          <button
-            type="button"
-            onClick={() => setQ("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-50 hover:opacity-100"
-            aria-label="Очистити"
-          >
-            <X size={16} />
-          </button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none"
+          />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Пошук пісні…"
+            className="te-inset w-full pl-10 pr-10 py-3 text-sm rounded-xl outline-none"
+            style={{ color: "var(--text)" }}
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-50 hover:opacity-100"
+              aria-label="Очистити"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        {sort !== undefined && sortBasePath && (
+          <SortSelect value={sort} basePath={sortBasePath} />
         )}
       </div>
       )}

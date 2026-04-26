@@ -3,6 +3,7 @@ import { Navbar } from "@/shared/components/Navbar";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
 import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
+import { TOPICS } from "@/features/song/data/topics";
 import { getArtists } from "@/features/artist/services/artists";
 import { ArtistStrip } from "@/features/artist/components/ArtistStrip";
 import { getSavedSlugs, getMyPlaylists } from "@/features/playlist/actions/playlists";
@@ -25,17 +26,6 @@ export const metadata: Metadata = {
   },
 };
 
-const TOPICS = [
-  { slug: "beginner",    icon: "🎸", label: "Пісні без баре",       description: "Для початківців" },
-  { slug: "campfire",    icon: "🔥", label: "Біля вогнища",       description: "Класика для посиденьок" },
-  { slug: "ukrainian",   icon: "🇺🇦", label: "Українська класика",  description: "Пісні, які знає кожен" },
-  { slug: "screen",      icon: "🎬", label: "З кіно та серіалів",  description: "Саундтреки, що запамʼяталися" },
-  { slug: "games",       icon: "🎮", label: "З відеоігор",          description: "Stalker, Відьмак, інші" },
-  { slug: "rock",        icon: "🤘", label: "Рок-хіти",            description: "Найкращі рок-пісні" },
-  { slug: "romantic",    icon: "💕", label: "Романтичні",           description: "Для настрою" },
-  { slug: "summer",      icon: "🌻", label: "Літні вайби",          description: "Для сонячних днів" },
-];
-
 export default async function HomePage() {
   const [trendingPage, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
     getSongsPage({ sortBy: "source_views", limit: 4 }),
@@ -51,7 +41,7 @@ export default async function HomePage() {
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 pb-16">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-6 pb-16">
 
         {/* ── 1. Hero ──────────────────────────────────────────────────────── */}
         <section className="text-center py-8 md:py-12">
@@ -129,13 +119,13 @@ export default async function HomePage() {
                 className="te-surface te-pressable p-5 flex flex-col justify-between"
                 style={{ borderRadius: "1.25rem", minHeight: 100 }}
               >
-                <span style={{ fontSize: "1.5rem" }}>{t.icon}</span>
+                <span style={{ fontSize: "1.5rem" }}>{t.emoji}</span>
                 <div>
                   <p className="font-bold text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
-                    {t.label}
+                    {t.title}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                    {t.description}
+                    {t.subtitle}
                   </p>
                 </div>
               </HapticLink>

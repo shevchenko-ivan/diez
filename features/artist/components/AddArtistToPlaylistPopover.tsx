@@ -306,6 +306,8 @@ export function AddArtistToPlaylistPopover({
       ref={popoverRef}
       className="te-surface flex flex-col gap-3 p-4"
       role="dialog"
+      aria-modal={isMobile ? "true" : undefined}
+      aria-labelledby="add-artist-to-playlist-title"
       style={isMobile ? mobileStyle : desktopStyle}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
@@ -319,6 +321,7 @@ export function AddArtistToPlaylistPopover({
       )}
       <div className="flex items-center gap-2">
         <h2
+          id="add-artist-to-playlist-title"
           className="flex-1 min-w-0 text-xs font-bold uppercase tracking-widest"
           style={{ color: "var(--text-muted)" }}
         >

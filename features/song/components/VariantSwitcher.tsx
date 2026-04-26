@@ -106,7 +106,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
                       </div>
                       <div
                         className="flex items-center gap-3 mt-0.5 text-[11px]"
-                        style={{ color: "var(--text-muted)", opacity: 0.7 }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         <span>{formatDate(v.createdAt)}</span>
                         <span className="inline-flex items-center gap-1">

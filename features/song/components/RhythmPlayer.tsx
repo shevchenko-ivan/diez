@@ -187,7 +187,7 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
         </AdjusterButton>
         <div className="font-mono font-bold text-center leading-tight" style={{ color: "var(--text)" }}>
           <div className="text-sm">{tempo}</div>
-          <div style={{ fontSize: "8px", opacity: 0.5, letterSpacing: "0.1em" }}>BPM</div>
+          <div style={{ fontSize: "8px", color: "var(--text-muted)", letterSpacing: "0.1em" }}>BPM</div>
         </div>
         <AdjusterButton onClick={() => adjustTempo(5)} aria-label="Швидше">
           <Plus size={14} strokeWidth={2.5} />

@@ -171,7 +171,7 @@ export default function UIKitPage() {
         </span>
       </header>
 
-      <main className="max-w-5xl mx-auto px-8 py-12">
+      <main id="main-content" tabIndex={-1} className="max-w-5xl mx-auto px-8 py-12">
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* TIER 0 — TOKENS                                                     */}

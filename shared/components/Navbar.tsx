@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, ListMusic } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +27,7 @@ export function Navbar() {
   const [navUser, setNavUser] = useState<NavUser | null | "loading">("loading");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { trigger } = useHaptics();
+  const pathname = usePathname();
 
   const closeDropdown = () => {
     trigger("light");
@@ -77,6 +79,18 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
+  // Escape closes dropdown / mobile menu (a11y).
+  useEffect(() => {
+    if (!dropdownOpen && !mobileOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (dropdownOpen) setDropdownOpen(false);
+      if (mobileOpen) setMobileOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dropdownOpen, mobileOpen]);
+
   async function signOut() {
     await createClient().auth.signOut();
     setDropdownOpen(false);
@@ -95,18 +109,27 @@ export function Navbar() {
       <nav className="max-w-6xl mx-auto flex items-center justify-between gap-4">
 
         {/* Logo */}
-        <Link href="/" className="flex items-center flex-shrink-0">
-          <span style={{ color: "var(--orange)", fontWeight: 500, fontSize: "1.35rem", letterSpacing: "-0.04em" }}>#</span>
-          <span style={{ color: "var(--text)", fontWeight: 500, fontSize: "1.35rem", letterSpacing: "-0.04em" }}>DIEZ</span>
+        <Link href="/" aria-label="Diez — на головну" className="flex items-center flex-shrink-0">
+          <span aria-hidden="true" style={{ color: "var(--orange)", fontWeight: 500, fontSize: "1.35rem", letterSpacing: "-0.04em" }}>#</span>
+          <span aria-hidden="true" style={{ color: "var(--text)", fontWeight: 500, fontSize: "1.35rem", letterSpacing: "-0.04em" }}>DIEZ</span>
         </Link>
 
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={item.href} className="px-3 py-2 text-sm transition-colors hover:opacity-70" style={{ color: "var(--text-mid)", fontWeight: 400 }}>
-              {item.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map((item) => {
+            const isCurrent = item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isCurrent ? "page" : undefined}
+                className="px-3 py-2 text-sm transition-colors hover:opacity-70"
+                style={{ color: "var(--text-mid)", fontWeight: 400 }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Desktop right area */}
@@ -143,6 +166,9 @@ export function Navbar() {
               <TeButton
                 shape="pill"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
+                aria-haspopup="menu"
+                aria-expanded={dropdownOpen}
+                aria-label={dropdownOpen ? "Закрити меню профілю" : "Відкрити меню профілю"}
                 className="flex items-center gap-2 pl-1.5 pr-3 py-1.5"
                 style={{ borderRadius: "3rem" }}
               >
@@ -156,26 +182,28 @@ export function Navbar() {
                 <span className="text-sm font-medium max-w-[120px] truncate" style={{ color: "var(--text)" }}>
                   {userEmail.split("@")[0]}
                 </span>
-                <ChevronDown size={13} style={{ color: "var(--text-muted)", transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                <ChevronDown size={13} aria-hidden="true" style={{ color: "var(--text-muted)", transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
               </TeButton>
 
               {/* Dropdown */}
               {dropdownOpen && (
                 <div
+                  role="menu"
+                  aria-label="Меню профілю"
                   className="absolute right-0 mt-2 w-52 te-surface overflow-hidden"
                   style={{ borderRadius: "1.25rem", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", zIndex: 100 }}
                 >
                   {/* Email header */}
                   <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-                    <p className="text-xs opacity-50 truncate" style={{ color: "var(--text-muted)" }}>{userEmail}</p>
+                    <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{userEmail}</p>
                   </div>
 
                   <div className="py-1">
                     <Link href="/add" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-                      style={{ color: "var(--orange)" }}
+                      style={{ color: "var(--orange-text)" }}
                     >
-                      <Plus size={15} style={{ color: "var(--orange)" }} /> Створити пісню
+                      <Plus size={15} style={{ color: "var(--orange)" }} aria-hidden="true" /> Створити пісню
                     </Link>
 
                     <Link href="/profile" onClick={closeDropdown}
@@ -235,7 +263,14 @@ export function Navbar() {
               : <Moon size={15} style={{ color: "var(--text-muted)" }} />
             }
           </TeButton>
-          <TeButton shape="pill" className="p-2.5" onClick={() => setMobileOpen(!mobileOpen)}>
+          <TeButton
+            shape="pill"
+            className="p-2.5"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-menu"
+            aria-label={mobileOpen ? "Закрити меню" : "Відкрити меню"}
+          >
             {mobileOpen ? <X size={16} /> : <Menu size={16} />}
           </TeButton>
         </div>
@@ -243,16 +278,20 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="te-surface md:hidden max-w-6xl mx-auto mt-2 p-4 space-y-1" style={{ borderRadius: "1.25rem" }}>
-          {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={item.href}
-              className="block px-4 py-2.5 rounded-xl text-sm font-medium"
-              style={{ color: "var(--text-mid)" }}
-              onClick={() => setMobileOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <div id="mobile-nav-menu" className="te-surface md:hidden max-w-6xl mx-auto mt-2 p-4 space-y-1" style={{ borderRadius: "1.25rem" }}>
+          {NAV_LINKS.map((item) => {
+            const isCurrent = item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
+            return (
+              <Link key={item.href} href={item.href}
+                aria-current={isCurrent ? "page" : undefined}
+                className="block px-4 py-2.5 rounded-xl text-sm font-medium"
+                style={{ color: "var(--text-mid)" }}
+                onClick={() => setMobileOpen(false)}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
 
           <div className="flex flex-col gap-2 pt-3 mt-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
             <TeButton shape="pill" href="/add" className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>

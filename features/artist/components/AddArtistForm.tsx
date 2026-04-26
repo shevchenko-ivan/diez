@@ -28,20 +28,22 @@ export function AddArtistForm() {
           )}
         </div>
         <div className="flex-1 space-y-2">
-          <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+          <label htmlFor="add-artist-photo" className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
             URL фото
           </label>
           <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
             <input
+              id="add-artist-photo"
               name="photo_url"
               value={photoUrl}
               onChange={(e) => setPhotoUrl(e.target.value)}
               placeholder="https://..."
+              aria-describedby="add-artist-photo-help"
               className="w-full bg-transparent outline-none text-sm font-medium"
               style={{ color: "var(--text)" }}
             />
           </div>
-          <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+          <p id="add-artist-photo-help" className="text-[11px]" style={{ color: "var(--text-muted)" }}>
             Вставте URL зображення (Supabase Storage, Google Drive, тощо)
           </p>
         </div>
@@ -49,13 +51,15 @@ export function AddArtistForm() {
 
       {/* Name */}
       <div className="space-y-2">
-        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+        <label htmlFor="add-artist-name" className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
           Ім'я / Назва гурту *
         </label>
         <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
           <input
+            id="add-artist-name"
             name="name"
             required
+            aria-required="true"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Напр. Океан Ельзи"
@@ -65,18 +69,19 @@ export function AddArtistForm() {
         </div>
         {slugPreview && (
           <p className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
-            slug: <span style={{ color: "var(--orange)" }}>{slugPreview}</span>
+            slug: <span style={{ color: "var(--orange-text)" }}>{slugPreview}</span>
           </p>
         )}
       </div>
 
       {/* Genre */}
       <div className="space-y-2">
-        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+        <label htmlFor="add-artist-genre" className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
           Жанр
         </label>
         <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
           <select
+            id="add-artist-genre"
             name="genre"
             className="w-full bg-transparent outline-none text-sm font-medium"
             style={{ color: "var(--text)" }}
@@ -91,11 +96,12 @@ export function AddArtistForm() {
 
       {/* Bio */}
       <div className="space-y-2">
-        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
+        <label htmlFor="add-artist-bio" className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
           Коротко про виконавця
         </label>
         <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
           <textarea
+            id="add-artist-bio"
             name="bio"
             rows={3}
             placeholder="Кілька речень про виконавця..."

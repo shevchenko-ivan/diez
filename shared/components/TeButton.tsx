@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import type { CSSProperties, FocusEvent, MouseEvent, ReactNode, TouchEvent } from "react";
+import { forwardRef } from "react";
+import type { CSSProperties, FocusEvent, MouseEvent, ReactNode, Ref, TouchEvent } from "react";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 
 type Shape = "circle" | "pill";
@@ -102,7 +103,7 @@ const CIRCLE_TONE: Record<Tone, string> = {
  *   <TeButton size="sm">+</TeButton>                                    // adjuster
  *   <TeButton href="/admin/edit" icon={Pencil} title="Edit" />          // as link
  */
-export function TeButton(props: TeButtonProps) {
+export const TeButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, TeButtonProps>(function TeButton(props, ref) {
   const {
     shape = "circle",
     icon: Icon,
@@ -172,6 +173,7 @@ export function TeButton(props: TeButtonProps) {
   if ("href" in props && props.href) {
     return (
       <Link
+        ref={ref as Ref<HTMLAnchorElement>}
         href={props.href}
         onClick={(e) => {
           fireHaptic();
@@ -190,6 +192,7 @@ export function TeButton(props: TeButtonProps) {
   const btn = props as AsButton;
   return (
     <button
+      ref={ref as Ref<HTMLButtonElement>}
       type={btn.type ?? "button"}
       onClick={(e) => {
         fireHaptic();
@@ -209,4 +212,4 @@ export function TeButton(props: TeButtonProps) {
       {inner}
     </button>
   );
-}
+});

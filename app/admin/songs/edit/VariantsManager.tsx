@@ -75,14 +75,14 @@ export function VariantsManager({ songId, songSlug, primaryVariantId, variants }
                   )}
                   <span
                     className="text-[10px] font-mono"
-                    style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                    style={{ color: "var(--text-muted)" }}
                   >
                     {v.key}
                   </span>
                 </div>
                 <div
                   className="flex items-center gap-3 mt-0.5 text-[11px]"
-                  style={{ color: "var(--text-muted)", opacity: 0.7 }}
+                  style={{ color: "var(--text-muted)" }}
                 >
                   <span>{formatDate(v.created_at)}</span>
                   <span>{(v.views ?? 0).toLocaleString("uk-UA")} переглядів</span>

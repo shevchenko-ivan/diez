@@ -250,6 +250,8 @@ export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists
       ref={popoverRef}
       className="te-surface flex flex-col gap-3 p-4"
       role="dialog"
+      aria-modal={isMobile ? "true" : undefined}
+      aria-labelledby="add-to-playlist-title"
       style={isMobile ? mobileStyle : desktopStyle}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
@@ -262,7 +264,7 @@ export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists
         />
       )}
       <div className="flex items-center gap-2">
-        <h2 className="flex-1 min-w-0 text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+        <h2 id="add-to-playlist-title" className="flex-1 min-w-0 text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
           Зберегти в список
         </h2>
         {isMobile && (

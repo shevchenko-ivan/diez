@@ -63,6 +63,10 @@ export function BottomSheet({ open, onClose, title, children }: Props) {
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "bottom-sheet-title" : undefined}
+        aria-label={title ? undefined : "Діалог"}
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
         onMouseDown={(e) => e.stopPropagation()}
         className="te-surface w-full max-w-md flex flex-col gap-4 p-5 pb-7"
@@ -82,7 +86,7 @@ export function BottomSheet({ open, onClose, title, children }: Props) {
           style={{ width: 36, height: 4, background: "var(--text-muted)", opacity: 0.25 }}
         />
         {title && (
-          <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>
+          <h2 id="bottom-sheet-title" className="text-base font-bold" style={{ color: "var(--text)" }}>
             {title}
           </h2>
         )}

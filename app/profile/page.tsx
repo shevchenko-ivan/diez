@@ -72,7 +72,7 @@ async function ProfileDashboard() {
           <div className="w-24 h-24 mb-4 te-inset flex items-center justify-center rounded-full overflow-hidden">
             <UserIcon size={40} style={{ color: "var(--text-muted)" }} />
           </div>
-          <h2 className="text-xl font-bold tracking-tight mb-1" style={{ color: "var(--text)" }}>{userName}</h2>
+          <h1 className="text-xl font-bold tracking-tight mb-1" style={{ color: "var(--text)" }}>{userName}</h1>
           <p className="text-sm font-medium opacity-60 mb-8" style={{ color: "var(--text-muted)" }}>{user.email}</p>
 
           <div className="flex gap-4 w-full">
@@ -110,10 +110,10 @@ async function ProfileDashboard() {
       <div className="flex-1 w-full space-y-12">
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
-              <Heart size={20} style={{ color: "var(--orange)" }} />
+            <h2 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
+              <Heart size={20} style={{ color: "var(--orange)" }} aria-hidden="true" />
               Збережені
-            </h3>
+            </h2>
             {defaultList && (
               <Link
                 href={`/profile/lists/${defaultList.id}`}
@@ -150,10 +150,10 @@ async function ProfileDashboard() {
         {otherLists.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
-                <ListMusic size={20} style={{ color: "var(--orange)" }} />
+              <h2 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
+                <ListMusic size={20} style={{ color: "var(--orange)" }} aria-hidden="true" />
                 Мої списки
-              </h3>
+              </h2>
               <Link
                 href="/profile/lists"
                 className="text-xs font-bold uppercase tracking-widest"
@@ -172,16 +172,16 @@ async function ProfileDashboard() {
 
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
+            <h2 className="text-2xl font-bold tracking-tighter uppercase flex items-center gap-2" style={{ color: "var(--text)" }}>
               Мої підбори
-            </h3>
+            </h2>
           </div>
 
           {submittedSongs.length === 0 ? (
             <EmptyState
               message="Ви ще не додавали пісень."
               variant="inset"
-              action={<Link href="/add" className="font-bold underline" style={{ color: "var(--orange)" }}>Додати зараз →</Link>}
+              action={<Link href="/add" className="font-bold underline" style={{ color: "var(--orange-text)" }}>Додати зараз →</Link>}
             />
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

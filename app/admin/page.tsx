@@ -101,7 +101,7 @@ function StatCard({
       <div style={{ color }}>{icon}</div>
       <div>
         <div className="text-3xl font-bold tracking-tighter" style={{ color: "var(--text)" }}>{value}</div>
-        <div className="text-xs font-bold tracking-widest uppercase mt-0.5" style={{ color: "var(--text-muted)", opacity: 0.7 }}>{label}</div>
+        <div className="text-xs font-bold tracking-widest uppercase mt-0.5" style={{ color: "var(--text-muted)" }}>{label}</div>
       </div>
     </>
   );

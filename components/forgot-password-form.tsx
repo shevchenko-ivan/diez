@@ -65,6 +65,10 @@ export function ForgotPasswordForm() {
               type="email"
               placeholder="you@example.com"
               required
+              aria-required="true"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "forgot-error" : undefined}
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-transparent outline-none text-sm font-medium"
@@ -72,7 +76,7 @@ export function ForgotPasswordForm() {
             />
           </div>
         </div>
-        {error && <p className="text-sm text-red-500 ml-1">{error}</p>}
+        {error && <p id="forgot-error" role="alert" className="text-sm text-red-500 ml-1">{error}</p>}
         <TeButton
           shape="pill"
           type="submit"
