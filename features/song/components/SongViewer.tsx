@@ -1077,28 +1077,32 @@ function ScrollFab({
         tangent to neck's left edge and foot's top edge — one smooth
         curve through the whole bend, no step/shelf artifacts.
       */}
-      <span className="scrollfab-bg" aria-hidden>
-        <span className="scrollfab-bg-neck" aria-hidden />
+      <span className={`scrollfab-bg ${active ? "" : "scrollfab-bg-collapsed"}`} aria-hidden>
+        {active && <span className="scrollfab-bg-neck" aria-hidden />}
         <span className="scrollfab-bg-play" aria-hidden />
-        <span className="scrollfab-bg-foot" aria-hidden />
+        {active && <span className="scrollfab-bg-foot" aria-hidden />}
       </span>
-      {/* TEMP: force-expanded for screenshot — restore `{active && ...}` guards
-          around +/- rows to re-hide them when scrollSpeed === 0. */}
-      <div className="flex justify-end">
-        <AdjusterButton
-          onClick={() => { trigger("light"); onSpeedChange(1); }}
-          aria-label="Швидше"
-        >
-          <Plus size={12} strokeWidth={2.5} />
-        </AdjusterButton>
-      </div>
+      {/* +/- only make sense once auto-scroll is running. Before that the play
+          button stands alone — no L-shaped background, no adjusters. */}
+      {active && (
+        <div className="flex justify-end">
+          <AdjusterButton
+            onClick={() => { trigger("light"); onSpeedChange(1); }}
+            aria-label="Швидше"
+          >
+            <Plus size={12} strokeWidth={2.5} />
+          </AdjusterButton>
+        </div>
+      )}
       <div className="flex items-end" style={{ columnGap: 12 }}>
-      <AdjusterButton
-        onClick={() => { trigger("light"); onSpeedChange(-1); }}
-        aria-label="Повільніше"
-      >
-        <Minus size={12} strokeWidth={2.5} />
-      </AdjusterButton>
+      {active && (
+        <AdjusterButton
+          onClick={() => { trigger("light"); onSpeedChange(-1); }}
+          aria-label="Повільніше"
+        >
+          <Minus size={12} strokeWidth={2.5} />
+        </AdjusterButton>
+      )}
       <button
         type="button"
         onClick={() => { trigger("medium"); onToggle(); }}

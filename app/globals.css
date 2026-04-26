@@ -260,6 +260,14 @@
     background: var(--bg);
     border-top-left-radius: var(--corner);
   }
+  /* Collapsed (auto-scroll inactive): only the play box is rendered. The
+     box is anchored to the viewport's bottom-right corner, so right and
+     bottom edges sit flush against the screen — only the inside-facing
+     top-left corner gets the radius. */
+  .scrollfab-bg-collapsed .scrollfab-bg-play {
+    background: var(--bg);
+    border-radius: var(--corner) 0 0 0;
+  }
   [data-theme="dark"] .scrollfab-bg {
     filter: drop-shadow(-1px -1px 3px rgba(0, 0, 0, 0.4));
   }
