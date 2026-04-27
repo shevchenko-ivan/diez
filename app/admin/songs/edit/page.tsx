@@ -13,6 +13,9 @@ import { AutoResizeTextarea } from "./AutoResizeTextarea";
 import { VariantTabs } from "./VariantTabs";
 import { TeButton } from "@/shared/components/TeButton";
 import { StrummingEditor } from "@/features/song/components/StrummingEditor";
+import { StrumPatternsEditor } from "@/features/song/components/StrumPatternsEditor";
+import { mapPatternRow } from "@/features/song/services/songs";
+import type { StrumPattern } from "@/features/song/types";
 import { RhythmBlock } from "./RhythmBlock";
 import { StringAutocomplete } from "./StringAutocomplete";
 import { AlbumAutocomplete } from "./AlbumAutocomplete";
@@ -186,6 +189,16 @@ export default async function EditSongPage({
 
   const isActivePrimary = activeVariant ? activeVariant.id === primaryVariantId : false;
 
+  // Rich strumming patterns (per-song, not per-variant — see migration 019).
+  const { data: patternRows } = await admin
+    .from("song_strumming_patterns")
+    .select("id, position, name, tempo, note_length, strokes")
+    .eq("song_id", song.id)
+    .order("position", { ascending: true });
+  const strumPatterns: StrumPattern[] = (patternRows ?? []).map((r) =>
+    mapPatternRow(r as Record<string, unknown>),
+  );
+
   return (
     <PageShell maxWidth="2xl" footer={false}>
       <Suspense><SavedToast /></Suspense>
@@ -358,6 +371,17 @@ export default async function EditSongPage({
               </div>
             </div>
           </RhythmBlock>
+
+          {/* ── Бій (multi-pattern editor — per song, not per variant) ── */}
+          <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>
+            <h2 className="text-lg font-bold mb-1 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+              Бої / патерни
+            </h2>
+            <p className="text-xs mb-5" style={{ color: "var(--text-muted)" }}>
+              Кілька патернів для різних частин пісні (Main, Pre-Chorus, Chorus...). Кожен зі своїм темпом, тривалістю ноти, акцентами.
+            </p>
+            <StrumPatternsEditor songId={song.id} initial={strumPatterns} />
+          </div>
 
           {/* ── Текст з акордами + один сабміт ───────────────────────── */}
           <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>

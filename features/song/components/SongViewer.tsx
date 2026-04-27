@@ -16,6 +16,10 @@ const RhythmPlayer = dynamic(
   () => import("./RhythmPlayer").then((m) => m.RhythmPlayer),
   { ssr: false },
 );
+const StrumPatternList = dynamic(
+  () => import("./StrumPatternList").then((m) => m.StrumPatternList),
+  { ssr: false },
+);
 const TunerWidget = dynamic(
   () => import("@/features/tuner/components/TunerWidget").then((m) => m.TunerWidget),
   { ssr: false },
@@ -523,21 +527,27 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
 
               {/* Chords */}
               <div>
-                {/* Rhythm / metronome — sits above everything; fallback на вісімку */}
-                <div
-                  className="mb-3 px-3 py-2"
-                  style={{
-                    borderRadius: "0.75rem",
-                    border: "1px solid var(--border, rgba(0,0,0,0.06))",
-                  }}
-                >
-                  <RhythmPlayer
-                    strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
-                    tempo={song.tempo ?? 100}
-                    timeSignature={song.timeSignature ?? "4/4"}
-                    bare
-                  />
-                </div>
+                {/* Rhythm — rich patterns when set, otherwise legacy fallback */}
+                {song.strumPatterns && song.strumPatterns.length > 0 ? (
+                  <div className="mb-3">
+                    <StrumPatternList patterns={song.strumPatterns} />
+                  </div>
+                ) : (
+                  <div
+                    className="mb-3 px-3 py-2"
+                    style={{
+                      borderRadius: "0.75rem",
+                      border: "1px solid var(--border, rgba(0,0,0,0.06))",
+                    }}
+                  >
+                    <RhythmPlayer
+                      strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
+                      tempo={song.tempo ?? 100}
+                      timeSignature={song.timeSignature ?? "4/4"}
+                      bare
+                    />
+                  </div>
+                )}
                 {/* Beginner mode */}
                 <button
                   type="button"
@@ -992,12 +1002,16 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               )}
             </ControlBlock>
 
-            {/* Rhythm / metronome — fallback на «вісімку» при відсутності патерну */}
-            <RhythmPlayer
-              strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
-              tempo={song.tempo ?? 100}
-              timeSignature={song.timeSignature ?? "4/4"}
-            />
+            {/* Rhythm — rich patterns when set, otherwise legacy auto fallback */}
+            {song.strumPatterns && song.strumPatterns.length > 0 ? (
+              <StrumPatternList patterns={song.strumPatterns} />
+            ) : (
+              <RhythmPlayer
+                strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
+                tempo={song.tempo ?? 100}
+                timeSignature={song.timeSignature ?? "4/4"}
+              />
+            )}
 
             {/* Audio player */}
             {song.youtubeId && (

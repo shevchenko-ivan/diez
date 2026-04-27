@@ -32,6 +32,34 @@ export interface SongSection {
 
 export type Strum = "D" | "U" | "Dx" | "Ux";
 
+// ─── Strumming patterns (rich model — multiple per song) ─────────────────────
+export type StrumDir = "D" | "U";
+export type NoteLength = "1/4" | "1/8" | "1/16" | "1/4t" | "1/8t" | "1/16t";
+
+/**
+ * A single strum within a pattern. Compact JSON keys (d/a/m/r) match the
+ * shape stored in `song_strumming_patterns.strokes` to keep the column
+ * payload small.
+ */
+export interface Stroke {
+  d: StrumDir;
+  /** Accented (louder). Drawn with ">" mark. */
+  a?: boolean;
+  /** Palm-muted / staccato. */
+  m?: boolean;
+  /** Rest — slot keeps timing but produces no sound. */
+  r?: boolean;
+}
+
+export interface StrumPattern {
+  id: string;
+  position: number;
+  name: string;
+  tempo: number;
+  noteLength: NoteLength;
+  strokes: Stroke[];
+}
+
 export interface SongVariant {
   id: string;
   label: string;
@@ -67,4 +95,6 @@ export interface Song {
   variants?: SongVariant[];
   primaryVariantId?: string;
   activeVariantId?: string;
+  /** Rich strumming patterns (multiple per song). When present, takes precedence over `strumming`. */
+  strumPatterns?: StrumPattern[];
 }

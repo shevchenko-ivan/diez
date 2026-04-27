@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { type Song, type SongSection, type SongVariant, type Difficulty, type Strum } from "../types";
+import { type Song, type SongSection, type SongVariant, type Difficulty, type Strum, type StrumPattern, type Stroke, type NoteLength } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { getTopicBySlug, isNoBarreSong, type Topic } from "../data/topics";
@@ -15,7 +15,7 @@ function getClient() {
 }
 
 const SONG_COLUMNS =
-  "slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, chords, views, sections, strumming, cover_image, cover_color, youtube_id, primary_variant_id";
+  "id, slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, chords, views, sections, strumming, cover_image, cover_color, youtube_id, primary_variant_id";
 
 // Slim column set for list views — excludes heavy JSONB (sections, strumming)
 // so the cached payload stays under Next.js's 2MB unstable_cache limit.
@@ -348,14 +348,52 @@ export const getSongsByArtist = unstable_cache(
 // the result is per-request-deduped by Next automatically.
 export async function getSongBySlug(slug: string): Promise<Song | undefined> {
   if (!hasEnvVars) return undefined;
-  const { data, error } = await getClient()
+  const client = getClient();
+  const { data, error } = await client
     .from("songs")
     .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
     .eq("slug", slug)
     .eq("status", "published")
     .single();
   if (error || !data) return undefined;
-  return mapRow(data as Record<string, unknown>);
+  const song = mapRow(data as Record<string, unknown>);
+
+  // Fetch rich strumming patterns separately (the table is small, the join
+  // would bloat the row payload, and missing patterns are not an error).
+  const songId = (data as Record<string, unknown>).id as string | undefined;
+  if (songId) {
+    const { data: patternRows } = await client
+      .from("song_strumming_patterns")
+      .select("id, position, name, tempo, note_length, strokes")
+      .eq("song_id", songId)
+      .order("position", { ascending: true });
+    if (patternRows && patternRows.length > 0) {
+      song.strumPatterns = patternRows.map(mapPatternRow);
+    }
+  }
+  return song;
+}
+
+export function mapPatternRow(row: Record<string, unknown>): StrumPattern {
+  const rawStrokes = (row.strokes as unknown[] | null) ?? [];
+  const strokes: Stroke[] = rawStrokes
+    .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
+    .map((s) => {
+      const dir = (s.d as string) === "U" ? "U" : "D";
+      const stroke: Stroke = { d: dir };
+      if (s.a === true) stroke.a = true;
+      if (s.m === true) stroke.m = true;
+      if (s.r === true) stroke.r = true;
+      return stroke;
+    });
+  return {
+    id: row.id as string,
+    position: (row.position as number) ?? 0,
+    name: (row.name as string) ?? "Pattern",
+    tempo: (row.tempo as number) ?? 100,
+    noteLength: ((row.note_length as string) ?? "1/8") as NoteLength,
+    strokes,
+  };
 }
 
 // Apply an active variant on top of the base song fields — swaps sections,
