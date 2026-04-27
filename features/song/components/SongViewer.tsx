@@ -530,6 +530,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 {/* Rhythm — rich patterns when set, otherwise legacy fallback */}
                 {song.strumPatterns && song.strumPatterns.length > 0 ? (
                   <div className="mb-3">
+                    {/* Mobile uses bare/inline style — pick the first pattern */}
                     <StrumPatternList patterns={song.strumPatterns} />
                   </div>
                 ) : (

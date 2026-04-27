@@ -10,12 +10,14 @@ interface Props {
 
 /**
  * Renders one strumming pattern (UG-style):
- * - Header: name + tempo (BPM)
- * - Strokes row with beat numbers underneath and triplet brackets when applicable
- * - Explicit accents drawn as ">" above the stroke (data-driven, not derived from position)
- * - Per-pattern Play button (Web Audio)
+ * - Header: name + tempo (BPM) + per-pattern Play
+ * - Strokes grouped by beat with the beat number under each group and a
+ *   triplet bracket "└─3─┘" beneath triplet groups.
+ * - Explicit accents drawn as ">" above the stroke (data-driven, not derived
+ *   from position).
  *
- * Accents control volume only (per project memory feedback_audio_accent.md).
+ * Accents only adjust volume — timbre/frequency unchanged (per project memory
+ * feedback_audio_accent.md).
  */
 export function PatternPlayer({ pattern }: Props) {
   const [playing, setPlaying] = useState(false);
@@ -23,7 +25,8 @@ export function PatternPlayer({ pattern }: Props) {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const { strokes, tempo, noteLength, name } = pattern;
-  const layout = useMemo(() => computeBeatLayout(noteLength, strokes.length), [noteLength, strokes.length]);
+  const beats = useMemo(() => groupByBeat(strokes, noteLength), [strokes, noteLength]);
+  const isTriplet = noteLength.endsWith("t");
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -61,8 +64,8 @@ export function PatternPlayer({ pattern }: Props) {
   };
 
   return (
-    <div className="space-y-1.5">
-      {/* Header — name + bpm + play */}
+    <div className="space-y-2">
+      {/* Header — play + name + bpm */}
       <div className="flex items-center gap-2 text-sm">
         <button
           type="button"
@@ -83,83 +86,61 @@ export function PatternPlayer({ pattern }: Props) {
             <Play size={10} fill="currentColor" style={{ marginLeft: 1 }} />
           )}
         </button>
-        <span className="font-bold tracking-tight" style={{ color: "var(--text)" }}>
+        <span className="font-bold tracking-tight truncate" style={{ color: "var(--text)" }}>
           {name}
         </span>
-        <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+        <span className="text-xs font-mono ml-auto flex-shrink-0" style={{ color: "var(--text-muted)" }}>
           {tempo} bpm
         </span>
       </div>
 
-      {/* Strokes + beat numbers + triplet brackets */}
-      <div className="overflow-x-auto pb-1">
-        <div className="inline-block min-w-full">
-          <div className="flex items-end gap-0.5">
-            {strokes.map((s, i) => (
-              <StrokeCell
-                key={i}
-                stroke={s}
-                active={activeIndex === i}
-                beatLabel={layout.beatLabels[i]}
-                tripletStart={layout.tripletStarts.has(i)}
-                tripletSpan={layout.tripletSpan}
-                groupSize={layout.groupSize}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Beat groups */}
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        {beats.map((b) => (
+          <BeatGroup
+            key={b.startIndex}
+            strokes={b.strokes}
+            startIndex={b.startIndex}
+            beatNumber={b.beatNumber}
+            isTriplet={isTriplet}
+            activeIndex={activeIndex}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Beat grouping ────────────────────────────────────────────────────────────
 
-interface BeatLayout {
-  /** Beat label per stroke index (e.g. "1", "2") or "" for off-beats. */
-  beatLabels: string[];
-  /** Stroke indices that begin a triplet group. */
-  tripletStarts: Set<number>;
-  /** Number of strokes in one triplet group (always 3 for triplet note lengths). */
-  tripletSpan: number;
-  /** Strokes per beat (or per "group" in UG terms). */
-  groupSize: number;
+interface BeatRecord {
+  strokes: Stroke[];
+  startIndex: number;
+  beatNumber: number;
 }
 
-function computeBeatLayout(nl: NoteLength, total: number): BeatLayout {
-  const isTriplet = nl.endsWith("t");
-  const beatLabels: string[] = Array(total).fill("");
-  const tripletStarts = new Set<number>();
-  let groupSize = 2; // 1/8 default
-
-  if (nl === "1/4") groupSize = 1;
-  else if (nl === "1/8") groupSize = 2;
-  else if (nl === "1/16") groupSize = 4;
-  else if (nl === "1/4t") groupSize = 3; // 3 quarter-triplets per "group"
-  else if (nl === "1/8t") groupSize = 3; // 3 eighth-triplets per beat
-  else if (nl === "1/16t") groupSize = 6;
-
-  // Beat numbering: every groupSize strokes starts a new beat.
-  let beat = 1;
-  for (let i = 0; i < total; i += groupSize) {
-    beatLabels[i] = String(beat);
-    beat += 1;
+function groupByBeat(strokes: Stroke[], nl: NoteLength): BeatRecord[] {
+  const groupSize = strokesPerBeat(nl);
+  const beats: BeatRecord[] = [];
+  for (let i = 0, beat = 1; i < strokes.length; i += groupSize, beat += 1) {
+    beats.push({
+      strokes: strokes.slice(i, i + groupSize),
+      startIndex: i,
+      beatNumber: beat,
+    });
   }
+  return beats;
+}
 
-  if (isTriplet) {
-    // Triplet bracket spans every 3 strokes.
-    const span = nl === "1/4t" ? 3 : nl === "1/8t" ? 3 : 3;
-    for (let i = 0; i + span <= total; i += span) {
-      tripletStarts.add(i);
-    }
+function strokesPerBeat(nl: NoteLength): number {
+  switch (nl) {
+    case "1/4": return 1;
+    case "1/8": return 2;
+    case "1/16": return 4;
+    case "1/4t": return 3;
+    case "1/8t": return 3;
+    case "1/16t": return 6;
   }
-
-  return {
-    beatLabels,
-    tripletStarts,
-    tripletSpan: 3,
-    groupSize,
-  };
 }
 
 function intervalFor(nl: NoteLength, tempo: number): number {
@@ -178,6 +159,115 @@ function intervalFor(nl: NoteLength, tempo: number): number {
     case "1/16t": seconds = quarter / 6; break;
   }
   return seconds * 1000;
+}
+
+// ─── Beat group renderer ─────────────────────────────────────────────────────
+
+interface BeatGroupProps {
+  strokes: Stroke[];
+  startIndex: number;
+  beatNumber: number;
+  isTriplet: boolean;
+  activeIndex: number;
+}
+
+function BeatGroup({ strokes, startIndex, beatNumber, isTriplet, activeIndex }: BeatGroupProps) {
+  return (
+    <div className="flex flex-col items-stretch" style={{ minWidth: 22 * strokes.length }}>
+      {/* Strokes row */}
+      <div className="flex items-end gap-0.5">
+        {strokes.map((s, i) => (
+          <StrokeCell key={i} stroke={s} active={activeIndex === startIndex + i} />
+        ))}
+      </div>
+
+      {/* Beat number — under the first stroke of the group */}
+      <div className="flex">
+        <div
+          style={{
+            width: 22,
+            textAlign: "center",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "var(--text-muted)",
+            lineHeight: "14px",
+          }}
+        >
+          {beatNumber}
+        </div>
+      </div>
+
+      {/* Triplet bracket — spans the whole group when triplet */}
+      {isTriplet && strokes.length === 3 && (
+        <div style={{ position: "relative", height: 12, marginTop: 1 }}>
+          <div
+            style={{
+              position: "absolute",
+              top: 4,
+              left: 3,
+              right: 3,
+              height: 4,
+              borderLeft: "1.5px solid var(--text-muted)",
+              borderRight: "1.5px solid var(--text-muted)",
+              borderTop: "1.5px solid var(--text-muted)",
+              opacity: 0.55,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontSize: 9,
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              background: "var(--surface, #FFF)",
+              padding: "0 3px",
+              lineHeight: "12px",
+            }}
+          >
+            3
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Stroke cell ──────────────────────────────────────────────────────────────
+
+function StrokeCell({ stroke, active }: { stroke: Stroke; active: boolean }) {
+  const isDown = stroke.d === "D";
+  const isMute = stroke.m === true;
+  const isAccent = stroke.a === true;
+  const isRest = stroke.r === true;
+
+  return (
+    <div className="flex flex-col items-center" style={{ width: 22, flexShrink: 0 }}>
+      {/* Accent mark above */}
+      <div style={{ height: 11, lineHeight: "11px", fontSize: 12, color: "var(--text)", fontWeight: 700 }}>
+        {isAccent ? ">" : ""}
+      </div>
+
+      {/* Arrow */}
+      <div
+        className="flex items-center justify-center rounded transition-all"
+        style={{
+          width: 22,
+          height: 24,
+          fontSize: isAccent ? 19 : 16,
+          fontWeight: isAccent ? 900 : 700,
+          color: active ? "var(--orange)" : isAccent ? "var(--text)" : isDown ? "var(--text)" : "var(--text-muted)",
+          opacity: isRest ? 0.25 : isMute ? 0.5 : 1,
+          background: active ? "rgba(255,136,0,0.18)" : "transparent",
+          transform: active ? "scale(1.25)" : "scale(1)",
+        }}
+      >
+        {isRest ? "·" : isDown ? "↓" : "↑"}
+      </div>
+    </div>
+  );
 }
 
 function playStroke(audioCtx: AudioContext, stroke: Stroke) {
@@ -209,101 +299,4 @@ function playStroke(audioCtx: AudioContext, stroke: Stroke) {
   if (typeof navigator !== "undefined" && navigator.vibrate) {
     navigator.vibrate(stroke.a ? 50 : isDown ? 28 : 18);
   }
-}
-
-// ─── Stroke cell ──────────────────────────────────────────────────────────────
-
-interface CellProps {
-  stroke: Stroke;
-  active: boolean;
-  beatLabel: string;
-  tripletStart: boolean;
-  tripletSpan: number;
-  groupSize: number;
-}
-
-function StrokeCell({ stroke, active, beatLabel, tripletStart, tripletSpan }: CellProps) {
-  const isDown = stroke.d === "D";
-  const isMute = stroke.m === true;
-  const isAccent = stroke.a === true;
-  const isRest = stroke.r === true;
-
-  return (
-    <div className="flex flex-col items-center" style={{ width: 22, flexShrink: 0 }}>
-      {/* Accent mark above */}
-      <div style={{ height: 10, lineHeight: "10px", fontSize: 11, color: "var(--text)", fontWeight: 700 }}>
-        {isAccent ? ">" : ""}
-      </div>
-
-      {/* Arrow */}
-      <div
-        className="flex items-center justify-center rounded transition-all"
-        style={{
-          width: 22,
-          height: 24,
-          fontSize: isAccent ? 18 : 16,
-          fontWeight: isAccent ? 900 : 700,
-          color: active ? "var(--orange)" : isAccent ? "var(--text)" : isDown ? "var(--text)" : "var(--text-muted)",
-          opacity: isRest ? 0.25 : isMute ? 0.5 : 1,
-          background: active ? "rgba(255,136,0,0.18)" : "transparent",
-          transform: active ? "scale(1.25)" : "scale(1)",
-        }}
-      >
-        {isRest ? "·" : isDown ? "↓" : "↑"}
-      </div>
-
-      {/* Beat number */}
-      <div
-        style={{
-          height: 12,
-          lineHeight: "12px",
-          fontSize: 10,
-          fontWeight: 600,
-          color: "var(--text-muted)",
-        }}
-      >
-        {beatLabel}
-      </div>
-
-      {/* Triplet bracket: [─3─] */}
-      {tripletStart && (
-        <div
-          style={{
-            position: "relative",
-            width: 22 * tripletSpan + 2 * (tripletSpan - 1),
-            height: 10,
-            marginLeft: 0,
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: 2,
-              left: 4,
-              right: 4,
-              height: 4,
-              borderLeft: "1px solid var(--text-muted)",
-              borderRight: "1px solid var(--text-muted)",
-              borderBottom: "1px solid var(--text-muted)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 1,
-              left: "50%",
-              transform: "translateX(-50%)",
-              fontSize: 9,
-              fontWeight: 700,
-              color: "var(--text-muted)",
-              background: "var(--surface)",
-              padding: "0 3px",
-            }}
-          >
-            3
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
