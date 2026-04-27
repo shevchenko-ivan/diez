@@ -7,6 +7,7 @@ import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, L
 import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
 import { TeButton } from "@/shared/components/TeButton";
+import { InstallAppButton } from "@/shared/components/InstallAppButton";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 
 const NAV_LINKS = [
@@ -297,6 +298,8 @@ export function Navbar() {
             <TeButton shape="pill" href="/add" className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>
               <Plus size={14} /> Створити пісню
             </TeButton>
+
+            <InstallAppButton onAfterAction={() => setMobileOpen(false)} />
 
             {isLoggedIn ? (
               <>
