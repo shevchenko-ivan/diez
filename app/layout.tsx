@@ -4,6 +4,7 @@ import { siteUrl } from "@/lib/utils";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -89,6 +90,7 @@ export default function RootLayout({
           <Toaster />
         </ThemeProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
