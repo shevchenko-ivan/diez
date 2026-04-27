@@ -10,6 +10,8 @@ import {
 } from "@/features/song/actions/strumming-patterns";
 import { playStroke, intervalFor } from "@/features/song/lib/strumming-audio";
 
+import { ToggleKnob } from "@/shared/components/ToggleKnob";
+
 interface Props {
   songId: string;
   initial: StrumPattern[];
@@ -28,11 +30,18 @@ const NOTE_LENGTHS: { value: NoteLength; label: string }[] = [
  * Admin editor for the per-song list of strumming patterns. Keeps a local
  * copy of the patterns so adding/editing/deleting feels instant; persists
  * each change via server actions and refetches via revalidatePath.
+ *
+ * Renders its own heading + toggle so the block can be collapsed when the
+ * song has no rhythm. The toggle is purely UI — patterns persist either way
+ * (the viewer just hides the block when there are no patterns).
  */
 export function StrumPatternsEditor({ songId, initial }: Props) {
   const [patterns, setPatterns] = useState<StrumPattern[]>(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // Default expanded only if the song already has patterns. Admin can toggle
+  // to add the first pattern.
+  const [expanded, setExpanded] = useState(initial.length > 0);
 
   function handleSaved(updated: StrumPattern) {
     setPatterns((prev) => {
@@ -50,7 +59,31 @@ export function StrumPatternsEditor({ songId, initial }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+            Бої / патерни
+          </h2>
+          {expanded && (
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              Кілька патернів для різних частин пісні (Main, Pre-Chorus, Chorus...). Кожен зі своїм темпом, тривалістю ноти, акцентами.
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-label={expanded ? "Згорнути бої" : "Розгорнути бої"}
+          className="flex-shrink-0"
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+        >
+          <ToggleKnob active={expanded} />
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-3 mt-5">
       {patterns.length === 0 && !adding && (
         <p className="text-xs italic" style={{ color: "var(--text-muted)" }}>
           Жодного патерну. Додайте перший — він стане Main Pattern.
@@ -91,6 +124,8 @@ export function StrumPatternsEditor({ songId, initial }: Props) {
         >
           <Plus size={14} /> Додати патерн
         </button>
+      )}
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { type Song, type SongSection, type SongVariant, type Difficulty, type Strum, type StrumPattern, type Stroke, type NoteLength } from "../types";
+import { type Song, type SongSection, type SongVariant, type Difficulty, type StrumPattern, type Stroke, type NoteLength } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { getTopicBySlug, isNoBarreSong, type Topic } from "../data/topics";
@@ -15,15 +15,15 @@ function getClient() {
 }
 
 const SONG_COLUMNS =
-  "id, slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, chords, views, sections, strumming, cover_image, cover_color, youtube_id, primary_variant_id";
+  "id, slug, title, artist, album, genre, key, capo, time_signature, difficulty, chords, views, sections, cover_image, cover_color, youtube_id, primary_variant_id";
 
-// Slim column set for list views — excludes heavy JSONB (sections, strumming)
-// so the cached payload stays under Next.js's 2MB unstable_cache limit.
+// Slim column set for list views — excludes heavy JSONB (sections) so the
+// cached payload stays under Next.js's 2MB unstable_cache limit.
 const SONG_LIST_COLUMNS =
-  "slug, title, artist, album, genre, key, capo, tempo, time_signature, difficulty, chords, views, cover_image, cover_color, youtube_id, primary_variant_id";
+  "slug, title, artist, album, genre, key, capo, time_signature, difficulty, chords, views, cover_image, cover_color, youtube_id, primary_variant_id";
 
 const VARIANT_COLUMNS =
-  "id, label, sections, chords, key, capo, tempo, strumming, views, created_at";
+  "id, label, sections, chords, key, capo, views, created_at";
 
 // Re-parse sections from the stored `raw` text so old rows (saved in the
 // previous word-aligned format) render with the new column-preserving parser.
@@ -64,8 +64,6 @@ function mapVariantRow(row: Record<string, unknown>, primaryId: string | null): 
     chords: resolved.chords,
     key: row.key as string,
     capo: (row.capo as number | null) ?? undefined,
-    tempo: (row.tempo as number | null) ?? undefined,
-    strumming: (row.strumming as Strum[] | null) ?? undefined,
     views: (row.views as number | null) ?? 0,
     createdAt: row.created_at as string,
     isPrimary: id === primaryId,
@@ -97,13 +95,11 @@ function mapRow(row: Record<string, unknown>): Song {
     genre: row.genre as string,
     key: row.key as string,
     capo: (row.capo as number | null) ?? undefined,
-    tempo: (row.tempo as number | null) ?? undefined,
     timeSignature: (row.time_signature as string | null) ?? undefined,
     difficulty: row.difficulty as Difficulty,
     chords: resolved.chords,
     views: row.views as number,
     sections: resolved.sections,
-    strumming: (row.strumming as Strum[] | null) ?? undefined,
     coverImage: (row.cover_image as string | null) ?? undefined,
     coverColor: (row.cover_color as string | null) ?? undefined,
     youtubeId: (row.youtube_id as string | null) ?? undefined,
@@ -397,8 +393,9 @@ export function mapPatternRow(row: Record<string, unknown>): StrumPattern {
 }
 
 // Apply an active variant on top of the base song fields — swaps sections,
-// chords, key, capo, tempo, strumming. Falls back to song-level values when
-// the variant is missing or primary.
+// chords, key, capo. Falls back to song-level values when the variant is
+// missing or primary. (Tempo/strumming live in song_strumming_patterns now,
+// which are per-song so they don't need variant overrides.)
 export function applyVariant(song: Song, variantId: string | undefined): Song {
   if (!song.variants || song.variants.length === 0) return song;
   const target =
@@ -412,8 +409,6 @@ export function applyVariant(song: Song, variantId: string | undefined): Song {
     chords: target.chords.length > 0 ? target.chords : song.chords,
     key: target.key,
     capo: target.capo ?? song.capo,
-    tempo: target.tempo ?? song.tempo,
-    strumming: target.strumming ?? song.strumming,
     activeVariantId: target.id,
   };
 }

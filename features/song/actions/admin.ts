@@ -16,20 +16,6 @@ function assertUuid(value: string | null | undefined, label = "ID"): string {
   return value;
 }
 
-const STRUM_VALUES = new Set(["D", "U", "Dx", "Ux"]);
-
-function parseStrumming(value: string | null | undefined): string[] | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return null;
-    const clean = parsed.filter((s): s is string => typeof s === "string" && STRUM_VALUES.has(s));
-    return clean.length > 0 ? clean : null;
-  } catch {
-    return null;
-  }
-}
-
 function sanitizeUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!value.startsWith("https://") && !value.startsWith("http://")) return null;
@@ -82,10 +68,7 @@ export async function createSong(formData: FormData) {
   const genre = (formData.get("genre") as string)?.trim() || "Інше";
   const key = (formData.get("key") as string)?.trim() || "Am";
   const difficulty = (formData.get("difficulty") as string) || "easy";
-  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
-  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
   const time_signature = (formData.get("time_signature") as string)?.trim() || null;
-  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   if (!title || !artist || !lyricsRaw) {
@@ -116,9 +99,7 @@ export async function createSong(formData: FormData) {
       genre,
       key,
       difficulty,
-      tempo,
       time_signature,
-      strumming,
       chords: parsed.chords,
       sections: { raw: lyricsRaw, sections: parsed.sections },
       status: "published",
@@ -139,8 +120,6 @@ export async function createSong(formData: FormData) {
       sections: { raw: lyricsRaw, sections: parsed.sections },
       chords: parsed.chords,
       key,
-      tempo,
-      strumming,
       status: "published",
       author_id: adminId,
     })
@@ -174,9 +153,6 @@ export async function createVariant(formData: FormData) {
   const label = (formData.get("label") as string)?.trim() || "Новий варіант";
   const key = (formData.get("key") as string)?.trim() || "Am";
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
-  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
-  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
   const makePrimary = formData.get("make_primary") === "on";
 
@@ -194,8 +170,6 @@ export async function createVariant(formData: FormData) {
       chords: parsed.chords,
       key,
       capo,
-      tempo,
-      strumming,
       status: "published",
       author_id: adminId,
     })
@@ -222,10 +196,6 @@ export async function updateVariant(formData: FormData) {
   const label = (formData.get("label") as string)?.trim();
   const key = (formData.get("key") as string)?.trim();
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  // Rhythm block toggle: if disabled, clear both tempo and strumming.
-  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
-  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
-  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
@@ -244,8 +214,6 @@ export async function updateVariant(formData: FormData) {
       ...(label ? { label } : {}),
       ...(key ? { key } : {}),
       capo,
-      tempo,
-      strumming,
       ...(parsed
         ? {
             sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -257,9 +225,9 @@ export async function updateVariant(formData: FormData) {
 
   if (error) throw new Error(`Помилка: ${error.message}`);
 
-  // Mirror tempo/strumming (+ key/capo/sections/chords) to songs table when this variant
-  // is the primary — the view page reads these from songs-level columns via applyVariant
-  // fallback, and this guards against join/RLS quirks.
+  // Mirror key/capo/sections/chords to songs table when this variant is the
+  // primary — the view page reads these from songs-level columns via
+  // applyVariant fallback, and this guards against join/RLS quirks.
   const songId = variant.song_id as string;
   const { data: parentSong } = await admin
     .from("songs")
@@ -272,8 +240,6 @@ export async function updateVariant(formData: FormData) {
       .update({
         ...(key ? { key } : {}),
         capo,
-        tempo,
-        strumming,
         ...(parsed
           ? {
               sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -405,14 +371,11 @@ export async function updateSong(formData: FormData) {
   const genre = (formData.get("genre") as string)?.trim() || null;
   const key = (formData.get("key") as string)?.trim() || undefined;
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  const tempo = formData.get("tempo") ? Number(formData.get("tempo")) : null;
   const time_signature = (formData.get("time_signature") as string)?.trim() || null;
   const difficulty = (formData.get("difficulty") as string) || null;
   const status = (formData.get("status") as string) || null;
   const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
   const youtube_id = extractYoutubeId(formData.get("youtube_id") as string);
-  const strummingRaw = formData.get("strumming");
-  const strumming = strummingRaw === null ? undefined : parseStrumming(strummingRaw as string);
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   if (!title || !artist) throw new Error("Назва та виконавець обов'язкові");
@@ -425,9 +388,8 @@ export async function updateSong(formData: FormData) {
   const { data: songBefore, error } = await admin
     .from("songs")
     .update({
-      title, artist, album, genre, ...(key ? { key } : {}), capo, tempo, time_signature,
+      title, artist, album, genre, ...(key ? { key } : {}), capo, time_signature,
       difficulty, status, cover_image, youtube_id,
-      ...(strumming !== undefined ? { strumming } : {}),
       ...(parsed ? {
         sections: { raw: lyricsRaw, sections: parsed.sections },
         chords: parsed.chords,
@@ -448,8 +410,6 @@ export async function updateSong(formData: FormData) {
       .update({
         ...(key ? { key } : {}),
         capo,
-        tempo,
-        ...(strumming !== undefined ? { strumming } : {}),
         ...(parsed ? {
           sections: { raw: lyricsRaw, sections: parsed.sections },
           chords: parsed.chords,
@@ -497,9 +457,6 @@ export async function updateSongFull(formData: FormData) {
   const label = (formData.get("label") as string)?.trim();
   const key = (formData.get("key") as string)?.trim();
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  const rhythmEnabled = formData.get("rhythm_enabled") === "on";
-  const tempo = rhythmEnabled && formData.get("tempo") ? Number(formData.get("tempo")) : null;
-  const strumming = rhythmEnabled ? parseStrumming(formData.get("strumming") as string) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
 
@@ -522,8 +479,6 @@ export async function updateSongFull(formData: FormData) {
       ...(label ? { label } : {}),
       ...(key ? { key } : {}),
       capo,
-      tempo,
-      strumming,
       ...(parsed
         ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
         : {}),
@@ -549,8 +504,6 @@ export async function updateSongFull(formData: FormData) {
         ? {
             ...(key ? { key } : {}),
             capo,
-            tempo,
-            strumming,
             ...(parsed
               ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
               : {}),

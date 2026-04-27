@@ -12,10 +12,6 @@ import { ControlBlock } from "@/shared/components/ControlBlock";
 import { useFocusMode } from "@/shared/hooks/useFocusMode";
 
 // Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
-const RhythmPlayer = dynamic(
-  () => import("./RhythmPlayer").then((m) => m.RhythmPlayer),
-  { ssr: false },
-);
 const StrumPatternList = dynamic(
   () => import("./StrumPatternList").then((m) => m.StrumPatternList),
   { ssr: false },
@@ -527,26 +523,10 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
 
               {/* Chords */}
               <div>
-                {/* Rhythm — rich patterns when set, otherwise legacy fallback */}
-                {song.strumPatterns && song.strumPatterns.length > 0 ? (
+                {/* Rhythm — rendered only when the song has strumming patterns. */}
+                {song.strumPatterns && song.strumPatterns.length > 0 && (
                   <div className="mb-3">
-                    {/* Mobile uses bare/inline style — pick the first pattern */}
                     <StrumPatternList patterns={song.strumPatterns} />
-                  </div>
-                ) : (
-                  <div
-                    className="mb-3 px-3 py-2"
-                    style={{
-                      borderRadius: "0.75rem",
-                      border: "1px solid var(--border, rgba(0,0,0,0.06))",
-                    }}
-                  >
-                    <RhythmPlayer
-                      strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
-                      tempo={song.tempo ?? 100}
-                      timeSignature={song.timeSignature ?? "4/4"}
-                      bare
-                    />
                   </div>
                 )}
                 {/* Beginner mode */}
@@ -1003,15 +983,9 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               )}
             </ControlBlock>
 
-            {/* Rhythm — rich patterns when set, otherwise legacy auto fallback */}
-            {song.strumPatterns && song.strumPatterns.length > 0 ? (
+            {/* Rhythm — only rendered when the song has strumming patterns. */}
+            {song.strumPatterns && song.strumPatterns.length > 0 && (
               <StrumPatternList patterns={song.strumPatterns} />
-            ) : (
-              <RhythmPlayer
-                strumming={song.strumming && song.strumming.length > 0 ? song.strumming : ["D", "D", "U", "U", "D", "U", "D", "U"]}
-                tempo={song.tempo ?? 100}
-                timeSignature={song.timeSignature ?? "4/4"}
-              />
             )}
 
             {/* Audio player */}

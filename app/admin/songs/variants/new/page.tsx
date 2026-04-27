@@ -5,8 +5,6 @@ import { PageShell } from "@/shared/components/PageShell";
 import { FormField } from "@/shared/components/FormField";
 import { BackButton } from "@/shared/components/BackButton";
 import { TeButton } from "@/shared/components/TeButton";
-import { StrummingEditor } from "@/features/song/components/StrummingEditor";
-import { RhythmBlock } from "../../edit/RhythmBlock";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createVariant } from "@/features/song/actions/admin";
@@ -88,20 +86,6 @@ export default async function NewVariantPage({
             </label>
           </div>
         </div>
-
-        <RhythmBlock initialEnabled={false}>
-          <FormField label="Темп (BPM)">
-            <input name="tempo" type="number" min={40} max={300} placeholder="120" className="field-input" style={{ color: "var(--text)" }} />
-          </FormField>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
-              Бій / ритмічний малюнок
-            </label>
-            <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
-              <StrummingEditor name="strumming" />
-            </div>
-          </div>
-        </RhythmBlock>
 
         <div className="te-surface p-8 md:p-10" style={{ borderRadius: "2rem" }}>
           <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>

@@ -30,8 +30,6 @@ export interface SongSection {
   tab?: string;       // raw ASCII tablature (6 string lines)
 }
 
-export type Strum = "D" | "U" | "Dx" | "Ux";
-
 // ─── Strumming patterns (rich model — multiple per song) ─────────────────────
 export type StrumDir = "D" | "U";
 export type NoteLength = "1/4" | "1/8" | "1/16" | "1/4t" | "1/8t" | "1/16t";
@@ -67,8 +65,6 @@ export interface SongVariant {
   chords: string[];
   key: string;
   capo?: number;
-  tempo?: number;
-  strumming?: Strum[];
   views: number;
   createdAt: string;
   isPrimary: boolean;
@@ -82,19 +78,17 @@ export interface Song {
   genre: string;
   key: string;
   capo?: number;
-  tempo?: number;
   timeSignature?: string;
   difficulty: Difficulty;
   chords: string[];
   views: number;
   sections: SongSection[];
   youtubeId?: string;
-  strumming?: Strum[];
   coverImage?: string;
   coverColor?: string;
   variants?: SongVariant[];
   primaryVariantId?: string;
   activeVariantId?: string;
-  /** Rich strumming patterns (multiple per song). When present, takes precedence over `strumming`. */
+  /** Rich strumming patterns (multiple per song). */
   strumPatterns?: StrumPattern[];
 }

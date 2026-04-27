@@ -8,15 +8,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { updateSongFull, setPrimaryVariant, deleteVariant } from "@/features/song/actions/admin";
-import { TempoInput } from "./TempoInput";
 import { AutoResizeTextarea } from "./AutoResizeTextarea";
 import { VariantTabs } from "./VariantTabs";
 import { TeButton } from "@/shared/components/TeButton";
-import { StrummingEditor } from "@/features/song/components/StrummingEditor";
 import { StrumPatternsEditor } from "@/features/song/components/StrumPatternsEditor";
 import { mapPatternRow } from "@/features/song/services/songs";
 import type { StrumPattern } from "@/features/song/types";
-import { RhythmBlock } from "./RhythmBlock";
 import { StringAutocomplete } from "./StringAutocomplete";
 import { AlbumAutocomplete } from "./AlbumAutocomplete";
 import { Suspense } from "react";
@@ -161,7 +158,7 @@ export default async function EditSongPage({
 
   const { data: variants } = await admin
     .from("song_variants")
-    .select("id, label, created_at, views, key, capo, tempo, strumming, sections")
+    .select("id, label, created_at, views, key, capo, sections")
     .eq("song_id", song.id)
     .order("created_at", { ascending: true });
 
@@ -173,8 +170,6 @@ export default async function EditSongPage({
     views: number | null;
     key: string;
     capo: number | null;
-    tempo: number | null;
-    strumming: string[] | null;
     sections: unknown;
   }>;
 
@@ -351,35 +346,8 @@ export default async function EditSongPage({
             </div>
           )}
 
-          {/* ── Ритм ──────────────────────────────────────────────────── */}
-          <RhythmBlock initialEnabled={!!(activeVariant.tempo || (activeVariant.strumming && activeVariant.strumming.length > 0))}>
-            <div>
-              <FormField label="Темп (BPM)">
-                <TempoInput name="tempo" defaultValue={activeVariant.tempo ?? ""} />
-              </FormField>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: "var(--text-muted)" }}>
-                Бій / ритмічний малюнок
-              </label>
-              <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
-                <StrummingEditor
-                  name="strumming"
-                  defaultValue={activeVariant.strumming ?? undefined}
-                />
-              </div>
-            </div>
-          </RhythmBlock>
-
           {/* ── Бій (multi-pattern editor — per song, not per variant) ── */}
           <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>
-            <h2 className="text-lg font-bold mb-1 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-              Бої / патерни
-            </h2>
-            <p className="text-xs mb-5" style={{ color: "var(--text-muted)" }}>
-              Кілька патернів для різних частин пісні (Main, Pre-Chorus, Chorus...). Кожен зі своїм темпом, тривалістю ноти, акцентами.
-            </p>
             <StrumPatternsEditor songId={song.id} initial={strumPatterns} />
           </div>
 
