@@ -8,6 +8,7 @@ import { AdjusterButton } from "@/shared/components/AdjusterButton";
 import { TeButton } from "@/shared/components/TeButton";
 
 type Strum = "D" | "U" | "Dx" | "Ux";
+type AccentLevel = "primary" | "secondary" | "none";
 
 interface RhythmPlayerProps {
   strumming: Strum[];
@@ -54,7 +55,7 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
     const intervalMs = (60 / tempo / 2) * 1000;
     let index = 0;
 
-    const playTick = (hit: Strum, accent: boolean) => {
+    const playTick = (hit: Strum, accent: AccentLevel) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       const filter = audioCtx.createBiquadFilter();
@@ -70,8 +71,13 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
       osc.frequency.setValueAtTime(isMute ? 80 : isDown ? 110 : 165, audioCtx.currentTime);
       osc.type = "triangle";
 
+      // Per project memory: accents only change volume — never timbre/frequency.
+      // Three-tier groove: primary (beat 1), secondary (other downbeats),
+      // none (off-beats / "і"). This is what makes a "вісімка" feel like
+      // a rhythmic pattern instead of 8 evenly-played hits.
       const baseVolume = isMute ? 0.15 : isDown ? 0.4 : 0.3;
-      const volume = accent ? Math.min(0.9, baseVolume * 1.8) : baseVolume;
+      const accentMultiplier = accent === "primary" ? 1.9 : accent === "secondary" ? 1.35 : 1;
+      const volume = Math.min(0.9, baseVolume * accentMultiplier);
       const duration = isMute ? 0.04 : 0.12;
 
       gain.gain.setValueAtTime(volume, audioCtx.currentTime);
@@ -80,15 +86,23 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
       osc.stop(audioCtx.currentTime + duration);
 
       if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(accent ? 55 : isDown ? 35 : 20);
+        const ms = accent === "primary" ? 55 : accent === "secondary" ? 35 : isDown ? 22 : 14;
+        navigator.vibrate(ms);
       }
+    };
+
+    const accentFor = (i: number): AccentLevel => {
+      if (i % measureLen === 0) return "primary";
+      // Even slots in 4/4 (2,4,6) = downbeats 2/3/4; odd slots = off-beats "і".
+      if (i % 2 === 0) return "secondary";
+      return "none";
     };
 
     const timer = setInterval(() => {
       if (audioCtx.state === "suspended") audioCtx.resume();
       const hit = strumming[index];
       setActiveIndex(index);
-      playTick(hit, index % measureLen === 0);
+      playTick(hit, accentFor(index));
       index = (index + 1) % strumming.length;
     }, intervalMs);
 
@@ -133,7 +147,9 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
           const isDown = hit.startsWith("D");
           const isMute = hit.endsWith("x");
           const active = activeIndex === i;
-          const isAccent = i % measureLen === 0;
+          const isPrimary = i % measureLen === 0;
+          const isSecondary = !isPrimary && i % 2 === 0;
+          const isAccent = isPrimary || isSecondary;
           return (
             <span
               key={i}
@@ -141,8 +157,8 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
               style={{
                 width: "22px",
                 height: "26px",
-                fontSize: isAccent ? "18px" : "16px",
-                fontWeight: isAccent ? 900 : 700,
+                fontSize: isPrimary ? "18px" : isSecondary ? "17px" : "16px",
+                fontWeight: isPrimary ? 900 : isSecondary ? 800 : 700,
                 color: active
                   ? "var(--orange)"
                   : isAccent
@@ -153,15 +169,17 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
                 opacity: isMute ? 0.5 : 1,
                 background: active
                   ? "rgba(255,136,0,0.18)"
-                  : isAccent
-                  ? "rgba(255,136,0,0.06)"
+                  : isPrimary
+                  ? "rgba(255,136,0,0.08)"
+                  : isSecondary
+                  ? "rgba(255,136,0,0.03)"
                   : "transparent",
-                transform: active ? (isAccent ? "scale(1.4)" : "scale(1.25)") : "scale(1)",
-                textShadow: isAccent ? "0 0 2px rgba(255,136,0,0.5)" : "none",
+                transform: active ? (isPrimary ? "scale(1.4)" : isSecondary ? "scale(1.3)" : "scale(1.25)") : "scale(1)",
+                textShadow: isPrimary ? "0 0 2px rgba(255,136,0,0.5)" : "none",
               }}
             >
               {isDown ? "↓" : "↑"}
-              {isAccent && (
+              {isPrimary && (
                 <span
                   style={{
                     position: "absolute",
@@ -172,6 +190,21 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
                     height: "4px",
                     borderRadius: "50%",
                     background: "var(--orange)",
+                  }}
+                />
+              )}
+              {isSecondary && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-2px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "3px",
+                    height: "3px",
+                    borderRadius: "50%",
+                    background: "var(--text-muted)",
+                    opacity: 0.6,
                   }}
                 />
               )}
@@ -227,7 +260,9 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
           const isDown = hit.startsWith("D");
           const isMute = hit.endsWith("x");
           const active = activeIndex === i;
-          const isAccent = i % measureLen === 0;
+          const isPrimary = i % measureLen === 0;
+          const isSecondary = !isPrimary && i % 2 === 0;
+          const isAccent = isPrimary || isSecondary;
           return (
             <span
               key={i}
@@ -235,16 +270,16 @@ export function RhythmPlayer({ strumming, tempo: defaultTempo, timeSignature = "
               style={{
                 width: 18,
                 height: 20,
-                fontSize: isAccent ? 15 : 13,
-                fontWeight: isAccent ? 900 : 700,
+                fontSize: isPrimary ? 15 : isSecondary ? 14 : 13,
+                fontWeight: isPrimary ? 900 : isSecondary ? 800 : 700,
                 color: active ? "var(--orange)" : isAccent || isDown ? "var(--text)" : "var(--text-muted)",
                 opacity: isMute ? 0.5 : 1,
-                background: active ? "rgba(255,136,0,0.18)" : isAccent ? "rgba(255,136,0,0.06)" : "transparent",
-                transform: active ? (isAccent ? "scale(1.3)" : "scale(1.2)") : "scale(1)",
+                background: active ? "rgba(255,136,0,0.18)" : isPrimary ? "rgba(255,136,0,0.08)" : isSecondary ? "rgba(255,136,0,0.03)" : "transparent",
+                transform: active ? (isPrimary ? "scale(1.3)" : isSecondary ? "scale(1.25)" : "scale(1.2)") : "scale(1)",
               }}
             >
               {isDown ? "↓" : "↑"}
-              {isAccent && (
+              {isPrimary && (
                 <span
                   style={{
                     position: "absolute",
