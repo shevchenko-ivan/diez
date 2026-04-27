@@ -158,7 +158,7 @@ function PatternRow({ pattern, onEdit }: { pattern: StrumPattern; onEdit: () => 
 function StrokesPreview({ strokes }: { strokes: Stroke[] }) {
   const visible = strokes.slice(0, 16);
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-0.5 flex-wrap max-w-full">
       {visible.map((s, i) => (
         <span
           key={i}
@@ -445,11 +445,11 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
                 key={preset.id}
                 type="button"
                 onClick={() => applyPreset(preset)}
-                className="te-pressable flex flex-col items-start gap-1 p-2 text-left"
+                className="te-pressable flex flex-col items-start gap-1 p-2 text-left min-w-0 overflow-hidden"
                 style={{ borderRadius: "0.6rem" }}
                 title={`Застосувати «${preset.label}»`}
               >
-                <div className="flex items-center justify-between w-full gap-2">
+                <div className="flex items-center justify-between w-full gap-2 min-w-0">
                   <span className="text-[11px] font-bold truncate" style={{ color: "var(--text)" }}>
                     {preset.label}
                   </span>
