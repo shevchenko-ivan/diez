@@ -300,7 +300,9 @@ function ksBuffer(ctx: AudioContext, freq: number, decay: number): AudioBuffer {
   for (let i = 0; i < period; i++) data[i] = Math.random() * 2 - 1;
 
   // Karplus-Strong: averaged feedback through a 1-period delay line.
-  for (let i = period; i < length; i++) {
+  // Start at period+1 so we never read data[-1] (Float32Array would yield
+  // `undefined` → NaN, silencing the whole buffer).
+  for (let i = period + 1; i < length; i++) {
     data[i] = (data[i - period] + data[i - period - 1]) * 0.5 * decay;
   }
 
