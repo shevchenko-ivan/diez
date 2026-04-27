@@ -163,6 +163,9 @@ function StrokesPreview({ strokes }: { strokes: Stroke[] }) {
         <span
           key={i}
           style={{
+            display: "inline-block",
+            width: 10,
+            textAlign: "center",
             fontSize: 12,
             fontWeight: s.a ? 900 : 600,
             opacity: s.r ? 0.3 : s.m ? 0.55 : 1,
