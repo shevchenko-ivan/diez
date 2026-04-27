@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Plus, Trash2, Save, X, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Plus, Trash2, Save, X, ChevronDown, Play, Square } from "lucide-react";
 import type { StrumPattern, Stroke, NoteLength } from "@/features/song/types";
 import {
   createStrumPattern,
   updateStrumPattern,
   deleteStrumPattern,
 } from "@/features/song/actions/strumming-patterns";
+import { playStroke, intervalFor } from "@/features/song/lib/strumming-audio";
 
 interface Props {
   songId: string;
@@ -161,6 +162,51 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   const [strokes, setStrokes] = useState<Stroke[]>(initial?.strokes ?? defaultStrokes());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [playing, setPlaying] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Preview playback — same engine as the read-only viewer so the admin hears
+  // exactly what users will hear. Re-runs on tempo/noteLength/strokes changes
+  // so edits during playback take effect immediately on the next loop tick.
+  useEffect(() => {
+    if (!playing || !audioCtxRef.current || strokes.length === 0) {
+      setActiveIndex(-1);
+      return;
+    }
+    const audioCtx = audioCtxRef.current;
+    const intervalMs = intervalFor(noteLength, tempo);
+    let i = 0;
+    const tick = () => {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const stroke = strokes[i];
+      setActiveIndex(i);
+      if (stroke && !stroke.r) playStroke(audioCtx, stroke);
+      i = (i + 1) % strokes.length;
+    };
+    const timer = setInterval(tick, intervalMs);
+    return () => clearInterval(timer);
+  }, [playing, strokes, tempo, noteLength]);
+
+  // Tear down the AudioContext on unmount so we don't leak audio nodes when
+  // the admin cancels/saves while the preview is still ticking.
+  useEffect(() => {
+    return () => {
+      audioCtxRef.current?.close().catch(() => {});
+      audioCtxRef.current = null;
+    };
+  }, []);
+
+  function togglePlay() {
+    if (!audioCtxRef.current) {
+      const AC =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtxRef.current = new AC();
+    }
+    if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
+    setPlaying((p) => !p);
+  }
 
   function cycleStroke(i: number) {
     setStrokes((prev) => {
@@ -263,6 +309,26 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
       aria-label="Редактор патерну"
     >
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={togglePlay}
+          aria-label={playing ? "Зупинити прослуховування" : "Прослухати патерн"}
+          title={playing ? "Зупинити" : "Прослухати"}
+          className="flex items-center justify-center rounded-full transition-colors flex-shrink-0"
+          style={{
+            width: 26,
+            height: 26,
+            background: playing ? "var(--orange)" : "transparent",
+            color: playing ? "#FFF" : "var(--text)",
+            border: playing ? "none" : "1.5px solid var(--text)",
+          }}
+        >
+          {playing ? (
+            <Square size={10} fill="currentColor" />
+          ) : (
+            <Play size={11} fill="currentColor" style={{ marginLeft: 1 }} />
+          )}
+        </button>
         <input
           type="text"
           value={name}
@@ -330,6 +396,7 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
               startIndex={b.startIndex}
               beatNumber={b.beatNumber}
               isTriplet={noteLength.endsWith("t")}
+              activeIndex={activeIndex}
               onCycle={cycleStroke}
             />
           ))}
@@ -420,12 +487,14 @@ function EditableBeatGroup({
   startIndex,
   beatNumber,
   isTriplet,
+  activeIndex,
   onCycle,
 }: {
   strokes: Stroke[];
   startIndex: number;
   beatNumber: number;
   isTriplet: boolean;
+  activeIndex: number;
   onCycle: (i: number) => void;
 }) {
   const cellW = 24;
@@ -434,66 +503,107 @@ function EditableBeatGroup({
       {/* Stroke buttons */}
       <div className="flex items-end gap-0.5">
         {strokes.map((s, i) => (
-          <StrokeButton key={i} stroke={s} onClick={() => onCycle(startIndex + i)} />
+          <StrokeButton
+            key={i}
+            stroke={s}
+            active={activeIndex === startIndex + i}
+            onClick={() => onCycle(startIndex + i)}
+          />
         ))}
       </div>
 
-      {/* Beat number — under the first stroke */}
+      {/* Subdivision labels — under EACH stroke, like sheet music: 1 & 2 & for
+          eighths, 1 e & a for sixteenths. Triplets just label the downbeat
+          (the "3" bracket below carries the rhythmic info). */}
       <div className="flex">
-        <div
-          style={{
-            width: cellW,
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 700,
-            color: "var(--text-muted)",
-            lineHeight: "14px",
-          }}
-        >
-          {beatNumber}
-        </div>
+        {strokes.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: cellW,
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: i === 0 ? 700 : 600,
+              color: "var(--text-muted)",
+              lineHeight: "14px",
+              opacity: i === 0 ? 1 : 0.7,
+            }}
+          >
+            {subdivisionLabel(i, strokes.length, beatNumber, isTriplet)}
+          </div>
+        ))}
       </div>
 
-      {/* Triplet bracket — only when it's a triplet note length AND the group
-          actually has 3 strokes (last incomplete group is skipped). */}
-      {isTriplet && strokes.length === 3 && (
-        <div style={{ position: "relative", height: 12, marginTop: 1 }}>
+      {/* Beam line — like the underline of beamed notes in sheet music. For
+          triplets we also draw a "3" badge floating over the line. */}
+      {strokes.length > 1 && (
+        <div style={{ position: "relative", height: 10, marginTop: 1 }}>
           <div
             style={{
               position: "absolute",
               top: 4,
               left: 3,
               right: 3,
-              height: 4,
-              borderLeft: "1.5px solid var(--text-muted)",
-              borderRight: "1.5px solid var(--text-muted)",
+              height: 0,
               borderTop: "1.5px solid var(--text-muted)",
               opacity: 0.55,
             }}
           />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: "50%",
-              transform: "translateX(-50%)",
-              fontSize: 9,
-              fontWeight: 700,
-              color: "var(--text-muted)",
-              background: "var(--surface, #FFF)",
-              padding: "0 3px",
-              lineHeight: "12px",
-            }}
-          >
-            3
-          </div>
+          {isTriplet && strokes.length === 3 && (
+            <div
+              style={{
+                position: "absolute",
+                top: -1,
+                left: "50%",
+                transform: "translateX(-50%)",
+                fontSize: 9,
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                background: "var(--surface, #FFF)",
+                padding: "0 3px",
+                lineHeight: "12px",
+              }}
+            >
+              3
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function StrokeButton({ stroke, onClick }: { stroke: Stroke; onClick: () => void }) {
+/**
+ * Sheet-music-style label for one stroke inside its beat:
+ *   1/4   → "1"
+ *   1/8   → "1 &"
+ *   1/16  → "1 e & a"
+ *   1/4t  → "1" + bracket (downbeat only; the bracket carries the "3")
+ *   1/8t  → "1" + bracket
+ *   1/16t → "1" + bracket
+ */
+function subdivisionLabel(
+  indexInBeat: number,
+  beatSize: number,
+  beatNumber: number,
+  isTriplet: boolean,
+): string {
+  if (indexInBeat === 0) return String(beatNumber);
+  if (isTriplet) return ""; // bracket carries the meaning
+  if (beatSize === 2) return "&"; // 1/8
+  if (beatSize === 4) return ["", "e", "&", "a"][indexInBeat] ?? ""; // 1/16
+  return "";
+}
+
+function StrokeButton({
+  stroke,
+  active,
+  onClick,
+}: {
+  stroke: Stroke;
+  active: boolean;
+  onClick: () => void;
+}) {
   const isDown = stroke.d === "D";
   const isMute = stroke.m === true;
   const isAccent = stroke.a === true;
@@ -502,19 +612,22 @@ function StrokeButton({ stroke, onClick }: { stroke: Stroke; onClick: () => void
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center justify-center"
+      className="flex flex-col items-center justify-center transition-all"
       style={{
         width: 24,
         height: 32,
         borderRadius: "0.4rem",
-        background: "var(--surface-active, rgba(0,0,0,0.04))",
+        background: active
+          ? "rgba(255,136,0,0.18)"
+          : "var(--surface-active, rgba(0,0,0,0.04))",
         border: isAccent ? "1.5px solid var(--orange)" : "1px solid transparent",
         opacity: isRest ? 0.4 : isMute ? 0.65 : 1,
-        color: isDown ? "var(--text)" : "var(--text-muted)",
+        color: active ? "var(--orange)" : isDown ? "var(--text)" : "var(--text-muted)",
         fontSize: 16,
         fontWeight: isAccent ? 900 : 700,
         cursor: "pointer",
         position: "relative",
+        transform: active ? "scale(1.15)" : "scale(1)",
       }}
       title={describeStroke(stroke)}
     >
