@@ -13,6 +13,7 @@ import type { NoteLength, Stroke } from "@/features/song/types";
 const D: Stroke = { d: "D" };
 const U: Stroke = { d: "U" };
 const DA: Stroke = { d: "D", a: true };
+const M: Stroke = { d: "D", m: true };
 const REST: Stroke = { d: "D", r: true };
 
 export interface StrumPreset {
@@ -80,6 +81,41 @@ export const STRUM_PRESETS: StrumPreset[] = [
     strokes: [DA, D, D, U, DA, D, D, U],
   },
   {
+    id: "petty",
+    // D · D U · D U · — Tom Petty / Free Fallin' / Hey There Delilah feel.
+    label: "Petty",
+    noteLength: "1/8",
+    strokes: [DA, REST, D, U, REST, D, U, REST],
+  },
+  {
+    id: "half-ballad",
+    // D · · · D U · U — sparse half-time ballad, lots of air.
+    label: "Балада повільна",
+    noteLength: "1/8",
+    strokes: [DA, REST, REST, REST, D, U, REST, U],
+  },
+  {
+    id: "bossa",
+    // D · U · D U · U — bossa-nova-style syncopation.
+    label: "Босса",
+    noteLength: "1/8",
+    strokes: [DA, REST, U, REST, D, U, REST, U],
+  },
+  {
+    id: "backbeat",
+    // D U Dm U D U Dm U — palm-mute "chuck" on beats 2 & 4 (funk/disco backbeat).
+    label: "Бекбіт",
+    noteLength: "1/8",
+    strokes: [DA, U, M, U, D, U, M, U],
+  },
+  {
+    id: "march",
+    // D! U D! U D! U D! U — every downbeat accented (march / pop-punk).
+    label: "Марш",
+    noteLength: "1/8",
+    strokes: [DA, U, DA, U, DA, U, DA, U],
+  },
+  {
     id: "reggae",
     // · U · U · U · U — upbeats only (skank).
     label: "Реггі",
@@ -105,6 +141,13 @@ export const STRUM_PRESETS: StrumPreset[] = [
     label: "6/8 (вальс)",
     noteLength: "1/8t",
     strokes: [DA, U, U, DA, U, U],
+  },
+  {
+    id: "house-6-8",
+    // 6/8 arpeggio feel — House of the Rising Sun.
+    label: "House 6/8",
+    noteLength: "1/8t",
+    strokes: [DA, REST, U, D, U, U],
   },
   {
     id: "shuffle",
