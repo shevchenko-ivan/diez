@@ -4,6 +4,7 @@ import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider } from "posthog-js/react";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * PostHog client-side provider.
@@ -43,9 +44,44 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <PageviewTracker />
       </Suspense>
+      <AuthIdentifier />
       {children}
     </PHProvider>
   );
+}
+
+/**
+ * Bridges Supabase auth state to PostHog.
+ *
+ * - On login → `identify(userId, { email })` so the anonymous session merges
+ *   with the named person. Also stamps the email as a Person property so the
+ *   "Internal & Test users" cohort can target by email.
+ * - On logout → `reset()` so the next visit gets a fresh anonymous id and
+ *   doesn't leak between accounts on shared devices.
+ */
+function AuthIdentifier() {
+  useEffect(() => {
+    if (!posthog.__loaded) return;
+    const sb = createClient();
+
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        posthog.identify(session.user.id, { email: session.user.email });
+      }
+    });
+
+    const { data: listener } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        posthog.identify(session.user.id, { email: session.user.email });
+      } else if (event === "SIGNED_OUT") {
+        posthog.reset();
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  return null;
 }
 
 function PageviewTracker() {
