@@ -315,16 +315,25 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
         </button>
       </div>
 
-      {/* Strokes editor */}
+      {/* Strokes editor — strokes grouped by beat, with beat numbers and a
+          triplet bracket beneath triplet groups. Mirrors the read-only viewer
+          (PatternPlayer) so the admin sees what the user will see. */}
       <div className="space-y-1">
         <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
           Удари — клік перемикає: ↓ → ↓&gt; → ↓×  → ↑ → ↑&gt; → ↑× → · (пауза) → ↓
         </div>
-        <div className="flex flex-wrap items-end gap-1 p-2 rounded-lg" style={{ background: "var(--surface, rgba(0,0,0,0.02))" }}>
-          {strokes.map((s, i) => (
-            <StrokeButton key={i} stroke={s} onClick={() => cycleStroke(i)} />
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2 p-2 rounded-lg" style={{ background: "var(--surface, rgba(0,0,0,0.02))" }}>
+          {groupStrokesByBeat(strokes, noteLength).map((b) => (
+            <EditableBeatGroup
+              key={b.startIndex}
+              strokes={b.strokes}
+              startIndex={b.startIndex}
+              beatNumber={b.beatNumber}
+              isTriplet={noteLength.endsWith("t")}
+              onCycle={cycleStroke}
+            />
           ))}
-          <div className="flex flex-col gap-1 ml-1">
+          <div className="flex flex-col gap-1 ml-1 self-center">
             <button type="button" onClick={addStroke} className="te-pressable w-7 h-6 flex items-center justify-center" style={{ borderRadius: "0.4rem", color: "var(--orange)" }} title="Додати удар">
               <Plus size={12} strokeWidth={2.5} />
             </button>
@@ -374,6 +383,112 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Beat grouping (mirrors the viewer) ──────────────────────────────────────
+
+interface EditableBeat {
+  strokes: Stroke[];
+  startIndex: number;
+  beatNumber: number;
+}
+
+function groupStrokesByBeat(strokes: Stroke[], nl: NoteLength): EditableBeat[] {
+  const size = strokesPerBeat(nl);
+  const out: EditableBeat[] = [];
+  for (let i = 0, beat = 1; i < strokes.length; i += size, beat += 1) {
+    out.push({ strokes: strokes.slice(i, i + size), startIndex: i, beatNumber: beat });
+  }
+  return out;
+}
+
+function strokesPerBeat(nl: NoteLength): number {
+  switch (nl) {
+    case "1/4": return 1;
+    case "1/8": return 2;
+    case "1/16": return 4;
+    case "1/4t": return 3;
+    case "1/8t": return 3;
+    case "1/16t": return 6;
+  }
+}
+
+function EditableBeatGroup({
+  strokes,
+  startIndex,
+  beatNumber,
+  isTriplet,
+  onCycle,
+}: {
+  strokes: Stroke[];
+  startIndex: number;
+  beatNumber: number;
+  isTriplet: boolean;
+  onCycle: (i: number) => void;
+}) {
+  const cellW = 24;
+  return (
+    <div className="flex flex-col items-stretch" style={{ minWidth: cellW * strokes.length }}>
+      {/* Stroke buttons */}
+      <div className="flex items-end gap-0.5">
+        {strokes.map((s, i) => (
+          <StrokeButton key={i} stroke={s} onClick={() => onCycle(startIndex + i)} />
+        ))}
+      </div>
+
+      {/* Beat number — under the first stroke */}
+      <div className="flex">
+        <div
+          style={{
+            width: cellW,
+            textAlign: "center",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "var(--text-muted)",
+            lineHeight: "14px",
+          }}
+        >
+          {beatNumber}
+        </div>
+      </div>
+
+      {/* Triplet bracket — only when it's a triplet note length AND the group
+          actually has 3 strokes (last incomplete group is skipped). */}
+      {isTriplet && strokes.length === 3 && (
+        <div style={{ position: "relative", height: 12, marginTop: 1 }}>
+          <div
+            style={{
+              position: "absolute",
+              top: 4,
+              left: 3,
+              right: 3,
+              height: 4,
+              borderLeft: "1.5px solid var(--text-muted)",
+              borderRight: "1.5px solid var(--text-muted)",
+              borderTop: "1.5px solid var(--text-muted)",
+              opacity: 0.55,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontSize: 9,
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              background: "var(--surface, #FFF)",
+              padding: "0 3px",
+              lineHeight: "12px",
+            }}
+          >
+            3
+          </div>
+        </div>
+      )}
     </div>
   );
 }
