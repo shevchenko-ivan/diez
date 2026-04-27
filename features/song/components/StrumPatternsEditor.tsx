@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Plus, Trash2, Save, X, ChevronDown, Play, Square } from "lucide-react";
+import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Play, Square } from "lucide-react";
 import type { StrumPattern, Stroke, NoteLength } from "@/features/song/types";
 import {
   createStrumPattern,
@@ -9,6 +9,7 @@ import {
   deleteStrumPattern,
 } from "@/features/song/actions/strumming-patterns";
 import { playStroke, intervalFor } from "@/features/song/lib/strumming-audio";
+import { STRUM_PRESETS, type StrumPreset } from "@/features/song/lib/strum-presets";
 
 import { ToggleKnob } from "@/shared/components/ToggleKnob";
 
@@ -199,7 +200,13 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   const [pending, startTransition] = useTransition();
   const [playing, setPlaying] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  function applyPreset(preset: StrumPreset) {
+    setStrokes(preset.strokes.map((s) => ({ ...s })));
+    setNoteLength(preset.noteLength);
+  }
 
   // Preview playback — same engine as the read-only viewer so the admin hears
   // exactly what users will hear. Re-runs on tempo/noteLength/strokes changes
@@ -414,6 +421,44 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
         >
           Шаблон
         </button>
+      </div>
+
+      {/* Presets gallery — one-click application of common patterns. Replaces
+          the current strokes + noteLength entirely, then admin fine-tunes. */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setPresetsOpen((v) => !v)}
+          className="te-pressable flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
+          style={{ borderRadius: "0.6rem", color: "var(--text-muted)" }}
+        >
+          {presetsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          Стандартні шаблони
+        </button>
+        {presetsOpen && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+            {STRUM_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyPreset(preset)}
+                className="te-pressable flex flex-col items-start gap-1 p-2 text-left"
+                style={{ borderRadius: "0.6rem" }}
+                title={`Застосувати «${preset.label}»`}
+              >
+                <div className="flex items-center justify-between w-full gap-2">
+                  <span className="text-[11px] font-bold truncate" style={{ color: "var(--text)" }}>
+                    {preset.label}
+                  </span>
+                  <span className="text-[9px] font-mono uppercase tracking-widest flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                    {preset.noteLength}
+                  </span>
+                </div>
+                <StrokesPreview strokes={preset.strokes} />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Strokes editor — strokes grouped by beat, with beat numbers and a
