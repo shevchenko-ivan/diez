@@ -3,6 +3,7 @@ import "./globals.css";
 import { siteUrl } from "@/lib/utils";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
+import { PostHogProvider } from "@/shared/components/PostHogProvider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -80,15 +81,17 @@ export default function RootLayout({
             }),
           }}
         />
-        <ThemeProvider>
-          {/* Skip link — first focusable element on every page (WCAG 2.4.1).
-              Visually hidden until focused, then anchored to the top-left. */}
-          <a href="#main-content" className="skip-to-content">
-            Перейти до основного вмісту
-          </a>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider>
+            {/* Skip link — first focusable element on every page (WCAG 2.4.1).
+                Visually hidden until focused, then anchored to the top-left. */}
+            <a href="#main-content" className="skip-to-content">
+              Перейти до основного вмісту
+            </a>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </PostHogProvider>
         <Analytics />
         <SpeedInsights />
       </body>
