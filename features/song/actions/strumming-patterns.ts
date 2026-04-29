@@ -94,7 +94,9 @@ async function revalidateForSong(admin: ReturnType<typeof createAdminClient>, so
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
-export async function createStrumPattern(formData: FormData) {
+export async function createStrumPattern(
+  formData: FormData,
+): Promise<{ id: string; position: number }> {
   try {
     await requireAdmin();
     const admin = createAdminClient();
@@ -115,17 +117,25 @@ export async function createStrumPattern(formData: FormData) {
       .limit(1);
     const nextPosition = existing && existing.length > 0 ? (existing[0].position as number) + 1 : 0;
 
-    const { error } = await admin.from("song_strumming_patterns").insert({
-      song_id: songId,
-      position: nextPosition,
-      name,
-      tempo,
-      note_length: noteLength,
-      strokes,
-    });
-    if (error) throw new Error(`Помилка створення: ${error.message}`);
+    // Return the inserted row so the client can replace its temporary id
+    // with the real UUID — otherwise editing-then-saving the just-created
+    // pattern hits assertUuid("tmp-...") and throws.
+    const { data: inserted, error } = await admin
+      .from("song_strumming_patterns")
+      .insert({
+        song_id: songId,
+        position: nextPosition,
+        name,
+        tempo,
+        note_length: noteLength,
+        strokes,
+      })
+      .select("id, position")
+      .single();
+    if (error || !inserted) throw new Error(`Помилка створення: ${error?.message ?? "no row returned"}`);
 
     await revalidateForSong(admin, songId);
+    return { id: inserted.id as string, position: inserted.position as number };
   } catch (e) {
     // Server-action errors get redacted on the client. Log the real cause
     // server-side so the dev terminal shows what actually went wrong.
