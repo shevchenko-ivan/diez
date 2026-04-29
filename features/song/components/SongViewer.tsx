@@ -149,6 +149,10 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
   const [scrollSpeed, setScrollSpeed] = useState(0);
   // Hide the auto-scroll control when the page already fits the viewport.
   const [pageScrollable, setPageScrollable] = useState(false);
+  // Mirror to a ref so the global Space-key handler — bound once on mount with
+  // empty deps — reads the latest value instead of the initial `false`.
+  const pageScrollableRef = useRef(false);
+  useEffect(() => { pageScrollableRef.current = pageScrollable; }, [pageScrollable]);
   const [noBarreMode, setNoBarreMode] = useState(false);
   const [beginnerMode, setBeginnerMode] = useState(false);
   const [focusMode, , toggleFocusMode] = useFocusMode();
@@ -250,7 +254,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
   }, [scrollSpeed]);
 
   const handleScrollToggle = () => {
-    if (!pageScrollable) return;
+    if (!pageScrollableRef.current) return;
     trigger("light");
     setScrollSpeed((prev) => (prev === 0 ? 1 : 0));
   };
