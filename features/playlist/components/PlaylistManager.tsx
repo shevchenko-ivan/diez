@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
+import { BackButton } from "@/shared/components/BackButton";
 import { SegmentedTabs } from "@/shared/components/SegmentedTabs";
 import { toast } from "@/shared/components/Toaster";
 import { useHaptics } from "@/shared/hooks/useHaptics";
@@ -153,54 +154,90 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header card */}
-      <div className="te-surface p-4 flex flex-col gap-3" style={{ borderRadius: "1.5rem" }}>
-        <div className="flex items-start gap-3">
-          {/* Title */}
-          <div className="min-w-0 flex-1">
-            {editingName && !playlist.isDefault ? (
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={saveName}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveName();
-                  if (e.key === "Escape") { setName(playlist.name); setEditingName(false); }
-                }}
-                className="te-inset px-3 py-1 rounded-xl bg-transparent outline-none text-xl font-bold tracking-tighter"
-                style={{ color: "var(--text)" }}
-              />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-2xl font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-                  {name}
-                </h1>
-                {!playlist.isDefault && (
-                  <button
-                    type="button"
-                    onClick={() => { trigger("selection"); setEditingName(true); }}
-                    aria-label="Перейменувати"
-                    className="opacity-50 hover:opacity-100"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    <Pencil size={13} />
-                  </button>
-                )}
-              </div>
-            )}
-            <p className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
-              {songs.length} {pluralSongs(songs.length)}
-              {playlist.isDefault && (
-                <span className="ml-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--orange-text)" }}>
-                  Дефолт
-                </span>
-              )}
-            </p>
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Header — back + centered title + right-aligned controls (desktop). */}
+      <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center mb-2">
+        <div className="md:col-start-1 md:justify-self-start">
+          <BackButton fallback="/profile/lists" />
+        </div>
 
-          {/* Delete */}
+        {/* Title + meta */}
+        <div className="text-center md:col-start-2">
+          {editingName && !playlist.isDefault ? (
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveName();
+                if (e.key === "Escape") { setName(playlist.name); setEditingName(false); }
+              }}
+              className="te-inset px-3 py-1 rounded-xl bg-transparent outline-none text-xl font-bold tracking-tighter text-center"
+              style={{ color: "var(--text)" }}
+            />
+          ) : (
+            <div className="inline-flex items-center gap-1.5">
+              <h1 className="text-2xl font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
+                {name}
+              </h1>
+              {!playlist.isDefault && (
+                <button
+                  type="button"
+                  onClick={() => { trigger("selection"); setEditingName(true); }}
+                  aria-label="Перейменувати"
+                  className="opacity-50 hover:opacity-100"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <Pencil size={13} />
+                </button>
+              )}
+            </div>
+          )}
+          <p className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
+            {songs.length} {pluralSongs(songs.length)}
+            {playlist.isDefault && (
+              <span className="ml-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--orange-text)" }}>
+                Дефолт
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Controls: visibility tabs + share URL + delete */}
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 md:col-start-3">
+          <SegmentedTabs
+            options={VIS_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
+            value={visibility}
+            onChange={changeVisibility}
+            ariaLabel="Видимість"
+            fit
+          />
+
+          {canShare && (
+            <div className="flex items-center gap-2">
+              <div
+                className="te-inset px-3 py-2 flex items-center gap-2 min-w-0"
+                style={{ borderRadius: "0.75rem" }}
+              >
+                <LinkIcon size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                <code
+                  className="text-[11px] whitespace-nowrap"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {shareUrl}
+                </code>
+              </div>
+              <TeButton
+                icon={copied ? Check : Copy}
+                size="sm"
+                onClick={handleCopy}
+                aria-label="Копіювати"
+                active={copied}
+              />
+            </div>
+          )}
+
           {!playlist.isDefault && (
             <TeButton
               icon={Trash2}
@@ -211,31 +248,6 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
             />
           )}
         </div>
-
-        {/* Visibility — full-width segmented tabs (match /chords instrument switcher) */}
-        <SegmentedTabs
-          options={VIS_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
-          value={visibility}
-          onChange={changeVisibility}
-          ariaLabel="Видимість"
-        />
-
-        {/* URL — full-width input + separate copy button */}
-        {canShare && (
-          <div className="flex items-center gap-2 w-full">
-            <div className="te-inset px-3 py-2 flex items-center gap-2 flex-1 min-w-0" style={{ borderRadius: "0.75rem" }}>
-              <LinkIcon size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-              <code className="flex-1 min-w-0 text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{shareUrl}</code>
-            </div>
-            <TeButton
-              icon={copied ? Check : Copy}
-              size="sm"
-              onClick={handleCopy}
-              aria-label="Копіювати"
-              active={copied}
-            />
-          </div>
-        )}
       </div>
 
       {/* Songs list */}

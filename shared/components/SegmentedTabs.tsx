@@ -25,6 +25,8 @@ interface SegmentedTabsProps<V extends string> {
   className?: string;
   /** Render a custom node instead of the default label+icon. */
   renderLabel?: (opt: SegmentedTabOption<V>, active: boolean) => ReactNode;
+  /** Hug content instead of stretching to full container width. Default: false. */
+  fit?: boolean;
 }
 
 export function SegmentedTabs<V extends string>({
@@ -35,6 +37,7 @@ export function SegmentedTabs<V extends string>({
   haptic = true,
   className,
   renderLabel,
+  fit = false,
 }: SegmentedTabsProps<V>) {
   const { trigger } = useHaptics();
 
@@ -43,7 +46,7 @@ export function SegmentedTabs<V extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={`te-control-pill segmented-tabs${className ? ` ${className}` : ""}`}
-      style={{ display: "flex", width: "100%" }}
+      style={fit ? { display: "inline-flex" } : { display: "flex", width: "100%" }}
     >
       {options.map((opt) => {
         const Icon = opt.icon;
@@ -61,16 +64,16 @@ export function SegmentedTabs<V extends string>({
             }}
             className="te-control-pill-btn text-[10px] uppercase tracking-wider"
             style={{
-              flex: 1,
+              flex: fit ? "0 0 auto" : 1,
               minWidth: 0,
               height: 28,
-              padding: "0 8px",
+              padding: fit ? "0 14px" : "0 8px",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
               color: active ? "var(--orange)" : "var(--text-muted)",
-              fontWeight: active ? 700 : 500,
+              fontWeight: fit ? 600 : active ? 700 : 500,
             }}
           >
             {renderLabel ? (

@@ -115,17 +115,29 @@ export function HeroSearch() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [songs, setSongs] = useState<SongSuggestion[]>([]);
+  const [lyricsSongs, setLyricsSongs] = useState<SongSuggestion[]>([]);
   const [artists, setArtists] = useState<ArtistSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const offsetRef = useRef(0);
+  const moreCtrlRef = useRef<AbortController | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Debounced fetch
+  // Debounced fetch — initial page (offset 0).
   useEffect(() => {
     const term = q.trim();
-    if (term.length < 2) { setSongs([]); setArtists([]); setActiveIndex(-1); return; }
+    moreCtrlRef.current?.abort();
+    if (term.length < 2) {
+      setSongs([]); setLyricsSongs([]); setArtists([]);
+      setHasMore(false); setLoadingMore(false);
+      offsetRef.current = 0;
+      setActiveIndex(-1);
+      return;
+    }
     setLoading(true);
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
@@ -133,12 +145,46 @@ export function HeroSearch() {
         const res = await fetch(`/api/search/suggest?q=${encodeURIComponent(term)}`, { signal: ctrl.signal });
         const data = await res.json();
         setSongs(data.songs ?? []);
+        setLyricsSongs(data.lyricsSongs ?? []);
         setArtists(data.artists ?? []);
+        setHasMore(!!data.hasMore);
+        offsetRef.current = data.nextOffset ?? 0;
       } catch { /* ignore */ }
       finally { setLoading(false); }
     }, 180);
     return () => { clearTimeout(t); ctrl.abort(); };
   }, [q]);
+
+  const loadMore = async () => {
+    const term = q.trim();
+    if (!term || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    moreCtrlRef.current = new AbortController();
+    try {
+      const res = await fetch(
+        `/api/search/suggest?q=${encodeURIComponent(term)}&offset=${offsetRef.current}`,
+        { signal: moreCtrlRef.current.signal },
+      );
+      const data = await res.json();
+      const seenSongs = new Set(songs.map((s) => s.slug));
+      const seenLyrics = new Set(lyricsSongs.map((s) => s.slug));
+      const newSongs: SongSuggestion[] = (data.songs ?? []).filter((s: SongSuggestion) => !seenSongs.has(s.slug));
+      const newLyrics: SongSuggestion[] = (data.lyricsSongs ?? []).filter((s: SongSuggestion) => !seenLyrics.has(s.slug));
+      if (newSongs.length) setSongs((prev) => [...prev, ...newSongs]);
+      if (newLyrics.length) setLyricsSongs((prev) => [...prev, ...newLyrics]);
+      setHasMore(!!data.hasMore);
+      offsetRef.current = data.nextOffset ?? offsetRef.current;
+    } catch { /* ignore */ }
+    finally { setLoadingMore(false); }
+  };
+
+  const onListScroll = () => {
+    const el = listRef.current;
+    if (!el || loadingMore || !hasMore) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+      loadMore();
+    }
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -157,13 +203,15 @@ export function HeroSearch() {
     router.push(`/songs?q=${encodeURIComponent(term)}`);
   };
 
-  // Flat list of navigable suggestions (artists first, then songs) — matches render order.
+  // Flat list of navigable suggestions (artists, songs, lyrics) — matches render order.
   const items: { key: string; href: string }[] = [
     ...artists.map((a) => ({ key: `a-${a.slug}`, href: `/artists/${a.slug}` })),
     ...songs.map((s) => ({ key: `s-${s.slug}`, href: `/songs/${s.slug}` })),
+    ...lyricsSongs.map((s) => ({ key: `l-${s.slug}`, href: `/songs/${s.slug}` })),
   ];
   const artistsOffset = 0;
   const songsOffset = artists.length;
+  const lyricsOffset = artists.length + songs.length;
 
   // Reset active item when results change.
   useEffect(() => { setActiveIndex(-1); }, [q]);
@@ -193,7 +241,7 @@ export function HeroSearch() {
     }
   };
 
-  const hasResults = songs.length > 0 || artists.length > 0;
+  const hasResults = songs.length > 0 || lyricsSongs.length > 0 || artists.length > 0;
   const showDropdown = open && q.trim().length >= 2;
   const activeStyle = { background: "rgba(0,0,0,0.05)" };
 
@@ -221,7 +269,7 @@ export function HeroSearch() {
             aria-controls="hero-search-listbox"
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `hero-search-item-${activeIndex}` : undefined}
-            placeholder="Шукайте: Океан Ельзи, Бумбокс або 'Wonderwall'..."
+            placeholder="Шукайте за назвою пісні, виконавцем або текстом"
             className="flex-1 bg-transparent outline-none text-sm font-medium"
             style={{ color: "var(--text)" }}
           />
@@ -253,6 +301,7 @@ export function HeroSearch() {
       {showDropdown && (
         <div
           ref={listRef}
+          onScroll={onListScroll}
           id="hero-search-listbox"
           role="listbox"
           className="absolute left-0 right-0 mt-2 te-surface overflow-hidden text-left z-50 max-h-[70vh] overflow-y-auto"
@@ -306,50 +355,88 @@ export function HeroSearch() {
             </div>
           )}
           {songs.length > 0 && (
-            <div className="py-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-              <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-                Пісні
-              </div>
-              {songs.map((s, i) => {
-                const fallback = s.cover_color ?? stringToColor(s.artist);
-                const idx = songsOffset + i;
-                const isActive = idx === activeIndex;
-                return (
-                  <Link
-                    key={s.slug}
-                    href={`/songs/${s.slug}`}
-                    onClick={() => setOpen(false)}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    data-idx={idx}
-                    id={`hero-search-item-${idx}`}
-                    role="option"
-                    aria-selected={isActive}
-                    style={isActive ? activeStyle : undefined}
-                    className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-                  >
-                    <div
-                      className="w-9 h-9 rounded-md overflow-hidden flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: s.cover_image ? undefined : `linear-gradient(135deg, ${fallback}aa, ${fallback}55)`,
-                      }}
-                    >
-                      {s.cover_image ? (
-                        <Image src={s.cover_image} alt={s.title} width={36} height={36} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xs font-bold" style={{ color: `${fallback}` }}>{s.artist.charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{s.title}</div>
-                      <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{s.artist}</div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <SongResultGroup
+              label="Пісні"
+              songs={songs}
+              startIndex={songsOffset}
+              activeIndex={activeIndex}
+              onActivate={setActiveIndex}
+              onSelect={() => setOpen(false)}
+              activeStyle={activeStyle}
+            />
+          )}
+          {lyricsSongs.length > 0 && (
+            <SongResultGroup
+              label="У текстах пісень"
+              songs={lyricsSongs}
+              startIndex={lyricsOffset}
+              activeIndex={activeIndex}
+              onActivate={setActiveIndex}
+              onSelect={() => setOpen(false)}
+              activeStyle={activeStyle}
+            />
+          )}
+          {loadingMore && (
+            <div className="px-4 py-3 text-xs text-center" style={{ color: "var(--text-muted)" }}>Завантаження…</div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface SongResultGroupProps {
+  label: string;
+  songs: SongSuggestion[];
+  startIndex: number;
+  activeIndex: number;
+  onActivate: (idx: number) => void;
+  onSelect: () => void;
+  activeStyle: React.CSSProperties;
+}
+
+function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, onSelect, activeStyle }: SongResultGroupProps) {
+  return (
+    <div className="py-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+      <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </div>
+      {songs.map((s, i) => {
+        const fallback = s.cover_color ?? stringToColor(s.artist);
+        const idx = startIndex + i;
+        const isActive = idx === activeIndex;
+        return (
+          <Link
+            key={s.slug}
+            href={`/songs/${s.slug}`}
+            onClick={onSelect}
+            onMouseEnter={() => onActivate(idx)}
+            data-idx={idx}
+            id={`hero-search-item-${idx}`}
+            role="option"
+            aria-selected={isActive}
+            style={isActive ? activeStyle : undefined}
+            className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+          >
+            <div
+              className="w-9 h-9 rounded-md overflow-hidden flex items-center justify-center flex-shrink-0"
+              style={{
+                background: s.cover_image ? undefined : `linear-gradient(135deg, ${fallback}aa, ${fallback}55)`,
+              }}
+            >
+              {s.cover_image ? (
+                <Image src={s.cover_image} alt={s.title} width={36} height={36} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xs font-bold" style={{ color: `${fallback}` }}>{s.artist.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{s.title}</div>
+              <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{s.artist}</div>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

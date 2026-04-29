@@ -26,6 +26,18 @@ interface Props {
 const POPOVER_WIDTH = 288;
 const FADE = 20;
 
+// Pre-select the default list when the song isn't in any list yet, so the
+// click on the heart immediately stages a save to the default — closing the
+// popover without further interaction commits it.
+function presetSelection(lists: PlaylistSummary[]): Set<string> {
+  const already = new Set(lists.filter((p) => p.hasSong).map((p) => p.id));
+  if (already.size === 0) {
+    const def = lists.find((p) => p.isDefault);
+    if (def) already.add(def.id);
+  }
+  return already;
+}
+
 function buildFadeMask(top: boolean, bottom: boolean): string {
   if (!top && !bottom) return "none";
   const start = top ? `transparent 0, black ${FADE}px` : `black 0`;
@@ -41,8 +53,7 @@ export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists
   const [lists, setLists] = useState<PlaylistSummary[] | null>(initialLists ?? null);
   const [selected, setSelected] = useState<Set<string>>(() => {
     if (!initialLists) return new Set();
-    const already = new Set(initialLists.filter((p) => p.hasSong).map((p) => p.id));
-    return already;
+    return presetSelection(initialLists);
   });
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -143,19 +154,23 @@ export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists
     setPos({ top, left, placement });
   }, [mounted, anchorRect, lists, showCreate, isMobile]);
 
-  // Load playlists; auto-select default if song is not yet in any list.
+  // Load playlists; auto-select default if song is not yet in any list, so
+  // a single click on the heart commits the song to the default list.
   useEffect(() => {
     const bootstrap = (data: PlaylistSummary[]) => {
       setLists(data);
       const already = new Set(data.filter((p) => p.hasSong).map((p) => p.id));
-      initialSelectedRef.current = new Set(already);
-      setSelected(already);
+      initialSelectedRef.current = already;
+      const next = presetSelection(data);
+      setSelected(next);
+      onSavedChange(next.size > 0);
     };
     if (initialLists) {
       bootstrap(initialLists);
       return;
     }
     getPlaylistsForSong(slug).then(bootstrap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, initialLists]);
 
   // Close on outside click — applies pending changes. Mobile uses backdrop.

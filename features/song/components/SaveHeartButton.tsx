@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { Heart, X } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
 import { AddToPlaylistPopover } from "@/features/playlist/components/AddToPlaylistPopover";
-import { getPlaylistsForSong } from "@/features/playlist/actions/playlists";
+import { getPlaylistsForSong, setSongPlaylists } from "@/features/playlist/actions/playlists";
 import type { PlaylistSummary } from "@/features/playlist/types";
 import { createClient } from "@/lib/supabase/client";
 import { useHaptics } from "@/shared/hooks/useHaptics";
@@ -51,6 +51,18 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
       setAuthOpen(true);
       return;
     }
+
+    // If already saved → unsave from every list with a single click.
+    // Reopening the popover for fine-grained edits requires saving first again.
+    if (saved) {
+      setSaved(false);
+      prefetchStarted.current = false;
+      setPrefetched(null);
+      const res = await setSongPlaylists(slug, [], variantId);
+      if (!res.ok) setSaved(true);
+      return;
+    }
+
     setAnchorRect(rect);
   };
 

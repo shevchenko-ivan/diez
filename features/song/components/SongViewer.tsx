@@ -147,6 +147,12 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
   const [transpose, setTranspose] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
+  // Hide the auto-scroll control when the page already fits the viewport.
+  const [pageScrollable, setPageScrollable] = useState(false);
+  // Mirror to a ref so the global Space-key handler — bound once on mount with
+  // empty deps — reads the latest value instead of the initial `false`.
+  const pageScrollableRef = useRef(false);
+  useEffect(() => { pageScrollableRef.current = pageScrollable; }, [pageScrollable]);
   const [noBarreMode, setNoBarreMode] = useState(false);
   const [beginnerMode, setBeginnerMode] = useState(false);
   const [focusMode, , toggleFocusMode] = useFocusMode();
@@ -248,9 +254,40 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
   }, [scrollSpeed]);
 
   const handleScrollToggle = () => {
+    if (!pageScrollableRef.current) return;
     trigger("light");
     setScrollSpeed((prev) => (prev === 0 ? 1 : 0));
   };
+
+  // Hide auto-scroll when the lyrics block itself fits within the first
+  // viewport — measuring the lyrics container directly (not the whole
+  // document) so a tall sidebar or footer doesn't keep the widget around
+  // when there's nothing left for the user to scroll *to*.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const update = () => {
+      const el = sectionsRef.current;
+      if (!el) { setPageScrollable(false); return; }
+      const rect = el.getBoundingClientRect();
+      const lyricsBottomAbs = rect.bottom + window.scrollY;
+      setPageScrollable(lyricsBottomAbs > window.innerHeight + 24);
+    };
+    update();
+    window.addEventListener("resize", update);
+    const ro = new ResizeObserver(update);
+    ro.observe(document.body);
+    if (sectionsRef.current) ro.observe(sectionsRef.current);
+    return () => {
+      window.removeEventListener("resize", update);
+      ro.disconnect();
+    };
+  }, []);
+
+  // If the page becomes non-scrollable while autoscrolling (e.g. focus mode
+  // collapses content), stop the loop so it doesn't sit idle ticking.
+  useEffect(() => {
+    if (!pageScrollable && scrollSpeed > 0) setScrollSpeed(0);
+  }, [pageScrollable, scrollSpeed]);
 
   // Global shortcuts: Space → toggle auto-scroll; F → toggle focus mode.
   // Layout-independent (uses e.code). Ignored in input/textarea/select/contenteditable.
@@ -937,7 +974,8 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
               <TunerWidget onClose={() => setExpandedTool(null)} />
             )}
 
-            {/* Auto scroll — compact: +/- only when active */}
+            {/* Auto scroll — hidden when the page already fits the viewport. */}
+            {pageScrollable && (
             <ControlBlock label="Автоскрол">
               {scrollSpeed > 0 ? (
                 <div className="flex items-center justify-between gap-2">
@@ -982,6 +1020,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 </TeButton>
               )}
             </ControlBlock>
+            )}
 
             {/* Rhythm — only rendered when the song has strumming patterns. */}
             {song.strumPatterns && song.strumPatterns.length > 0 && (
@@ -1000,12 +1039,14 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
         </aside>
       </div>
 
-      {/* Mobile scroll FAB — fades to transparent while auto-scrolling idle */}
-      <ScrollFab
-        scrollSpeed={scrollSpeed}
-        onToggle={handleScrollToggle}
-        onSpeedChange={handleScrollSpeed}
-      />
+      {/* Mobile scroll FAB — hidden when the page fits the viewport. */}
+      {pageScrollable && (
+        <ScrollFab
+          scrollSpeed={scrollSpeed}
+          onToggle={handleScrollToggle}
+          onSpeedChange={handleScrollSpeed}
+        />
+      )}
 
     </div>
   );

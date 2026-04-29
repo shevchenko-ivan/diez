@@ -20,6 +20,8 @@ const NAV_LINKS = [
 interface NavUser {
   email: string;
   isAdmin: boolean;
+  displayName: string;
+  avatarUrl: string | null;
 }
 
 export function Navbar() {
@@ -38,19 +40,29 @@ export function Navbar() {
   useEffect(() => {
     const sb = createClient();
 
+    function fallbackName(email: string) {
+      return email ? email.split("@")[0] : "";
+    }
+
     async function load() {
       try {
         // getSession reads from localStorage — no network call, instant
         const { data: { session } } = await sb.auth.getSession();
         if (!session?.user) { setNavUser(null); return; }
 
+        const email = session.user.email ?? "";
         const { data: profile } = await sb
           .from("profiles")
-          .select("is_admin")
+          .select("is_admin, username, avatar_url")
           .eq("id", session.user.id)
           .single();
 
-        setNavUser({ email: session.user.email ?? "", isAdmin: !!profile?.is_admin });
+        setNavUser({
+          email,
+          isAdmin: !!profile?.is_admin,
+          displayName: profile?.username?.trim() || fallbackName(email),
+          avatarUrl: profile?.avatar_url ?? null,
+        });
       } catch {
         setNavUser(null);
       }
@@ -60,10 +72,15 @@ export function Navbar() {
 
     const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
       if (!session) { setNavUser(null); return; }
-      setNavUser({ email: session.user.email ?? "", isAdmin: false });
-      // refetch is_admin in background
-      sb.from("profiles").select("is_admin").eq("id", session.user.id).single()
-        .then(({ data }) => setNavUser({ email: session.user.email ?? "", isAdmin: !!data?.is_admin }));
+      const email = session.user.email ?? "";
+      setNavUser({ email, isAdmin: false, displayName: fallbackName(email), avatarUrl: null });
+      sb.from("profiles").select("is_admin, username, avatar_url").eq("id", session.user.id).single()
+        .then(({ data }) => setNavUser({
+          email,
+          isAdmin: !!data?.is_admin,
+          displayName: data?.username?.trim() || fallbackName(email),
+          avatarUrl: data?.avatar_url ?? null,
+        }));
     });
 
     return () => listener.subscription.unsubscribe();
@@ -101,7 +118,9 @@ export function Navbar() {
   const isLoggedIn = navUser !== "loading" && navUser !== null;
   const isAdmin = isLoggedIn && (navUser as NavUser).isAdmin;
   const userEmail = isLoggedIn ? (navUser as NavUser).email : "";
-  const userInitial = userEmail ? userEmail[0].toUpperCase() : "?";
+  const userDisplayName = isLoggedIn ? (navUser as NavUser).displayName : "";
+  const userAvatarUrl = isLoggedIn ? (navUser as NavUser).avatarUrl : null;
+  const userInitial = (userDisplayName || userEmail)[0]?.toUpperCase() ?? "?";
 
   const { isDark, toggle } = useTheme();
 
@@ -175,13 +194,18 @@ export function Navbar() {
               >
                 {/* Avatar */}
                 <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                  style={{ background: "var(--orange)" }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 overflow-hidden"
+                  style={{ background: userAvatarUrl ? "transparent" : "var(--orange)" }}
                 >
-                  {userInitial}
+                  {userAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={userAvatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    userInitial
+                  )}
                 </div>
                 <span className="text-sm font-medium max-w-[120px] truncate" style={{ color: "var(--text)" }}>
-                  {userEmail.split("@")[0]}
+                  {userDisplayName}
                 </span>
                 <ChevronDown size={13} aria-hidden="true" style={{ color: "var(--text-muted)", transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
               </TeButton>

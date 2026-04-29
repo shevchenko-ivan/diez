@@ -6,7 +6,7 @@ import { SegmentedTabs } from "@/shared/components/SegmentedTabs";
 const OPTIONS = [
   { value: "guitar" as Instrument, label: "Гітара" },
   { value: "ukulele" as Instrument, label: "Укулеле" },
-  { value: "piano" as Instrument, label: "Піаніно" },
+  { value: "piano" as Instrument, label: "Клавіші" },
 ];
 
 export function InstrumentSwitch() {
