@@ -8,7 +8,7 @@ import {
   updateStrumPattern,
   deleteStrumPattern,
 } from "@/features/song/actions/strumming-patterns";
-import { playStroke, intervalFor } from "@/features/song/lib/strumming-audio";
+import { playStroke, playMetronomeClick, strokesPerBeat as strokesPerBeatFn, intervalFor } from "@/features/song/lib/strumming-audio";
 import { STRUM_PRESETS, type StrumPreset } from "@/features/song/lib/strum-presets";
 
 import { ToggleKnob } from "@/shared/components/ToggleKnob";
@@ -204,6 +204,7 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   const [playing, setPlaying] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [metronome, setMetronome] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   function applyPreset(preset: StrumPreset) {
@@ -221,17 +222,22 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
     }
     const audioCtx = audioCtxRef.current;
     const intervalMs = intervalFor(noteLength, tempo);
+    const beatSize = strokesPerBeatFn(noteLength);
     let i = 0;
     const tick = () => {
       if (audioCtx.state === "suspended") audioCtx.resume();
       const stroke = strokes[i];
       setActiveIndex(i);
       if (stroke && !stroke.r) playStroke(audioCtx, stroke);
+      // Optional quiet metronome click on every beat (downbeat = brighter).
+      if (metronome && i % beatSize === 0) {
+        playMetronomeClick(audioCtx, Math.floor(i / beatSize) % 4 === 0);
+      }
       i = (i + 1) % strokes.length;
     };
     const timer = setInterval(tick, intervalMs);
     return () => clearInterval(timer);
-  }, [playing, strokes, tempo, noteLength]);
+  }, [playing, strokes, tempo, noteLength, metronome]);
 
   // Tear down the AudioContext on unmount so we don't leak audio nodes when
   // the admin cancels/saves while the preview is still ticking.
@@ -400,6 +406,24 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }} />
           </div>
         </label>
+
+        {/* Metronome toggle — quiet click on each beat for testing. */}
+        <button
+          type="button"
+          onClick={() => setMetronome((m) => !m)}
+          aria-pressed={metronome}
+          title={metronome ? "Вимкнути метроном" : "Увімкнути метроном (клік на кожну долю)"}
+          className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors"
+          style={{
+            borderRadius: "0.75rem",
+            border: "1px solid",
+            borderColor: metronome ? "rgba(255,140,60,0.45)" : "var(--border, rgba(0,0,0,0.1))",
+            background: metronome ? "rgba(255,140,60,0.12)" : "transparent",
+            color: metronome ? "var(--orange)" : "var(--text-muted)",
+          }}
+        >
+          Метроном
+        </button>
 
       </div>
 

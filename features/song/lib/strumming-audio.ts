@@ -93,6 +93,44 @@ export function playStroke(audioCtx: AudioContext, stroke: Stroke) {
   }
 }
 
+/**
+ * Quiet metronome click (sine ping) used to lay quarter-note beats under the
+ * strum pattern. Kept low volume so it sits "behind" the strum, not over it.
+ *
+ * `accent=true` is the downbeat (beat 1 of the bar) — slightly higher pitch
+ * + a touch louder so the listener can re-orient if they lose count. Other
+ * beats are the same neutral click.
+ */
+export function playMetronomeClick(audioCtx: AudioContext, accent: boolean) {
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  // 1500 Hz on downbeats, 1000 Hz elsewhere — distinct but unobtrusive.
+  osc.type = "sine";
+  osc.frequency.value = accent ? 1500 : 1000;
+  // Snappy envelope: 5 ms attack, ~70 ms decay to silence. No tail.
+  const peak = accent ? 0.06 : 0.04;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.09);
+}
+
+/** How many strokes make up one beat for a given note length. */
+export function strokesPerBeat(nl: NoteLength): number {
+  switch (nl) {
+    case "1/4": return 1;
+    case "1/8": return 2;
+    case "1/16": return 4;
+    case "1/4t": return 3;
+    case "1/8t": return 3;
+    case "1/16t": return 6;
+  }
+}
+
 /** Milliseconds between consecutive strokes for a given note length + tempo. */
 export function intervalFor(nl: NoteLength, tempo: number): number {
   const quarter = 60 / tempo;

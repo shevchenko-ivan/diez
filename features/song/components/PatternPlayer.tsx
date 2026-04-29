@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Play, Square } from "lucide-react";
 import type { StrumPattern, Stroke, NoteLength } from "@/features/song/types";
-import { playStroke, intervalFor } from "@/features/song/lib/strumming-audio";
+import { playStroke, playMetronomeClick, strokesPerBeat as strokesPerBeatFn, intervalFor } from "@/features/song/lib/strumming-audio";
 
 interface Props {
   pattern: StrumPattern;
@@ -23,11 +23,15 @@ interface Props {
 export function PatternPlayer({ pattern }: Props) {
   const [playing, setPlaying] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  // Quiet metronome click on every beat — toggleable so the user can A/B
+  // whether the click helps them feel the pulse against the strum pattern.
+  const [metronome, setMetronome] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const { strokes, tempo, noteLength, name } = pattern;
   const beats = useMemo(() => groupByBeat(strokes, noteLength), [strokes, noteLength]);
   const isTriplet = noteLength.endsWith("t");
+  const beatSize = strokesPerBeatFn(noteLength);
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -53,11 +57,17 @@ export function PatternPlayer({ pattern }: Props) {
       const stroke = strokes[i];
       setActiveIndex(i);
       if (stroke && !stroke.r) playStroke(audioCtx, stroke);
+      // Click on every beat boundary. Downbeat (beat 1 of the bar = every 4
+      // beats in 4/4) gets a brighter click so the listener can re-orient.
+      if (metronome && i % beatSize === 0) {
+        const beatNumber = Math.floor(i / beatSize); // 0-based beat index
+        playMetronomeClick(audioCtx, beatNumber % 4 === 0);
+      }
       i = (i + 1) % strokes.length;
     };
     const timer = setInterval(tick, intervalMs);
     return () => clearInterval(timer);
-  }, [playing, strokes, tempo, noteLength]);
+  }, [playing, strokes, tempo, noteLength, metronome, beatSize]);
 
   const togglePlay = () => {
     initAudio();
@@ -90,7 +100,23 @@ export function PatternPlayer({ pattern }: Props) {
         <span className="font-bold tracking-tight truncate" style={{ color: "var(--text)" }}>
           {name}
         </span>
-        <span className="text-xs font-mono ml-auto flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+        <button
+          type="button"
+          onClick={() => setMetronome((m) => !m)}
+          aria-pressed={metronome}
+          title={metronome ? "Вимкнути метроном" : "Увімкнути метроном (клік на 1, 2, 3, 4)"}
+          className="ml-auto flex-shrink-0 text-[9px] font-bold uppercase tracking-widest px-2 py-1 transition-colors"
+          style={{
+            borderRadius: "0.5rem",
+            border: "1px solid",
+            borderColor: metronome ? "rgba(255,140,60,0.45)" : "var(--border, rgba(0,0,0,0.1))",
+            background: metronome ? "rgba(255,140,60,0.12)" : "transparent",
+            color: metronome ? "var(--orange)" : "var(--text-muted)",
+          }}
+        >
+          Метроном
+        </button>
+        <span className="text-xs font-mono flex-shrink-0" style={{ color: "var(--text-muted)" }}>
           {tempo} bpm
         </span>
       </div>
