@@ -162,7 +162,14 @@ export default async function SongPage({
         )}
 
         {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
-        <SongViewer song={song} />
+        <SongViewer
+          song={song}
+          editSlot={
+            <Suspense fallback={null}>
+              <AdminEditSheetButton slug={slug} />
+            </Suspense>
+          }
+        />
 
 
         {/* ── Other songs by this artist (deferred — below the fold) ──── */}
@@ -210,6 +217,26 @@ async function AdminEditButton({ slug }: { slug: string }) {
         <Pencil size={14} />
       </TeButton>
     </span>
+  );
+}
+
+// Mobile/tablet: full-width edit button at the bottom of the tools sheet.
+// `lookupAdminSongId` is React.cache'd so this shares the same DB roundtrip
+// as the desktop <AdminEditButton/> in the header.
+async function AdminEditSheetButton({ slug }: { slug: string }) {
+  const songId = await lookupAdminSongId(slug);
+  if (!songId) return null;
+  return (
+    <TeButton
+      shape="pill"
+      href={`/admin/songs/edit?id=${songId}&from=song`}
+      icon={Pencil}
+      iconSize={14}
+      className="w-full py-2 text-xs font-bold justify-center"
+      style={{ borderRadius: "1rem", color: "var(--orange)" }}
+    >
+      Редагувати
+    </TeButton>
   );
 }
 
