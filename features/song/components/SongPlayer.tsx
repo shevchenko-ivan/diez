@@ -43,6 +43,9 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
+  // Tap on play before YT API has finished loading — queue the intent and
+  // fire it the moment the player goes ready.
+  const pendingPlayRef = useRef(false);
 
   // Animation states
   const [playBtnAnim, setPlayBtnAnim] = useState<"idle" | "press" | "launch">("idle");
@@ -73,6 +76,11 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
         onReady: () => {
           setDuration(playerRef.current?.getDuration() ?? 0);
           setReady(true);
+          // Drain queued play intent (user tapped while we were still loading).
+          if (pendingPlayRef.current) {
+            pendingPlayRef.current = false;
+            try { playerRef.current?.playVideo?.(); } catch {}
+          }
         },
         onStateChange: (e: any) => {
           const isPlaying = e.data === window.YT.PlayerState.PLAYING;
@@ -89,18 +97,30 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
   }, [youtubeId]);
 
   useEffect(() => {
-    if (window.YT?.Player) {
-      initPlayer();
-    } else {
-      window.onYouTubeIframeAPIReady = initPlayer;
+    // Poll for window.YT.Player instead of relying on the global
+    // onYouTubeIframeAPIReady callback — when two SongPlayer instances mount
+    // (mobile compact + desktop full) the callback gets overwritten and
+    // whichever assigned last wins, leaving the other stuck on `ready=false`.
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const tryInit = () => {
+      if (cancelled) return;
+      if (window.YT?.Player) {
+        initPlayer();
+        return;
+      }
       if (!document.getElementById("yt-api-script")) {
         const s = document.createElement("script");
         s.id = "yt-api-script";
         s.src = "https://www.youtube.com/iframe_api";
         document.head.appendChild(s);
       }
-    }
+      timer = setTimeout(tryInit, 100);
+    };
+    tryInit();
     return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
       if (intervalRef.current) clearInterval(intervalRef.current);
       // Pause before destroy — destroy alone sometimes leaves audio playing
       // for a beat on mobile (iframe teardown is async).
@@ -122,11 +142,16 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
   }, [playing]);
 
   const togglePlay = () => {
-    if (!ready) return;
-    // Press → spring back → if starting, launch glow
+    // Animate the press regardless of ready state — gives instant feedback
+    // even if the YT player is still booting.
     setPlayBtnAnim("press");
     setTimeout(() => setPlayBtnAnim("launch"), 100);
     setTimeout(() => setPlayBtnAnim("idle"), 400);
+    if (!ready) {
+      // Queue play intent; onReady will drain it.
+      pendingPlayRef.current = !pendingPlayRef.current;
+      return;
+    }
     if (playing) {
       playerRef.current?.pauseVideo();
     } else {
@@ -237,17 +262,17 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
             </span>
           </div>
         </div>
-        {/* Play / Pause — right side for reachable tap target */}
+        {/* Play / Pause — right side for reachable tap target. Always
+            tappable: a tap before YT API readies is queued (drained in
+            onReady), so the user never has to wait and tap again. */}
         <TeButton
           onClick={togglePlay}
-          disabled={!ready}
           aria-label={playing ? "Пауза" : "Грати"}
           title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
           style={{
             width: 44, height: 44,
             color: "var(--orange)",
-            opacity: ready ? 1 : 0.35,
-            cursor: ready ? "pointer" : "default",
+            opacity: ready ? 1 : 0.7,
             flexShrink: 0,
             ...playBtnStyle,
           }}
@@ -365,17 +390,15 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
             <SkipBackIcon />
           </TeButton>
 
-          {/* Play / Pause */}
+          {/* Play / Pause — always tappable; queues if API still loading. */}
           <TeButton
             onClick={togglePlay}
-            disabled={!ready}
             aria-label={playing ? "Пауза" : "Грати"}
             title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
             style={{
               width: 56, height: 56,
               color: "var(--orange)",
-              opacity: ready ? 1 : 0.35,
-              cursor: ready ? "pointer" : "default",
+              opacity: ready ? 1 : 0.7,
               ...playBtnStyle,
             }}
           >
