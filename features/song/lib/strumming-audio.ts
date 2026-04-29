@@ -94,29 +94,57 @@ export function playStroke(audioCtx: AudioContext, stroke: Stroke) {
 }
 
 /**
- * Quiet metronome click (sine ping) used to lay quarter-note beats under the
- * strum pattern. Kept low volume so it sits "behind" the strum, not over it.
+ * Metronome click — short, broadband "tick" engineered to cut through the
+ * strum without dominating it. Two layers:
+ *   1. Triangle oscillator at 1500/2200 Hz for the pitch component (so the
+ *      downbeat is clearly distinguishable).
+ *   2. Brief band-passed noise burst for the transient "tk" attack — sine
+ *      tones alone get masked by Karplus-Strong string noise.
  *
- * `accent=true` is the downbeat (beat 1 of the bar) — slightly higher pitch
- * + a touch louder so the listener can re-orient if they lose count. Other
- * beats are the same neutral click.
+ * `accent=true` is the downbeat (beat 1 of the bar) — higher pitch and a
+ * little louder. Other beats are a softer woodblock-style tick.
  */
 export function playMetronomeClick(audioCtx: AudioContext, accent: boolean) {
   const t0 = audioCtx.currentTime;
+  const dur = 0.06;
+
+  // Pitched layer (triangle = more harmonics than sine, easier to hear over
+  // string noise but still musical).
   const osc = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  // 1500 Hz on downbeats, 1000 Hz elsewhere — distinct but unobtrusive.
-  osc.type = "sine";
-  osc.frequency.value = accent ? 1500 : 1000;
-  // Snappy envelope: 5 ms attack, ~70 ms decay to silence. No tail.
-  const peak = accent ? 0.06 : 0.04;
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.005);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
-  osc.connect(g);
-  g.connect(audioCtx.destination);
+  const oscG = audioCtx.createGain();
+  osc.type = "triangle";
+  osc.frequency.value = accent ? 2200 : 1500;
+  const oscPeak = accent ? 0.45 : 0.3;
+  oscG.gain.setValueAtTime(0.0001, t0);
+  oscG.gain.exponentialRampToValueAtTime(oscPeak, t0 + 0.002);
+  oscG.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(oscG);
+  oscG.connect(audioCtx.destination);
   osc.start(t0);
-  osc.stop(t0 + 0.09);
+  osc.stop(t0 + dur + 0.02);
+
+  // Noise transient — band-passed white noise gives the click its "tk" attack
+  // that survives masking from broadband strum content.
+  const sr = audioCtx.sampleRate;
+  const noiseLen = Math.floor(sr * 0.015);
+  const noiseBuf = audioCtx.createBuffer(1, noiseLen, sr);
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < noiseLen; i++) data[i] = Math.random() * 2 - 1;
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = noiseBuf;
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = accent ? 4000 : 3000;
+  bp.Q.value = 1.2;
+  const noiseG = audioCtx.createGain();
+  const noisePeak = accent ? 0.35 : 0.25;
+  noiseG.gain.setValueAtTime(noisePeak, t0);
+  noiseG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.025);
+  noise.connect(bp);
+  bp.connect(noiseG);
+  noiseG.connect(audioCtx.destination);
+  noise.start(t0);
+  noise.stop(t0 + 0.03);
 }
 
 /** How many strokes make up one beat for a given note length. */
