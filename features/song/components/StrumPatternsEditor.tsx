@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Play, Square } from "lucide-react";
+import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Play, Square, Sparkles } from "lucide-react";
 import type { StrumPattern, Stroke, NoteLength } from "@/features/song/types";
 import {
   createStrumPattern,
@@ -409,14 +409,33 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
         <button
           type="button"
           onClick={() => setPresetsOpen((v) => !v)}
-          className="te-pressable flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
-          style={{ borderRadius: "0.6rem", color: "var(--text-muted)" }}
+          className="te-pressable w-full flex items-center justify-between gap-2 px-4 py-3 text-xs font-bold"
+          style={{
+            borderRadius: "0.9rem",
+            color: "var(--text)",
+            border: "1px solid var(--border, rgba(0,0,0,0.08))",
+            background: presetsOpen ? "rgba(255,140,60,0.06)" : "transparent",
+          }}
+          aria-expanded={presetsOpen}
         >
-          {presetsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          Стандартні шаблони
+          <span className="flex items-center gap-2">
+            <Sparkles size={14} strokeWidth={2} style={{ color: "var(--orange)" }} />
+            <span>Обрати готовий шаблон</span>
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.5"
+              style={{
+                borderRadius: 4,
+                color: "var(--text-muted)",
+                background: "var(--surface-dk)",
+              }}
+            >
+              {STRUM_PRESETS.length}
+            </span>
+          </span>
+          {presetsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
         {presetsOpen && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
             {STRUM_PRESETS.map((preset) => (
               <button
                 key={preset.id}
