@@ -1,15 +1,15 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { PageShell } from "@/shared/components/PageShell";
 import { FormField } from "@/shared/components/FormField";
-import { Save, Star, Trash2 } from "lucide-react";
+import { Save, Star, Trash2, Plus } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { updateSongFull, setPrimaryVariant, deleteVariant } from "@/features/song/actions/admin";
 import { AutoResizeTextarea } from "./AutoResizeTextarea";
-import { VariantTabs } from "./VariantTabs";
 import { TeButton } from "@/shared/components/TeButton";
 import { StrumPatternsEditor } from "@/features/song/components/StrumPatternsEditor";
 import { mapPatternRow } from "@/features/song/services/songs";
@@ -238,10 +238,6 @@ export default async function EditSongPage({
 
           {/* ── Мета пісні ──────────────────────────────────────────────── */}
           <div className="te-surface p-5 md:p-6" style={{ borderRadius: "2rem" }}>
-            <h2 className="text-lg font-bold mb-6 uppercase tracking-tighter" style={{ color: "var(--text)" }}>
-              Мета пісні
-            </h2>
-
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField label="Назва *">
@@ -295,16 +291,54 @@ export default async function EditSongPage({
             </div>
           </div>
 
-          {/* ── Variant tabs ──────────────────────────────────────────── */}
+          {/* ── Variants: flat chip-row + add button (no tabs) ───────── */}
           {allVariants.length > 0 && (
-            <VariantTabs
-              songId={song.id}
-              activeVariantId={activeVariant.id}
-              primaryVariantId={primaryVariantId}
-              variants={allVariants.map((v) => ({ id: v.id, label: v.label }))}
-              basePath="/admin/songs/edit"
-              fromParam={from}
-            />
+            <div className="flex items-center flex-wrap gap-2 px-1">
+              {allVariants.length > 1 && allVariants.map((v) => {
+                const isActive = v.id === activeVariant.id;
+                const isPrimary = v.id === primaryVariantId;
+                const params = new URLSearchParams({ id: song.id, variant: v.id });
+                if (from) params.set("from", from);
+                return (
+                  <Link
+                    key={v.id}
+                    href={`/admin/songs/edit?${params.toString()}`}
+                    scroll={false}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors"
+                    style={{
+                      borderRadius: "999px",
+                      background: isActive ? "rgba(255,140,60,0.14)" : "transparent",
+                      color: isActive ? "var(--orange)" : "var(--text-muted)",
+                      border: "1px solid",
+                      borderColor: isActive ? "rgba(255,140,60,0.35)" : "var(--border, rgba(0,0,0,0.08))",
+                    }}
+                  >
+                    {v.label}
+                    {isPrimary && (
+                      <span
+                        className="text-[8px] font-bold tracking-widest uppercase px-1 py-0.5"
+                        style={{
+                          borderRadius: 3,
+                          color: "var(--orange)",
+                          background: "rgba(255,140,60,0.12)",
+                        }}
+                      >
+                        Осн.
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+              <TeButton
+                shape="pill"
+                href={`/admin/songs/variants/new?songId=${song.id}`}
+                className="px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-bold"
+                style={{ color: "var(--orange)" }}
+              >
+                <Plus size={13} />
+                Новий варіант
+              </TeButton>
+            </div>
           )}
 
           {/* ── Variant label + side actions (non-primary only) ───────── */}
