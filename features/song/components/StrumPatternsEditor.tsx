@@ -302,7 +302,6 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   function handleSubmit() {
     setError(null);
     const isCreating = !initial;
-    const action = isCreating ? createStrumPattern : updateStrumPattern;
 
     const fd = new FormData();
     if (isCreating) fd.set("songId", songId);
@@ -314,12 +313,20 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
 
     startTransition(async () => {
       try {
-        await action(fd);
-        // Optimistic local update — the server-side revalidation will reload
-        // the canonical list on the next navigation.
+        // Create returns the real DB row so we can sync the local id;
+        // update returns void.
+        let realId = initial?.id;
+        let realPosition = initial?.position ?? 0;
+        if (isCreating) {
+          const result = await createStrumPattern(fd);
+          realId = result.id;
+          realPosition = result.position;
+        } else {
+          await updateStrumPattern(fd);
+        }
         onSaved({
-          id: initial?.id ?? `tmp-${Date.now()}`,
-          position: initial?.position ?? 999,
+          id: realId!,
+          position: realPosition,
           name,
           tempo,
           noteLength,
