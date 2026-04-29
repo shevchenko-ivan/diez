@@ -6,7 +6,7 @@ import { LoadingState } from "@/shared/components/LoadingState";
 import { SongCard } from "@/features/song/components/SongCard";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
 import { getMyPlaylists } from "@/features/playlist/actions/playlists";
-import { LogOut, Settings, Heart, Plus, User as UserIcon, ListMusic } from "lucide-react";
+import { LogOut, Pencil, Heart, Plus, User as UserIcon, ListMusic } from "lucide-react";
 import Link from "next/link";
 import { TeButton } from "@/shared/components/TeButton";
 import { redirect } from "next/navigation";
@@ -33,6 +33,12 @@ async function ProfileDashboard() {
   }
 
   const user = data.user;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username, avatar_url")
+    .eq("id", user.id)
+    .single();
 
   const playlists = await getMyPlaylists();
   const defaultList = playlists.find((p) => p.isDefault) ?? null;
@@ -63,14 +69,20 @@ async function ProfileDashboard() {
   const submittedSongs = (submittedData ?? []) as Record<string, unknown>[];
   const otherLists = playlists.filter((p) => !p.isDefault);
 
-  const userName = user.email!.split("@")[0];
+  const userName = profile?.username?.trim() || user.email!.split("@")[0];
+  const avatarUrl = profile?.avatar_url ?? null;
 
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start">
       <aside className="w-full md:w-80 flex flex-col gap-6 shrink-0">
         <div className="te-surface p-8 text-center flex flex-col items-center" style={{ borderRadius: "2rem" }}>
           <div className="w-24 h-24 mb-4 te-inset flex items-center justify-center rounded-full overflow-hidden">
-            <UserIcon size={40} style={{ color: "var(--text-muted)" }} />
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <UserIcon size={40} style={{ color: "var(--text-muted)" }} />
+            )}
           </div>
           <h1 className="text-xl font-bold tracking-tight mb-1" style={{ color: "var(--text)" }}>{userName}</h1>
           <p className="text-sm font-medium opacity-60 mb-8" style={{ color: "var(--text-muted)" }}>{user.email}</p>
@@ -96,9 +108,10 @@ async function ProfileDashboard() {
             <Plus size={16} strokeWidth={1.8} />
             Додати нову пісню
           </TeButton>
-          <button disabled className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1 hover:bg-[var(--surface-active)]" style={{ color: "var(--text)", transition: "background 0.2s" }}>
-            <Settings size={16} style={{ color: "var(--text-muted)" }} /> Налаштування
-          </button>
+          <TeButton shape="pill" href="/profile/edit" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+            <Pencil size={16} strokeWidth={1.8} />
+            Редагувати профіль
+          </TeButton>
           <form action={signOut} className="w-full">
             <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl hover:bg-red-500/10 text-red-500" style={{ transition: "background 0.2s" }}>
               <LogOut size={16} /> Вийти
