@@ -255,20 +255,24 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
     setScrollSpeed((prev) => (prev === 0 ? 1 : 0));
   };
 
-  // Detect whether the page actually overflows the viewport. Re-measures on
-  // resize, on window scroll height changes, and when content (sections,
-  // expanded tools) changes size. Threshold avoids flicker for tiny diffs.
+  // Hide auto-scroll when the lyrics block itself fits within the first
+  // viewport — measuring the lyrics container directly (not the whole
+  // document) so a tall sidebar or footer doesn't keep the widget around
+  // when there's nothing left for the user to scroll *to*.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const update = () => {
-      const sh = document.documentElement.scrollHeight;
-      const ih = window.innerHeight;
-      setPageScrollable(sh > ih + 24);
+      const el = sectionsRef.current;
+      if (!el) { setPageScrollable(false); return; }
+      const rect = el.getBoundingClientRect();
+      const lyricsBottomAbs = rect.bottom + window.scrollY;
+      setPageScrollable(lyricsBottomAbs > window.innerHeight + 24);
     };
     update();
     window.addEventListener("resize", update);
     const ro = new ResizeObserver(update);
     ro.observe(document.body);
+    if (sectionsRef.current) ro.observe(sectionsRef.current);
     return () => {
       window.removeEventListener("resize", update);
       ro.disconnect();
