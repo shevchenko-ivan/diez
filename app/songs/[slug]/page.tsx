@@ -226,15 +226,16 @@ async function AdminEditButton({ slug }: { slug: string }) {
 async function AdminEditSheetButton({ slug }: { slug: string }) {
   const songId = await lookupAdminSongId(slug);
   if (!songId) return null;
+  // Server → Client: can't pass `icon={Pencil}` (function reference) across
+  // the boundary — render the icon inline as children instead.
   return (
     <TeButton
       shape="pill"
       href={`/admin/songs/edit?id=${songId}&from=song`}
-      icon={Pencil}
-      iconSize={14}
-      className="w-full py-2 text-xs font-bold justify-center"
+      className="w-full py-2 text-xs font-bold justify-center gap-2"
       style={{ borderRadius: "1rem", color: "var(--orange)" }}
     >
+      <Pencil size={14} />
       Редагувати
     </TeButton>
   );
