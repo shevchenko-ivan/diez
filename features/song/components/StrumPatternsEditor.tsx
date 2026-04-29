@@ -268,37 +268,6 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
     setStrokes((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
   }
 
-  function applyTemplate(template: NoteLength | "custom") {
-    if (template === "custom") return;
-    const map: Record<string, Stroke[]> = {
-      "1/4": [{ d: "D", a: true }, { d: "D" }, { d: "D" }, { d: "D" }],
-      "1/8": [
-        { d: "D", a: true }, { d: "U" }, { d: "D" }, { d: "U" },
-        { d: "D" }, { d: "U" }, { d: "D" }, { d: "U" },
-      ],
-      "1/16": new Array(16).fill(0).map((_, i) => ({
-        d: i % 2 === 0 ? "D" as const : "U" as const,
-        ...(i === 0 ? { a: true } : {}),
-      })),
-      "1/8t": new Array(12).fill(0).map((_, i) => ({
-        d: i % 2 === 0 ? "D" as const : "U" as const,
-        ...(i % 3 === 0 ? { a: true } : {}),
-      })),
-      "1/4t": new Array(6).fill(0).map((_, i) => ({
-        d: "D" as const,
-        ...(i % 3 === 0 ? { a: true } : {}),
-      })),
-      "1/16t": new Array(12).fill(0).map((_, i) => ({
-        d: i % 2 === 0 ? "D" as const : "U" as const,
-        ...(i % 3 === 0 ? { a: true } : {}),
-      })),
-    };
-    if (map[template]) {
-      setStrokes(map[template]);
-      setNoteLength(template);
-    }
-  }
-
   function handleSubmit() {
     setError(null);
     const isCreating = !initial;
@@ -348,12 +317,16 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
 
   return (
     <div
-      className="te-inset p-4 space-y-3"
-      style={{ borderRadius: "1rem" }}
+      className="p-5 md:p-6 space-y-5"
+      style={{
+        borderRadius: "1.25rem",
+        background: "var(--surface)",
+        border: "1px solid var(--border, rgba(0,0,0,0.08))",
+      }}
       role="group"
       aria-label="Редактор патерну"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={togglePlay}
@@ -361,69 +334,73 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
           title={playing ? "Зупинити" : "Прослухати"}
           className="flex items-center justify-center rounded-full transition-colors flex-shrink-0"
           style={{
-            width: 26,
-            height: 26,
+            width: 32,
+            height: 32,
             background: playing ? "var(--orange)" : "transparent",
             color: playing ? "#FFF" : "var(--text)",
             border: playing ? "none" : "1.5px solid var(--text)",
           }}
         >
           {playing ? (
-            <Square size={10} fill="currentColor" />
+            <Square size={12} fill="currentColor" />
           ) : (
-            <Play size={11} fill="currentColor" style={{ marginLeft: 1 }} />
+            <Play size={13} fill="currentColor" style={{ marginLeft: 1 }} />
           )}
         </button>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Назва (наприклад, Main Pattern)"
-          className="field-input flex-1 text-sm"
-          style={{ color: "var(--text)" }}
-        />
+        <label className="flex-1 flex flex-col gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+            Назва
+          </span>
+          <div className="te-inset px-3 py-2.5" style={{ borderRadius: "0.75rem" }}>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Наприклад, Main Pattern"
+              className="field-input text-sm"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+        </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-xs">
-          <span className="font-bold" style={{ color: "var(--text-muted)" }}>BPM</span>
-          <input
-            type="number"
-            min={30}
-            max={320}
-            value={tempo}
-            onChange={(e) => setTempo(parseInt(e.target.value, 10) || 100)}
-            className="field-input w-20 text-sm"
-            style={{ color: "var(--text)" }}
-          />
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="flex flex-col gap-1.5" style={{ minWidth: 100 }}>
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+            BPM
+          </span>
+          <div className="te-inset px-3 py-2.5" style={{ borderRadius: "0.75rem" }}>
+            <input
+              type="number"
+              min={30}
+              max={320}
+              value={tempo}
+              onChange={(e) => setTempo(parseInt(e.target.value, 10) || 100)}
+              className="field-input text-sm"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
         </label>
 
-        <label className="flex items-center gap-2 text-xs">
-          <span className="font-bold" style={{ color: "var(--text-muted)" }}>Тривалість</span>
-          <div className="relative">
+        <label className="flex flex-col gap-1.5 flex-1" style={{ minWidth: 140 }}>
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+            Тривалість
+          </span>
+          <div className="te-inset px-3 py-2.5 relative" style={{ borderRadius: "0.75rem" }}>
             <select
               value={noteLength}
               onChange={(e) => setNoteLength(e.target.value as NoteLength)}
-              className="field-input pr-7 text-sm appearance-none"
+              className="field-input pr-6 text-sm appearance-none"
               style={{ color: "var(--text)" }}
             >
               {NOTE_LENGTHS.map((n) => (
                 <option key={n.value} value={n.value}>{n.label}</option>
               ))}
             </select>
-            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }} />
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }} />
           </div>
         </label>
 
-        <button
-          type="button"
-          onClick={() => applyTemplate(noteLength)}
-          className="te-pressable px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
-          style={{ borderRadius: "0.6rem", color: "var(--text-muted)" }}
-          title="Заповнити стандартним патерном для обраної тривалості"
-        >
-          Шаблон
-        </button>
       </div>
 
       {/* Presets gallery — one-click application of common patterns. Replaces
