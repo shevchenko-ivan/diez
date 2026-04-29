@@ -8,7 +8,7 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getSongBySlug, getSongsByArtist, applyVariant } from "@/features/song/services/songs";
-import { getSavedSlugs, getSavedVariantId } from "@/features/playlist/actions/playlists";
+import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongActions } from "@/features/song/components/SongActions";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
 import { SongViewer } from "@/features/song/components/SongViewer";
@@ -71,20 +71,22 @@ export default async function SongPage({
 }) {
   const { slug } = await params;
   const { v: variantId } = await searchParams;
-  const baseSong = await getSongBySlug(slug);
+
+  // Run song fetch + save-state in parallel — they only need `slug`.
+  // (Previously song was awaited first, then a 2-call parallel batch ran;
+  // this collapses one round-trip on mobile networks.)
+  const [baseSong, saveState] = await Promise.all([
+    getSongBySlug(slug),
+    getSongSaveStateForSlug(slug),
+  ]);
   if (!baseSong) return notFound();
 
-  // Critical-path queries — needed for the header/viewer above the fold.
-  // Related songs + admin check are streamed via <Suspense> below.
-  const [savedSlugs, savedVariantId, realArtistSlug] = await Promise.all([
-    getSavedSlugs(),
-    getSavedVariantId(slug),
-    getArtistSlugByName(baseSong.artist),
-  ]);
+  // Artist slug needs the song row, so it runs after.
+  const realArtistSlug = await getArtistSlugByName(baseSong.artist);
   const artistSlug = realArtistSlug ?? slugify(baseSong.artist);
 
   // ?v= takes priority; then the variant the user previously saved; then primary.
-  const effectiveVariantId = variantId ?? savedVariantId ?? undefined;
+  const effectiveVariantId = variantId ?? saveState.variantId ?? undefined;
   const song = applyVariant(baseSong, effectiveVariantId);
 
   const jsonLd: Record<string, unknown> = {
@@ -147,7 +149,7 @@ export default async function SongPage({
               <AdminEditButton slug={slug} />
             </Suspense>
             <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
-            <SongActions slug={song.slug} isSaved={savedSlugs.has(song.slug)} variantId={song.activeVariantId} />
+            <SongActions slug={song.slug} isSaved={saveState.isSaved} variantId={song.activeVariantId} />
           </div>
         </div>
 

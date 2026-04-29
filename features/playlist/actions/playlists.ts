@@ -83,6 +83,35 @@ export async function getSavedVariantId(slug: string): Promise<string | null> {
   return (data as Record<string, unknown>).variant_id as string | null;
 }
 
+/**
+ * Combined critical-path query for `/songs/[slug]`: tells us in ONE
+ * roundtrip whether the current user has this song saved + which variant
+ * they last picked. Replaces the previous pair `getSavedSlugs() + getSavedVariantId()`
+ * which made TWO auth + TWO DB calls (and over-fetched ALL saved slugs just
+ * to check one). Mobile networks pay for every roundtrip — this halves them.
+ */
+export async function getSongSaveStateForSlug(
+  slug: string,
+): Promise<{ isSaved: boolean; variantId: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { isSaved: false, variantId: null };
+
+  const { data } = await supabase
+    .from("playlist_songs")
+    .select("variant_id, songs!inner(slug), playlists!inner(owner_id)")
+    .eq("songs.slug", slug)
+    .eq("playlists.owner_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return { isSaved: false, variantId: null };
+  return {
+    isSaved: true,
+    variantId: ((data as Record<string, unknown>).variant_id as string | null) ?? null,
+  };
+}
+
 /** Current user's playlists with song count + up to 3 cover previews. */
 export async function getMyPlaylists(): Promise<Playlist[]> {
   const supabase = await createClient();
