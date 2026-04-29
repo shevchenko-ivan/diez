@@ -657,10 +657,10 @@ function EditableBeatGroup({
 }
 
 /**
- * Sheet-music-style label for one stroke inside its beat:
+ * Sheet-music-style label for one stroke inside its beat (Ukrainian counting):
  *   1/4   → "1"
- *   1/8   → "1 &"
- *   1/16  → "1 e & a"
+ *   1/8   → "1 і"
+ *   1/16  → "1 та і та"
  *   1/4t  → "1" + bracket (downbeat only; the bracket carries the "3")
  *   1/8t  → "1" + bracket
  *   1/16t → "1" + bracket
@@ -673,8 +673,8 @@ function subdivisionLabel(
 ): string {
   if (indexInBeat === 0) return String(beatNumber);
   if (isTriplet) return ""; // bracket carries the meaning
-  if (beatSize === 2) return "&"; // 1/8
-  if (beatSize === 4) return ["", "e", "&", "a"][indexInBeat] ?? ""; // 1/16
+  if (beatSize === 2) return "і"; // 1/8
+  if (beatSize === 4) return ["", "та", "і", "та"][indexInBeat] ?? ""; // 1/16
   return "";
 }
 
