@@ -262,7 +262,7 @@ export default async function EditSongPage({
                 <AlbumAutocomplete name="album" defaultValue={song.album ?? ""} pairs={albumPairs} placeholder="Назва альбому" />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField label="Жанр">
                   <select name="genre" defaultValue={song.genre ?? ""} className="field-input" style={{ color: "var(--text)" }}>
                     <option value="">— Обрати —</option>
@@ -275,11 +275,8 @@ export default async function EditSongPage({
                     {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </FormField>
-                <FormField label="Розмір">
-                  <select name="time_signature" defaultValue={song.time_signature ?? "4/4"} className="field-input" style={{ color: "var(--text)" }}>
-                    {["2/4","3/4","4/4","6/8","12/8"].map(ts => <option key={ts} value={ts}>{ts}</option>)}
-                  </select>
-                </FormField>
+                {/* Розмір прибрано — час такту визначає сам ритм
+                    (note_length × кількість ударів у патерні). */}
               </div>
 
               <FormField label="URL обкладинки">
