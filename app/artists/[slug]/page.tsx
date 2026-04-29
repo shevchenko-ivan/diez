@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { type Metadata } from "next";
+import Script from "next/script";
 import { PageShell } from "@/shared/components/PageShell";
 import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
@@ -92,8 +93,10 @@ export default async function ArtistPage({
 
   return (
     <PageShell>
-      <script
+      <Script
+        id={`ld-json-artist-${slug}`}
         type="application/ld+json"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="mb-6 flex items-center justify-between gap-3">

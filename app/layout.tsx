@@ -4,8 +4,10 @@ import { siteUrl } from "@/lib/utils";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
 import { PostHogProvider } from "@/shared/components/PostHogProvider";
+import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -50,17 +52,10 @@ export default function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
-        {/* Auto-hide scrollbars: add `is-scrolling` to <html> while the user
-            is actively scrolling, remove it 800ms after motion stops. CSS
-            uses this class to reveal the track/thumb. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "(function(){var h=document.documentElement,t;function on(){h.classList.add('is-scrolling');clearTimeout(t);t=setTimeout(function(){h.classList.remove('is-scrolling');},50);}window.addEventListener('scroll',on,{passive:true,capture:true});window.addEventListener('wheel',on,{passive:true});window.addEventListener('touchmove',on,{passive:true});})();",
-          }}
-        />
-        <script
+        <Script
+          id="ld-json-website"
           type="application/ld+json"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -81,6 +76,7 @@ export default function RootLayout({
             }),
           }}
         />
+        <ScrollbarAutoHide />
         <PostHogProvider>
           <ThemeProvider>
             {/* Skip link — first focusable element on every page (WCAG 2.4.1).
