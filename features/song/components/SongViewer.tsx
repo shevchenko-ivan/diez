@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
@@ -143,7 +143,16 @@ function wrapLine(
 
 // ─── SongViewer ───────────────────────────────────────────────────────────────
 
-export function SongViewer({ song, editHref }: { song: Song; editHref?: string }) {
+export function SongViewer({
+  song,
+  editHref,
+  editSlot,
+}: {
+  song: Song;
+  editHref?: string;
+  /** Server-streamed admin "Edit" button rendered at the bottom of the mobile tools sheet. */
+  editSlot?: ReactNode;
+}) {
   const [transpose, setTranspose] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
@@ -660,7 +669,9 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                 </div>
               </div>
 
-              {/* Edit (admin only) */}
+              {/* Edit (admin only) — `editHref` for direct prop wiring,
+                  `editSlot` for server-streamed Suspense (preferred: avoids
+                  blocking the viewer on the admin DB lookup). */}
               {editHref && (
                 <TeButton
                   shape="pill"
@@ -673,6 +684,7 @@ export function SongViewer({ song, editHref }: { song: Song; editHref?: string }
                   Редагувати
                 </TeButton>
               )}
+              {editSlot}
                 </div>
               </div>
             </div>
