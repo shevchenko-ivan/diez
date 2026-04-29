@@ -78,73 +78,94 @@ function parseName(value: string | null | undefined): string {
 }
 
 async function revalidateForSong(admin: ReturnType<typeof createAdminClient>, songId: string) {
-  const { data } = await admin.from("songs").select("slug").eq("id", songId).single();
-  revalidateTag("songs", "max");
-  if (data?.slug) revalidatePath(`/songs/${data.slug}`);
+  // Wrap individually so a revalidate failure doesn't roll back a successful
+  // DB write. Server-action errors get redacted before they reach the client,
+  // so we log the actual cause server-side for diagnosability.
+  try {
+    const { data } = await admin.from("songs").select("slug").eq("id", songId).single();
+    try { revalidateTag("songs", "max"); } catch (e) { console.error("[strumming] revalidateTag failed:", e); }
+    if (data?.slug) {
+      try { revalidatePath(`/songs/${data.slug}`); } catch (e) { console.error("[strumming] revalidatePath failed:", e); }
+    }
+  } catch (e) {
+    console.error("[strumming] revalidateForSong outer failure:", e);
+  }
 }
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
 export async function createStrumPattern(formData: FormData) {
-  await requireAdmin();
-  const admin = createAdminClient();
+  try {
+    await requireAdmin();
+    const admin = createAdminClient();
 
-  const songId = assertUuid(formData.get("songId") as string, "ID пісні");
-  const name = parseName(formData.get("name") as string);
-  const tempo = parseTempo(formData.get("tempo") as string);
-  const noteLength = parseNoteLength(formData.get("noteLength") as string);
-  const strokes = parseStrokes(formData.get("strokes") as string);
-  if (!strokes) throw new Error("Патерн порожній — додайте хоча б один удар");
+    const songId = assertUuid(formData.get("songId") as string, "ID пісні");
+    const name = parseName(formData.get("name") as string);
+    const tempo = parseTempo(formData.get("tempo") as string);
+    const noteLength = parseNoteLength(formData.get("noteLength") as string);
+    const strokes = parseStrokes(formData.get("strokes") as string);
+    if (!strokes) throw new Error("Патерн порожній — додайте хоча б один удар");
 
-  // Append at the end.
-  const { data: existing } = await admin
-    .from("song_strumming_patterns")
-    .select("position")
-    .eq("song_id", songId)
-    .order("position", { ascending: false })
-    .limit(1);
-  const nextPosition = existing && existing.length > 0 ? (existing[0].position as number) + 1 : 0;
+    // Append at the end.
+    const { data: existing } = await admin
+      .from("song_strumming_patterns")
+      .select("position")
+      .eq("song_id", songId)
+      .order("position", { ascending: false })
+      .limit(1);
+    const nextPosition = existing && existing.length > 0 ? (existing[0].position as number) + 1 : 0;
 
-  const { error } = await admin.from("song_strumming_patterns").insert({
-    song_id: songId,
-    position: nextPosition,
-    name,
-    tempo,
-    note_length: noteLength,
-    strokes,
-  });
-  if (error) throw new Error(`Помилка створення: ${error.message}`);
+    const { error } = await admin.from("song_strumming_patterns").insert({
+      song_id: songId,
+      position: nextPosition,
+      name,
+      tempo,
+      note_length: noteLength,
+      strokes,
+    });
+    if (error) throw new Error(`Помилка створення: ${error.message}`);
 
-  await revalidateForSong(admin, songId);
+    await revalidateForSong(admin, songId);
+  } catch (e) {
+    // Server-action errors get redacted on the client. Log the real cause
+    // server-side so the dev terminal shows what actually went wrong.
+    console.error("[createStrumPattern] failed:", e);
+    throw e;
+  }
 }
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export async function updateStrumPattern(formData: FormData) {
-  await requireAdmin();
-  const admin = createAdminClient();
+  try {
+    await requireAdmin();
+    const admin = createAdminClient();
 
-  const id = assertUuid(formData.get("id") as string, "ID патерну");
-  const name = parseName(formData.get("name") as string);
-  const tempo = parseTempo(formData.get("tempo") as string);
-  const noteLength = parseNoteLength(formData.get("noteLength") as string);
-  const strokes = parseStrokes(formData.get("strokes") as string);
-  if (!strokes) throw new Error("Патерн порожній — додайте хоча б один удар");
+    const id = assertUuid(formData.get("id") as string, "ID патерну");
+    const name = parseName(formData.get("name") as string);
+    const tempo = parseTempo(formData.get("tempo") as string);
+    const noteLength = parseNoteLength(formData.get("noteLength") as string);
+    const strokes = parseStrokes(formData.get("strokes") as string);
+    if (!strokes) throw new Error("Патерн порожній — додайте хоча б один удар");
 
-  const { data: existing, error: fetchError } = await admin
-    .from("song_strumming_patterns")
-    .select("song_id")
-    .eq("id", id)
-    .single();
-  if (fetchError || !existing) throw new Error("Патерн не знайдено");
+    const { data: existing, error: fetchError } = await admin
+      .from("song_strumming_patterns")
+      .select("song_id")
+      .eq("id", id)
+      .single();
+    if (fetchError || !existing) throw new Error("Патерн не знайдено");
 
-  const { error } = await admin
-    .from("song_strumming_patterns")
-    .update({ name, tempo, note_length: noteLength, strokes })
-    .eq("id", id);
-  if (error) throw new Error(`Помилка оновлення: ${error.message}`);
+    const { error } = await admin
+      .from("song_strumming_patterns")
+      .update({ name, tempo, note_length: noteLength, strokes })
+      .eq("id", id);
+    if (error) throw new Error(`Помилка оновлення: ${error.message}`);
 
-  await revalidateForSong(admin, existing.song_id as string);
+    await revalidateForSong(admin, existing.song_id as string);
+  } catch (e) {
+    console.error("[updateStrumPattern] failed:", e);
+    throw e;
+  }
 }
 
 // ─── Delete ──────────────────────────────────────────────────────────────────
