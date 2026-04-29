@@ -10,6 +10,7 @@ import {
 } from "@/features/song/actions/strumming-patterns";
 import { playStroke, playMetronomeClick, strokesPerBeat as strokesPerBeatFn, intervalFor } from "@/features/song/lib/strumming-audio";
 import { STRUM_PRESETS, type StrumPreset } from "@/features/song/lib/strum-presets";
+import { loadUserPresets, saveUserPreset, deleteUserPreset } from "@/features/song/lib/user-strum-presets";
 
 import { ToggleKnob } from "@/shared/components/ToggleKnob";
 
@@ -205,11 +206,35 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   const [activeIndex, setActiveIndex] = useState(-1);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [metronome, setMetronome] = useState(false);
+  // User-saved presets live in localStorage (see lib/user-strum-presets.ts).
+  // Initialized empty for SSR parity, hydrated from localStorage in effect.
+  const [userPresets, setUserPresets] = useState<StrumPreset[]>([]);
+  const [savedFlash, setSavedFlash] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => { setUserPresets(loadUserPresets()); }, []);
 
   function applyPreset(preset: StrumPreset) {
     setStrokes(preset.strokes.map((s) => ({ ...s })));
     setNoteLength(preset.noteLength);
+  }
+
+  function handleSaveAsTemplate() {
+    const label = (name || "Без назви").trim().slice(0, 60);
+    const created = saveUserPreset({
+      label,
+      noteLength,
+      strokes: strokes.map((s) => ({ ...s })),
+    });
+    setUserPresets((prev) => [...prev, created]);
+    setPresetsOpen(true);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1400);
+  }
+
+  function handleDeleteUserPreset(id: string) {
+    deleteUserPreset(id);
+    setUserPresets((prev) => prev.filter((p) => p.id !== id));
   }
 
   // Preview playback — same engine as the read-only viewer so the admin hears
@@ -425,6 +450,24 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
           Метроном
         </button>
 
+        {/* Save current pattern as a personal template (localStorage). Shows
+            up under "Мої шаблони" in the presets gallery for reuse. */}
+        <button
+          type="button"
+          onClick={handleSaveAsTemplate}
+          title="Зберегти цей патерн як ваш шаблон (для повторного використання)"
+          className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors"
+          style={{
+            borderRadius: "0.75rem",
+            border: "1px solid",
+            borderColor: savedFlash ? "rgba(255,140,60,0.45)" : "var(--border, rgba(0,0,0,0.1))",
+            background: savedFlash ? "rgba(255,140,60,0.12)" : "transparent",
+            color: savedFlash ? "var(--orange)" : "var(--text-muted)",
+          }}
+        >
+          {savedFlash ? "Збережено ✓" : "Зберегти як шаблон"}
+        </button>
+
       </div>
 
       {/* Presets gallery — one-click application of common patterns. Replaces
@@ -453,33 +496,94 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
                 background: "var(--surface-dk)",
               }}
             >
-              {STRUM_PRESETS.length}
+              {STRUM_PRESETS.length + userPresets.length}
             </span>
           </span>
           {presetsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
         {presetsOpen && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-            {STRUM_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => applyPreset(preset)}
-                className="te-pressable flex flex-col items-start gap-1 p-2 text-left min-w-0 overflow-hidden"
-                style={{ borderRadius: "0.6rem" }}
-                title={`Застосувати «${preset.label}»`}
-              >
-                <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                  <span className="text-[11px] font-bold truncate" style={{ color: "var(--text)" }}>
-                    {preset.label}
-                  </span>
-                  <span className="text-[9px] font-mono uppercase tracking-widest flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                    {preset.noteLength}
-                  </span>
+          <div className="space-y-3 mt-3">
+            {userPresets.length > 0 && (
+              <div>
+                <div
+                  className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Мої шаблони
                 </div>
-                <StrokesPreview strokes={preset.strokes} />
-              </button>
-            ))}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {userPresets.map((preset) => (
+                    <div key={preset.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => applyPreset(preset)}
+                        className="te-pressable w-full flex flex-col items-start gap-1 p-2 pr-7 text-left min-w-0 overflow-hidden"
+                        style={{ borderRadius: "0.6rem" }}
+                        title={`Застосувати «${preset.label}»`}
+                      >
+                        <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                          <span className="text-[11px] font-bold truncate" style={{ color: "var(--text)" }}>
+                            {preset.label}
+                          </span>
+                          <span className="text-[9px] font-mono uppercase tracking-widest flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                            {preset.noteLength}
+                          </span>
+                        </div>
+                        <StrokesPreview strokes={preset.strokes} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteUserPreset(preset.id)}
+                        title="Видалити шаблон"
+                        aria-label={`Видалити шаблон «${preset.label}»`}
+                        className="absolute top-1.5 right-1.5 flex items-center justify-center"
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          color: "var(--text-muted)",
+                          background: "transparent",
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              {userPresets.length > 0 && (
+                <div
+                  className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Стандартні
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {STRUM_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className="te-pressable flex flex-col items-start gap-1 p-2 text-left min-w-0 overflow-hidden"
+                    style={{ borderRadius: "0.6rem" }}
+                    title={`Застосувати «${preset.label}»`}
+                  >
+                    <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                      <span className="text-[11px] font-bold truncate" style={{ color: "var(--text)" }}>
+                        {preset.label}
+                      </span>
+                      <span className="text-[9px] font-mono uppercase tracking-widest flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                        {preset.noteLength}
+                      </span>
+                    </div>
+                    <StrokesPreview strokes={preset.strokes} />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
