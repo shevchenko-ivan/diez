@@ -393,7 +393,10 @@ export default async function EditSongPage({
                 defaultValue={serializeSections(activeVariant.sections)}
                 placeholder={"Куплет 1:\n[Am]Слова пісні [C]тут\n[G]Наступний рядок\n\nПриспів:\n[F]Приспів тут"}
                 className="field-input w-full resize-none font-mono text-xs leading-relaxed"
-                style={{ color: "var(--text)" }}
+                // Drop the orange focus ring on this large editor — the
+                // sunken te-inset already telegraphs focus context, and the
+                // ring is visually noisy when editing long bodies of text.
+                style={{ color: "var(--text)", outline: "none" }}
               />
             </div>
             <div className="pt-6 flex justify-end">
