@@ -472,7 +472,9 @@ export async function updateSongFull(formData: FormData) {
     throw new Error("Варіант не належить пісні");
   }
 
-  // 1) Update the variant.
+  // 1) Update the variant. Force status to 'published' when the parent song
+  //    is being saved as published — otherwise a stale draft status on a
+  //    variant would make it invisible to the public viewer via RLS.
   const { error: variantErr } = await admin
     .from("song_variants")
     .update({
@@ -482,6 +484,7 @@ export async function updateSongFull(formData: FormData) {
       ...(parsed
         ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
         : {}),
+      ...(status === "published" ? { status: "published" } : {}),
     })
     .eq("id", variantId);
   if (variantErr) throw new Error(`Помилка варіанта: ${variantErr.message}`);
