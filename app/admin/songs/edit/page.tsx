@@ -389,6 +389,7 @@ export default async function EditSongPage({
             </h2>
             <div className="te-inset p-4" style={{ borderRadius: "1rem" }}>
               <AutoResizeTextarea
+                key={activeVariant.id}
                 name="lyrics_with_chords"
                 defaultValue={serializeSections(activeVariant.sections)}
                 placeholder={"Куплет 1:\n[Am]Слова пісні [C]тут\n[G]Наступний рядок\n\nПриспів:\n[F]Приспів тут"}
