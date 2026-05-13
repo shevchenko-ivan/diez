@@ -146,7 +146,7 @@ export default async function SongPage({
               </span>
             )}
             <Suspense>
-              <AdminEditButton slug={slug} />
+              <AdminEditButton slug={slug} variantId={song.activeVariantId} />
             </Suspense>
             <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
             <SongActions slug={song.slug} isSaved={saveState.isSaved} variantId={song.activeVariantId} />
@@ -168,7 +168,7 @@ export default async function SongPage({
           song={song}
           editSlot={
             <Suspense fallback={null}>
-              <AdminEditSheetButton slug={slug} />
+              <AdminEditSheetButton slug={slug} variantId={song.activeVariantId} />
             </Suspense>
           }
         />
@@ -206,13 +206,14 @@ const lookupAdminSongId = cache(async (slug: string): Promise<string | null> => 
   }
 });
 
-async function AdminEditButton({ slug }: { slug: string }) {
+async function AdminEditButton({ slug, variantId }: { slug: string; variantId?: string }) {
   const songId = await lookupAdminSongId(slug);
   if (!songId) return null;
+  const href = `/admin/songs/edit?id=${songId}&from=song${variantId ? `&variant=${variantId}` : ""}`;
   return (
     <span className="hidden lg:inline-flex">
       <TeButton
-        href={`/admin/songs/edit?id=${songId}&from=song`}
+        href={href}
         title="Редагувати"
         style={{ width: 36, height: 36, color: "var(--orange)" }}
       >
@@ -225,15 +226,16 @@ async function AdminEditButton({ slug }: { slug: string }) {
 // Mobile/tablet: full-width edit button at the bottom of the tools sheet.
 // `lookupAdminSongId` is React.cache'd so this shares the same DB roundtrip
 // as the desktop <AdminEditButton/> in the header.
-async function AdminEditSheetButton({ slug }: { slug: string }) {
+async function AdminEditSheetButton({ slug, variantId }: { slug: string; variantId?: string }) {
   const songId = await lookupAdminSongId(slug);
   if (!songId) return null;
+  const href = `/admin/songs/edit?id=${songId}&from=song${variantId ? `&variant=${variantId}` : ""}`;
   // Server → Client: can't pass `icon={Pencil}` (function reference) across
   // the boundary — render the icon inline as children instead.
   return (
     <TeButton
       shape="pill"
-      href={`/admin/songs/edit?id=${songId}&from=song`}
+      href={href}
       className="w-full py-2 text-xs font-bold justify-center gap-2"
       style={{ borderRadius: "1rem", color: "var(--orange)" }}
     >
