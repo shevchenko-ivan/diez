@@ -274,6 +274,7 @@ const TEMPLATES: Record<string, number[][]> = {
 // Voicings that can't be derived from C-root templates (open string shapes)
 const OVERRIDES: Record<string, number[][]> = {
   "A#": [[-1,1,3,-1,3,-1]],
+  "A#6": [[-1,1,0,0,3,3]],
   "B": [[-1,2,4,-1,4,-1]],
   "C#": [[-1,4,3,0,2,0],[-1,4,-1,0,2,0],[-1,-1,3,0,2,0]],
   "C#7": [[-1,-1,3,4,2,0]],
@@ -537,6 +538,7 @@ function generateChordDB(): Record<string, ChordDef[]> {
     "Dm": [-1, -1, 0, 2, 3, 1],
     "Gm": [3, 5, 5, 3, 3, 3],
     "G7": [3, 5, 3, 4, 3, 3],
+    "Cadd9": [-1, 3, 2, 0, 3, 3],
   };
   for (const [name, target] of Object.entries(DEFAULT_PROMOTIONS)) {
     const list = db[name];
