@@ -218,7 +218,7 @@ export function SongViewer({
     }
   };
   const { trigger } = useHaptics();
-  const voicingState = useVoicings(song.slug);
+  const voicingState = useVoicings(song.slug, song.chordVoicings);
 
   // Fire-and-forget view increment — once per variant per browser session.
   const activeVariantId = song.activeVariantId;

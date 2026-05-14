@@ -68,6 +68,8 @@ export interface SongVariant {
   views: number;
   createdAt: string;
   isPrimary: boolean;
+  /** Admin-picked default voicing index per chord name (e.g. {"Bb6": 0, "A7": 2}). */
+  chordVoicings?: Record<string, number>;
 }
 
 export interface Song {
@@ -91,4 +93,6 @@ export interface Song {
   activeVariantId?: string;
   /** Rich strumming patterns (multiple per song). */
   strumPatterns?: StrumPattern[];
+  /** Admin-picked default voicing index per chord name (variant-scoped). */
+  chordVoicings?: Record<string, number>;
 }

@@ -456,7 +456,10 @@ export type VoicingState = {
   setVoicingIdx: (updater: (prev: Record<string, number>) => Record<string, number>) => void;
 };
 
-export function useVoicings(songSlug?: string): VoicingState {
+export function useVoicings(
+  songSlug?: string,
+  initial?: Record<string, number>,
+): VoicingState {
   // Always start empty to match SSR output; hydrate from localStorage after mount.
   const [voicingIdx, setVoicingIdxRaw] = useState<Record<string, number>>({});
 
@@ -464,9 +467,14 @@ export function useVoicings(songSlug?: string): VoicingState {
     if (!songSlug) return;
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey(songSlug)) || "{}");
-      if (saved && typeof saved === "object") setVoicingIdxRaw(saved);
-    } catch {}
-  }, [songSlug]);
+      const fromStorage = saved && typeof saved === "object" ? saved : {};
+      // Admin-set defaults seed any chord the user hasn't touched locally.
+      const merged = { ...(initial ?? {}), ...fromStorage };
+      setVoicingIdxRaw(merged);
+    } catch {
+      if (initial) setVoicingIdxRaw(initial);
+    }
+  }, [songSlug, initial]);
 
   const setVoicingIdx = useCallback((updater: (prev: Record<string, number>) => Record<string, number>) => {
     setVoicingIdxRaw((prev) => {

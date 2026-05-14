@@ -16,6 +16,27 @@ function assertUuid(value: string | null | undefined, label = "ID"): string {
   return value;
 }
 
+// Parse a "chord -> voicing index" map from a form field. Skips invalid entries
+// so a bad input can't poison the row. Returns null when the field is missing
+// or unparseable (caller decides whether to leave the existing value alone).
+function parseChordVoicings(raw: unknown): Record<string, number> | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      const n = typeof v === "number" ? v : Number(v);
+      if (Number.isFinite(n) && n >= 0 && Number.isInteger(n) && typeof k === "string" && k.length <= 16) {
+        out[k] = n;
+      }
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!value.startsWith("https://") && !value.startsWith("http://")) return null;
@@ -159,6 +180,7 @@ export async function createVariant(formData: FormData) {
   if (!lyricsRaw) throw new Error("Потрібен текст з акордами");
 
   const parsed = parseLyricsWithChords(lyricsRaw);
+  const voicings = parseChordVoicings(formData.get("chord_voicings"));
   const admin = createAdminClient();
 
   const { data: variant, error } = await admin
@@ -172,6 +194,7 @@ export async function createVariant(formData: FormData) {
       capo,
       status: "published",
       author_id: adminId,
+      ...(voicings ? { chord_voicings: voicings } : {}),
     })
     .select("id")
     .single();
@@ -459,6 +482,7 @@ export async function updateSongFull(formData: FormData) {
   const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
+  const voicings = parseChordVoicings(formData.get("chord_voicings"));
 
   const admin = createAdminClient();
 
@@ -485,6 +509,7 @@ export async function updateSongFull(formData: FormData) {
         ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
         : {}),
       ...(status === "published" ? { status: "published" } : {}),
+      ...(voicings ? { chord_voicings: voicings } : {}),
     })
     .eq("id", variantId);
   if (variantErr) throw new Error(`Помилка варіанта: ${variantErr.message}`);
