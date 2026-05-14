@@ -18,6 +18,8 @@ import { StringAutocomplete } from "./StringAutocomplete";
 import { AlbumAutocomplete } from "./AlbumAutocomplete";
 import { Suspense } from "react";
 import { SavedToast } from "@/shared/components/SavedToast";
+import { ChordVoicingPicker } from "./ChordVoicingPicker";
+import { parseLyricsWithChords } from "@/features/song/lib/parseLyrics";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
@@ -156,11 +158,21 @@ export default async function EditSongPage({
     .map((r) => ({ artist: (r.artist ?? "").trim(), album: (r.album ?? "").trim() }))
     .filter((p) => p.artist && p.album);
 
-  const { data: variants } = await admin
+  // Try with chord_voicings (migration 022); fall back to base columns if the
+  // column doesn't exist yet so this page keeps loading during rollout.
+  let variantsRes = await admin
     .from("song_variants")
-    .select("id, label, created_at, views, key, capo, sections")
+    .select("id, label, created_at, views, key, capo, sections, chord_voicings")
     .eq("song_id", song.id)
     .order("created_at", { ascending: true });
+  if (variantsRes.error && variantsRes.error.code === "42703") {
+    variantsRes = await admin
+      .from("song_variants")
+      .select("id, label, created_at, views, key, capo, sections")
+      .eq("song_id", song.id)
+      .order("created_at", { ascending: true });
+  }
+  const { data: variants } = variantsRes;
 
   const primaryVariantId = (song.primary_variant_id as string | null) ?? null;
   const allVariants = (variants ?? []) as Array<{
@@ -171,6 +183,7 @@ export default async function EditSongPage({
     key: string;
     capo: number | null;
     sections: unknown;
+    chord_voicings?: Record<string, number> | null;
   }>;
 
   const requested =
@@ -400,12 +413,20 @@ export default async function EditSongPage({
                 style={{ color: "var(--text)", outline: "none" }}
               />
             </div>
-            <div className="pt-6 flex justify-end">
-              <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
-                <Save size={16} />
-                ЗБЕРЕГТИ
-              </TeButton>
-            </div>
+          </div>
+
+          {/* ── Аплікатури акордів (per-variant default voicings) ───── */}
+          <ChordVoicingPicker
+            key={activeVariant.id}
+            chords={parseLyricsWithChords(serializeSections(activeVariant.sections)).chords}
+            initial={activeVariant.chord_voicings}
+          />
+
+          <div className="pt-6 flex justify-end">
+            <TeButton shape="pill" type="submit" className="px-8 py-4 flex items-center gap-3 text-sm font-bold tracking-widest">
+              <Save size={16} />
+              ЗБЕРЕГТИ
+            </TeButton>
           </div>
         </form>
       ) : null}

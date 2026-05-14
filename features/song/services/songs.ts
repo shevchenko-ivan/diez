@@ -22,8 +22,13 @@ const SONG_COLUMNS =
 const SONG_LIST_COLUMNS =
   "slug, title, artist, album, genre, key, capo, time_signature, difficulty, chords, views, cover_image, cover_color, youtube_id, primary_variant_id";
 
-const VARIANT_COLUMNS =
+// `chord_voicings` is added by migration 022. Older deployments may not have
+// it yet — `getSongBySlug` retries with this fallback list on column-missing
+// errors so the public viewer keeps working until the migration is applied.
+const VARIANT_COLUMNS_BASE =
   "id, label, sections, chords, key, capo, views, created_at";
+const VARIANT_COLUMNS =
+  `${VARIANT_COLUMNS_BASE}, chord_voicings`;
 
 // Re-parse sections from the stored `raw` text so old rows (saved in the
 // previous word-aligned format) render with the new column-preserving parser.
@@ -57,6 +62,11 @@ function mapVariantRow(row: Record<string, unknown>, primaryId: string | null): 
     row.sections,
     (row.chords as string[] | null) ?? null,
   );
+  const rawVoicings = row.chord_voicings;
+  const chordVoicings =
+    rawVoicings && typeof rawVoicings === "object" && !Array.isArray(rawVoicings)
+      ? (rawVoicings as Record<string, number>)
+      : undefined;
   return {
     id,
     label: row.label as string,
@@ -67,6 +77,7 @@ function mapVariantRow(row: Record<string, unknown>, primaryId: string | null): 
     views: (row.views as number | null) ?? 0,
     createdAt: row.created_at as string,
     isPrimary: id === primaryId,
+    chordVoicings,
   };
 }
 
@@ -345,12 +356,24 @@ export const getSongsByArtist = unstable_cache(
 export async function getSongBySlug(slug: string): Promise<Song | undefined> {
   if (!hasEnvVars) return undefined;
   const client = getClient();
-  const { data, error } = await client
+  let { data, error } = await client
     .from("songs")
     .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
     .eq("slug", slug)
     .eq("status", "published")
     .single();
+  // 42703 = undefined_column. Retry without chord_voicings if migration 022
+  // hasn't been applied yet (keeps the public site online during rollout).
+  if (error && error.code === "42703") {
+    const retry = await client
+      .from("songs")
+      .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS_BASE})`)
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error || !data) return undefined;
   const song = mapRow(data as Record<string, unknown>);
 
@@ -410,5 +433,6 @@ export function applyVariant(song: Song, variantId: string | undefined): Song {
     key: target.key,
     capo: target.capo ?? song.capo,
     activeVariantId: target.id,
+    chordVoicings: target.chordVoicings ?? song.chordVoicings,
   };
 }
