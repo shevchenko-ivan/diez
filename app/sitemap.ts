@@ -1,6 +1,7 @@
 import { type MetadataRoute } from "next";
 import { getAllSongSlugs } from "@/features/song/services/songs";
 import { getRankedArtists } from "@/features/artist/services/artists";
+import { TOPICS } from "@/features/song/data/topics";
 import { siteUrl } from "@/lib/utils";
 
 // Mirror the robots.ts guard: no sitemap on non-production deployments.
@@ -59,6 +60,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...artistSlugs.map((slug) => ({
       url: `${siteUrl}/artists/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
+    // Topic landing pages — `?topic=` query strings are real, indexable URLs
+    // with their own SEO-tuned title/description per /songs/page.tsx. They
+    // target broad evergreen queries ("акорди для початківців", "пісні біля
+    // вогнища") which a single-song page can't rank for.
+    ...TOPICS.map((t) => ({
+      url: `${siteUrl}/songs?topic=${t.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.7,
