@@ -43,12 +43,16 @@ export function SongCard({ ...props }: SongCardProps) {
         className="te-card-well w-full aspect-[4/3] relative overflow-hidden"
         style={{ borderRadius: "1rem" }}
       >
-        {/* Cover */}
+        {/* Cover — alt text doubles as Google Image Search input and
+            screen-reader label. "Cover-link-to-text" patterns sometimes
+            advise alt="" so the link text isn't repeated, but here the title
+            and artist are visually beside the image; for SEO + a11y the
+            descriptive alt wins. */}
         {props.coverImage ? (
           <Image
             src={props.coverImage}
             className="object-cover"
-            alt=""
+            alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
           />
