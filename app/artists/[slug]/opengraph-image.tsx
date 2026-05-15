@@ -18,7 +18,13 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
   const artist = await getArtistBySlug(slug);
   const name = artist?.name ?? slug;
   const songs = artist ? await getSongsByArtist(name) : [];
+  // Truncate manually — Satori doesn't support `-webkit-line-clamp` or
+  // text-overflow, and the canvas only fits ~2 lines.
+  const nameDisplay = name.length > 28 ? name.slice(0, 27) + "…" : name;
   const topTitles = songs.slice(0, 3).map((s) => s.title);
+  const titlesLine = topTitles.map((t) => `«${t}»`).join("  ·  ");
+  const titlesDisplay =
+    titlesLine.length > 80 ? titlesLine.slice(0, 79) + "…" : titlesLine;
 
   return new ImageResponse(
     (
@@ -48,6 +54,7 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
           {songs.length > 0 && (
             <div
               style={{
+                display: "flex",
                 fontSize: 22,
                 fontWeight: 700,
                 padding: "10px 22px",
@@ -58,7 +65,9 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
                 letterSpacing: "0.1em",
               }}
             >
-              {songs.length}{" "}пісень
+              {/* Single concatenated string — see /songs OG note about
+                  Satori's multi-text-node child rule. */}
+              {`${songs.length} пісень`}
             </div>
           )}
         </div>
@@ -90,13 +99,10 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
               fontWeight: 900,
               lineHeight: 1.05,
               letterSpacing: "-0.04em",
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 2,
-              overflow: "hidden",
+              display: "flex",
             }}
           >
-            {name}
+            {nameDisplay}
           </div>
         </div>
 
@@ -119,13 +125,10 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
                 fontWeight: 600,
                 opacity: 0.9,
                 letterSpacing: "-0.01em",
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                overflow: "hidden",
+                display: "flex",
               }}
             >
-              {topTitles.map((t) => `«${t}»`).join("  ·  ")}
+              {titlesDisplay}
             </div>
           </div>
         )}
