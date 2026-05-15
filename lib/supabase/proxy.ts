@@ -56,7 +56,22 @@ export async function updateSession(request: NextRequest) {
 
   // Public routes — accessible without login.
   // Must match the approved routing in CLAUDE.md exactly.
-  const publicPaths = ["/songs", "/artists"];
+  // `/privacy`, `/terms`, `/about` are linked from the Google OAuth consent
+  // screen and need to be reachable to guests; without them the OAuth app
+  // publish flow fails Google's "homepage / privacy / terms must be public"
+  // check.
+  // `/lists`, `/tuner`, `/chords` are public utility pages that the navbar
+  // exposes to guests.
+  const publicPaths = [
+    "/songs",
+    "/artists",
+    "/about",
+    "/privacy",
+    "/terms",
+    "/lists",
+    "/tuner",
+    "/chords",
+  ];
 
   const isPublic =
     request.nextUrl.pathname === "/" ||
