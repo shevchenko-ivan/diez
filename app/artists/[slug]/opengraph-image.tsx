@@ -6,7 +6,8 @@ import { getSongsByArtist } from "@/features/song/services/songs";
 // name, song count, and three top-played song titles on a dark themed
 // background, which previews far better than the static brand image.
 
-export const runtime = "edge";
+// nodejs runtime — see /songs/[slug]/opengraph-image.tsx for rationale.
+export const runtime = "nodejs";
 export const alt = "Diez — Акорди для гітари";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
