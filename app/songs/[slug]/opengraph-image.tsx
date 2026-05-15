@@ -6,7 +6,11 @@ import { getSongBySlug } from "@/features/song/services/songs";
 // and we get a branded card with the title, artist and chord list — far more
 // click-worthy than the generic /opengraph-image.png fallback.
 
-export const runtime = "edge";
+// nodejs runtime, not edge — getSongBySlug pulls Supabase + parses lyrics
+// JSON, and we hit edge-runtime compatibility quirks (silent 0-byte
+// responses) often enough that the few-hundred-ms cold-start trade isn't
+// worth it for a route that crawlers hit, not end users.
+export const runtime = "nodejs";
 export const alt = "Diez — Акорди для гітари";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
