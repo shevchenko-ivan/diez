@@ -59,11 +59,20 @@ export async function generateMetadata({
       description,
       type: "article",
       url: `/songs/${slug}`,
-      // Use song cover when available; falls back to app/opengraph-image.png via Next.js inheritance.
-      // Relative paths are resolved against metadataBase in app/layout.tsx.
-      ...(metaSong.coverImage && {
-        images: [{ url: metaSong.coverImage, alt: `${metaSong.title} — ${metaSong.artist}` }],
-      }),
+      // `images` is intentionally omitted — Next.js auto-resolves the
+      // co-located `opengraph-image.tsx` (dynamic per-song card with title,
+      // artist, key and chord row) when `openGraph.images` is unset. Setting
+      // a raw cover URL here would override that and ship a generic square
+      // album-art image, which is worse for chat previews.
+    },
+    twitter: {
+      // Without an explicit `twitter` object, Twitter falls back to the
+      // root-level `metadataBase` and misses both the per-song title and the
+      // dynamic preview image. Mirror the openGraph values so X/Twitter and
+      // any platform that prefers twitter:* tags also see the right card.
+      card: "summary_large_image",
+      title: `${metaSong.title} — ${metaSong.artist}`,
+      description,
     },
   };
 }
