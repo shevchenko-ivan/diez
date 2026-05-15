@@ -73,9 +73,16 @@ export async function updateSession(request: NextRequest) {
     "/chords",
   ];
 
+  // SEO endpoints — Google / Bing must be able to crawl these without auth.
+  // Without this guard the proxy 307s to /auth/login, which makes the entire
+  // catalogue invisible to search engines (one of the most common reasons
+  // a Next.js + Supabase MVP gets zero organic traffic).
+  const seoFiles = ["/robots.txt", "/sitemap.xml", "/manifest.webmanifest"];
+
   const isPublic =
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/auth") ||
+    seoFiles.includes(request.nextUrl.pathname) ||
     publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (!isPublic && !user) {

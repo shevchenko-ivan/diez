@@ -1,16 +1,30 @@
 import { type MetadataRoute } from "next";
 import { getAllSongSlugs } from "@/features/song/services/songs";
+import { getRankedArtists } from "@/features/artist/services/artists";
 import { siteUrl } from "@/lib/utils";
 
 // Mirror the robots.ts guard: no sitemap on non-production deployments.
 const isProduction = !!process.env.NEXT_PUBLIC_SITE_URL;
 
+// Rebuild the sitemap every hour. Without this, Next.js generates it once at
+// build time — new songs published via /admin would not appear in the sitemap
+// until the next deploy, which is rare on an admin-driven content site.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!isProduction) return [];
-  const songs = await getAllSongSlugs();
-  const artistSlugs = [
-    ...new Set(songs.map((s) => s.artist.toLowerCase().replace(/\s+/g, "-"))),
-  ];
+  // Run both queries in parallel — sitemap rebuilds on `revalidate` and we
+  // don't want it to become the slowest route.
+  const [songs, artists] = await Promise.all([
+    getAllSongSlugs(),
+    getRankedArtists(),
+  ]);
+  // Use real artist slugs from the `artists` table. `slugify(name)` does NOT
+  // match `/artists/[slug]` (Cyrillic names get transliterated, aliases get
+  // canonicalized). The previous dumb fallback dumped Cyrillic-slugged URLs
+  // into the sitemap that 404'd on every search-engine crawl — making the
+  // entire catalogue look broken to Google.
+  const artistSlugs = artists.map((a) => a.slug);
 
   return [
     {
