@@ -46,7 +46,15 @@ export async function generateMetadata({
       description: `${songs.length} пісень ${name} з акордами на Diez.`,
       type: "website",
       url: `/artists/${slug}`,
-      ...(artist?.photo_url && { images: [{ url: artist.photo_url }] }),
+      // No explicit `images` — Next.js auto-resolves the co-located
+      // `opengraph-image.tsx` which renders a dark themed card with the
+      // artist name and top song titles. Passing `photo_url` here would
+      // override that with a raw square portrait, which previews poorly.
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${name} — Акорди й тексти пісень`,
+      description: `${songs.length} пісень ${name} з акордами на Diez.`,
     },
   };
 }
