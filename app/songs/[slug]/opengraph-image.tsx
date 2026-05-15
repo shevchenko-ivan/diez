@@ -51,6 +51,11 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
   const chords = song.chords.slice(0, 8).join("  ·  ");
   const difficultyLabel =
     song.difficulty === "easy" ? "Легка" : song.difficulty === "medium" ? "Середня" : "Складна";
+  // Manually truncate — Satori doesn't honor `-webkit-line-clamp` and the
+  // OG canvas only has room for ~2 lines of huge text. Truncating here keeps
+  // both the layout and the renderer happy.
+  const titleDisplay =
+    song.title.length > 40 ? song.title.slice(0, 39) + "…" : song.title;
 
   return new ImageResponse(
     (
@@ -82,17 +87,20 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
           </div>
           <div
             style={{
+              display: "flex",
               fontSize: 22,
               fontWeight: 700,
               padding: "10px 22px",
               borderRadius: 999,
               background: "rgba(255, 255, 255, 0.15)",
-              backdropFilter: "blur(4px)",
               textTransform: "uppercase",
               letterSpacing: "0.1em",
             }}
           >
-            {difficultyLabel} · {song.key}
+            {/* Single concatenated string — JSX template literals with
+                interpolation create separate text nodes, and Satori counts
+                them as multiple children which would require display:flex. */}
+            {`${difficultyLabel} · ${song.key}`}
           </div>
         </div>
 
@@ -124,16 +132,10 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
               lineHeight: 1.05,
               letterSpacing: "-0.04em",
               color: "#FFFFFF",
-              // Manual truncation — Satori (next/og's renderer) doesn't honor
-              // CSS text-overflow, so very long titles would otherwise wrap
-              // into the chord row.
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 2,
-              overflow: "hidden",
+              display: "flex",
             }}
           >
-            {song.title}
+            {titleDisplay}
           </div>
         </div>
 
