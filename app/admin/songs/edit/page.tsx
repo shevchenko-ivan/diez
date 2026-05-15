@@ -160,19 +160,26 @@ export default async function EditSongPage({
 
   // Try with chord_voicings (migration 022); fall back to base columns if the
   // column doesn't exist yet so this page keeps loading during rollout.
-  let variantsRes = await admin
-    .from("song_variants")
-    .select("id, label, created_at, views, key, capo, sections, chord_voicings")
-    .eq("song_id", song.id)
-    .order("created_at", { ascending: true });
-  if (variantsRes.error && variantsRes.error.code === "42703") {
-    variantsRes = await admin
+  // The two selects differ by exactly one optional column, so we widen the
+  // result type and re-narrow at use-sites.
+  let variants: unknown[] | null = null;
+  {
+    const res = await admin
       .from("song_variants")
-      .select("id, label, created_at, views, key, capo, sections")
+      .select("id, label, created_at, views, key, capo, sections, chord_voicings")
       .eq("song_id", song.id)
       .order("created_at", { ascending: true });
+    if (res.error && res.error.code === "42703") {
+      const retry = await admin
+        .from("song_variants")
+        .select("id, label, created_at, views, key, capo, sections")
+        .eq("song_id", song.id)
+        .order("created_at", { ascending: true });
+      variants = retry.data;
+    } else {
+      variants = res.data;
+    }
   }
-  const { data: variants } = variantsRes;
 
   const primaryVariantId = (song.primary_variant_id as string | null) ?? null;
   const allVariants = (variants ?? []) as Array<{

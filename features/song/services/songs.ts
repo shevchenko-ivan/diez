@@ -356,14 +356,22 @@ export const getSongsByArtist = unstable_cache(
 export async function getSongBySlug(slug: string): Promise<Song | undefined> {
   if (!hasEnvVars) return undefined;
   const client = getClient();
-  let { data, error } = await client
-    .from("songs")
-    .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
   // 42703 = undefined_column. Retry without chord_voicings if migration 022
   // hasn't been applied yet (keeps the public site online during rollout).
+  // Use `any` casts on results — the two selects differ in inferred shape by
+  // exactly one nullable column, which we re-narrow downstream via `mapRow`.
+  let data: unknown = null;
+  let error: { code?: string; message?: string } | null = null;
+  {
+    const res = await client
+      .from("songs")
+      .select(`${SONG_COLUMNS}, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
+    data = res.data;
+    error = res.error;
+  }
   if (error && error.code === "42703") {
     const retry = await client
       .from("songs")
