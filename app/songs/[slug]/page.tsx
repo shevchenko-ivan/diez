@@ -1,5 +1,4 @@
 import { type Metadata } from "next";
-import Script from "next/script";
 import { notFound } from "next/navigation";
 
 // Song pages are admin-editable — force fresh fetch on every request so
@@ -93,23 +92,44 @@ export default async function SongPage({
     "@context": "https://schema.org",
     "@type": "MusicComposition",
     name: song.title,
-    composer: { "@type": "MusicGroup", name: song.artist },
+    composer: { "@type": "MusicGroup", name: song.artist, url: `${siteUrl}/artists/${artistSlug}` },
     musicalKey: song.key,
     genre: song.genre,
     url: `${siteUrl}/songs/${song.slug}`,
     ...(song.album && {
       inAlbum: { "@type": "MusicAlbum", name: song.album },
     }),
+    ...(song.coverImage && { image: song.coverImage }),
+  };
+
+  // Breadcrumbs help Google render "Diez › Пісні › Artist › Title" in SERPs,
+  // which significantly boosts CTR on long-tail song-name queries.
+  const breadcrumbsLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Diez", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Пісні", item: `${siteUrl}/songs` },
+      { "@type": "ListItem", position: 3, name: song.artist, item: `${siteUrl}/artists/${artistSlug}` },
+      { "@type": "ListItem", position: 4, name: song.title, item: `${siteUrl}/songs/${song.slug}` },
+    ],
   };
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Suspense><SavedToast /></Suspense>
-      <Script
-        id={`ld-json-song-${song.slug}`}
+      {/* JSON-LD is rendered inline (not via next/script afterInteractive)
+          so it lands in the initial SSR HTML — Googlebot's render budget is
+          unpredictable and we don't want structured data to depend on it. */}
+      <script
         type="application/ld+json"
-        strategy="afterInteractive"
+        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
       />
       <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
 
