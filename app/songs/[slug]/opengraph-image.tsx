@@ -11,8 +11,13 @@ export const alt = "Diez — Акорди для гітари";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function OG({ params }: { params: { slug: string } }) {
-  const song = await getSongBySlug(params.slug);
+// Next 16 passes `params` as a Promise in opengraph-image.tsx, mirroring
+// generateMetadata. Awaiting it (not `params.slug` directly) is what kept
+// the dynamic card from rendering — every shared link fell through to the
+// site-wide fallback because `undefined` slug yielded no song.
+export default async function OG({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const song = await getSongBySlug(slug);
   // Fall back to the static OG if the song was deleted between sitemap
   // generation and a crawler hit — Next will use app/opengraph-image.png.
   if (!song) {

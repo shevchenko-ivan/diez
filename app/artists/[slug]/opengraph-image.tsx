@@ -11,9 +11,11 @@ export const alt = "Diez — Акорди для гітари";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function OG({ params }: { params: { slug: string } }) {
-  const artist = await getArtistBySlug(params.slug);
-  const name = artist?.name ?? params.slug;
+// Next 16 wraps `params` in a Promise here, same as generateMetadata.
+export default async function OG({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const artist = await getArtistBySlug(slug);
+  const name = artist?.name ?? slug;
   const songs = artist ? await getSongsByArtist(name) : [];
   const topTitles = songs.slice(0, 3).map((s) => s.title);
 
