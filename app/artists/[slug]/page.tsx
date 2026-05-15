@@ -27,13 +27,23 @@ export async function generateMetadata({
   const aliases = (artist?.aliases ?? []).filter(a => a && a !== name);
   const aliasPhrase = aliases.length > 0 ? ` (також: ${aliases.join(", ")})` : "";
 
+  // Sample the artist's three most-viewed song titles into the description.
+  // Their titles are real long-tail keywords users actually type into Google
+  // — pulling them into the meta tag is the single biggest organic boost a
+  // catalog artist page can get for free.
+  const topTitles = songs.slice(0, 3).map((s) => `«${s.title}»`).join(", ");
+  const titlesPart = topTitles ? ` Серед популярних: ${topTitles}.` : "";
+
   return {
-    title: `${name}${aliasPhrase} — Акорди пісень | Diez`,
-    description: `Акорди пісень ${name}${aliasPhrase} на Diez. ${songs.length} пісень у каталозі.`,
-    ...(aliases.length > 0 && { keywords: [name, ...aliases, "акорди", "гітара"] }),
+    title: `${name}${aliasPhrase} — акорди, тексти пісень | Diez`,
+    description:
+      `${songs.length} пісень ${name} з акордами та текстами для гітари на Diez.` +
+      `${titlesPart}`,
+    ...(aliases.length > 0 && { keywords: [name, ...aliases, "акорди", "текст пісні", "гітара"] }),
     alternates: { canonical: `/artists/${slug}` },
     openGraph: {
-      title: `${name} — Акорди пісень`,
+      title: `${name} — Акорди й тексти пісень`,
+      description: `${songs.length} пісень ${name} з акордами на Diez.`,
       type: "website",
       url: `/artists/${slug}`,
       ...(artist?.photo_url && { images: [{ url: artist.photo_url }] }),

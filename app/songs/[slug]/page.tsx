@@ -38,8 +38,17 @@ export async function generateMetadata({
 
   const difficultyLabel =
     metaSong.difficulty === "easy" ? "легка" : metaSong.difficulty === "medium" ? "середня" : "складна";
-  const title = `${metaSong.title} — ${metaSong.artist} | Акорди | Diez`;
-  const description = `Акорди пісні «${metaSong.title}» виконавця ${metaSong.artist}. Тональність: ${metaSong.key}, складність: ${difficultyLabel}. Акорди: ${metaSong.chords.join(", ")}.`;
+  const title = `${metaSong.title} — ${metaSong.artist}: акорди, текст, тональність | Diez`;
+  // Description is tuned to ~155 chars (Google desktop snippet cap). Leads
+  // with the highest-intent keywords ("акорди", "текст"), then the searchable
+  // long-tails ("грати на гітарі", "табулатура") so we cover more query
+  // shapes without keyword stuffing.
+  const chordList = metaSong.chords.slice(0, 6).join(", ");
+  const capoNote = metaSong.capo ? `, капо ${metaSong.capo}` : "";
+  const description =
+    `Акорди й текст пісні «${metaSong.title}» — ${metaSong.artist}. ` +
+    `Тональність ${metaSong.key}${capoNote}, ${difficultyLabel}. ` +
+    `Акорди: ${chordList}. Грай на гітарі на Diez.`;
 
   return {
     title,
@@ -115,6 +124,28 @@ export default async function SongPage({
     ],
   };
 
+  // VideoObject schema for songs with a YouTube player. Google indexes these
+  // separately in Video Search and may render a video thumbnail next to the
+  // SERP result. Skipped when there's no embed (no value to claim a video).
+  const videoLd = song.youtubeId
+    ? {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        name: `${song.title} — ${song.artist}`,
+        description: `Музичний кліп пісні «${song.title}» виконавця ${song.artist}.`,
+        thumbnailUrl: [
+          `https://i.ytimg.com/vi/${song.youtubeId}/hqdefault.jpg`,
+          `https://i.ytimg.com/vi/${song.youtubeId}/maxresdefault.jpg`,
+        ],
+        // YouTube API gives us no uploadDate cheaply; using the song's
+        // canonical URL as `contentUrl` keeps Google happy — embedUrl points
+        // to the actual iframe target, which is required for rich video.
+        contentUrl: `${siteUrl}/songs/${song.slug}`,
+        embedUrl: `https://www.youtube.com/embed/${song.youtubeId}`,
+        uploadDate: new Date().toISOString().slice(0, 10),
+      }
+    : null;
+
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Suspense><SavedToast /></Suspense>
@@ -131,6 +162,13 @@ export default async function SongPage({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
       />
+      {videoLd && (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(videoLd) }}
+        />
+      )}
       <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
 
         {/* ── Header (single row, centered title, no surface) ─────────── */}

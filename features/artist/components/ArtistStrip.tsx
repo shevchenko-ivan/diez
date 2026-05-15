@@ -86,7 +86,7 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={artist.photo_url}
-                  alt={artist.name}
+                  alt={`${artist.name} — фото виконавця`}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (

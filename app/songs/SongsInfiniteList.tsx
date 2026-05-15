@@ -68,7 +68,13 @@ export function SongsInfiniteList({
                 }}
               >
                 {song.coverImage && (
-                  <Image src={song.coverImage} alt={song.title} width={56} height={56} className="w-full h-full object-cover" />
+                  <Image
+                    src={song.coverImage}
+                    alt={`Обкладинка пісні «${song.title}» — ${song.artist}`}
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover"
+                  />
                 )}
               </div>
               <Link href={`/songs/${song.slug}`} className="flex-1 min-w-0">
