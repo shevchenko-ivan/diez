@@ -7,7 +7,6 @@ import { PostHogProvider } from "@/shared/components/PostHogProvider";
 import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -52,10 +51,13 @@ export default function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
-        <Script
-          id="ld-json-website"
+        {/* WebSite schema with SearchAction makes Google show a sitelinks
+            search box under our brand result. Rendered inline in SSR (not via
+            next/script afterInteractive) so it lands in the initial HTML — many
+            crawlers don't execute JS reliably enough for structured data. */}
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
+          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",

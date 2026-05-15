@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { type Metadata } from "next";
-import Script from "next/script";
 import { PageShell } from "@/shared/components/PageShell";
 import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
@@ -89,15 +88,31 @@ export default async function ArtistPage({
       alternateName: artist.aliases,
     }),
     ...(artist?.photo_url && { image: artist.photo_url }),
+    ...(artist?.genre && { genre: artist.genre }),
+  };
+
+  const breadcrumbsLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Diez", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Виконавці", item: `${siteUrl}/artists` },
+      { "@type": "ListItem", position: 3, name: artistName, item: `${siteUrl}/artists/${slug}` },
+    ],
   };
 
   return (
     <PageShell>
-      <Script
-        id={`ld-json-artist-${slug}`}
+      {/* Inline JSON-LD in SSR HTML — Googlebot reads it before JS execution. */}
+      <script
         type="application/ld+json"
-        strategy="afterInteractive"
+        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
       />
       <div className="mb-6 flex items-center justify-between gap-3">
         <BackButton fallback="/artists" label="Виконавці" />
