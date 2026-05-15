@@ -26,6 +26,9 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
   const titlesDisplay =
     titlesLine.length > 80 ? titlesLine.slice(0, 79) + "…" : titlesLine;
 
+  // Split layout mirrors the song card. Left = artist photo (circular crop
+  // via overflow:hidden on a square is the most Satori-friendly approach),
+  // right = metadata column on dark panel.
   return new ImageResponse(
     (
       <div
@@ -33,105 +36,150 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          background: "linear-gradient(135deg, #1A1A1A, #2A2418 75%)",
-          padding: 64,
-          color: "#FFFFFF",
+          background: "#0F0F0F",
           fontFamily: "system-ui",
+          color: "#FFFFFF",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div
-            style={{
-              fontSize: 38,
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-              color: "#FF8C3C",
-            }}
-          >
-            # DIEZ
-          </div>
-          {songs.length > 0 && (
+        {/* Left — artist photo if available, otherwise an initial-circle
+            placeholder. Same 630×630 square that /songs uses. */}
+        <div
+          style={{
+            display: "flex",
+            width: 630,
+            height: 630,
+            background: "#1A1A1A",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {artist?.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={artist.photo_url}
+              width={630}
+              height={630}
+              style={{ width: 630, height: 630, objectFit: "cover" }}
+              alt=""
+            />
+          ) : (
             <div
               style={{
                 display: "flex",
-                fontSize: 22,
-                fontWeight: 700,
-                padding: "10px 22px",
-                borderRadius: 999,
-                background: "rgba(255, 140, 60, 0.18)",
+                fontSize: 280,
+                fontWeight: 900,
                 color: "#FF8C3C",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
+                opacity: 0.4,
               }}
             >
-              {/* Single concatenated string — see /songs OG note about
-                  Satori's multi-text-node child rule. */}
-              {`${songs.length} пісень`}
+              {name.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
 
+        {/* Right — metadata column */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             flex: 1,
-            justifyContent: "center",
-            marginTop: 24,
+            padding: "48px 56px",
+            justifyContent: "space-between",
           }}
         >
           <div
             style={{
-              fontSize: 28,
-              fontWeight: 600,
-              opacity: 0.65,
-              marginBottom: 8,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Виконавець
-          </div>
-          <div
-            style={{
-              fontSize: 110,
-              fontWeight: 900,
-              lineHeight: 1.05,
-              letterSpacing: "-0.04em",
               display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            {nameDisplay}
-          </div>
-        </div>
-
-        {topTitles.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                opacity: 0.5,
-                textTransform: "uppercase",
-                letterSpacing: "0.12em",
-              }}
-            >
-              Популярні пісні
-            </div>
             <div
               style={{
                 fontSize: 32,
-                fontWeight: 600,
-                opacity: 0.9,
-                letterSpacing: "-0.01em",
-                display: "flex",
+                fontWeight: 900,
+                letterSpacing: "-0.04em",
+                color: "#FF8C3C",
               }}
             >
-              {titlesDisplay}
+              # DIEZ
+            </div>
+            {songs.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  padding: "8px 18px",
+                  borderRadius: 999,
+                  background: "rgba(255, 140, 60, 0.15)",
+                  color: "#FF8C3C",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}
+              >
+                {`${songs.length} пісень`}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 600,
+                opacity: 0.5,
+                marginBottom: 8,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Виконавець
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 84,
+                fontWeight: 900,
+                lineHeight: 1.05,
+                letterSpacing: "-0.04em",
+              }}
+            >
+              {nameDisplay}
             </div>
           </div>
-        )}
+
+          {topTitles.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  opacity: 0.5,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  marginBottom: 8,
+                }}
+              >
+                Популярні пісні
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 24,
+                  fontWeight: 600,
+                  opacity: 0.9,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {titlesDisplay}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex" }} />
+          )}
+        </div>
       </div>
     ),
     size,
