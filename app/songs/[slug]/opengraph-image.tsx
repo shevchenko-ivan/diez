@@ -48,7 +48,6 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
     );
   }
 
-  const chords = song.chords.slice(0, 8).join("  ·  ");
   const difficultyLabel =
     song.difficulty === "easy" ? "Легка" : song.difficulty === "medium" ? "Середня" : "Складна";
   // Manually truncate — Satori doesn't honor `-webkit-line-clamp` and the
@@ -57,6 +56,9 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
   const titleDisplay =
     song.title.length > 40 ? song.title.slice(0, 39) + "…" : song.title;
 
+  // Split layout: left half is the real album cover (the thing guitarists
+  // recognise instantly), right half is the metadata column on a dark panel.
+  // Mirrors the in-app SongCard composition.
   return new ImageResponse(
     (
       <div
@@ -64,94 +66,130 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          background: song.coverColor
-            ? `linear-gradient(135deg, ${song.coverColor}DD, #1A1A1A 80%)`
-            : "linear-gradient(135deg, #E8DDD0, #C8B59A 80%)",
-          padding: 64,
-          color: "#FFFFFF",
+          background: "#0F0F0F",
           fontFamily: "system-ui",
+          color: "#FFFFFF",
         }}
       >
-        {/* Header — brand + difficulty pill */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div
-            style={{
-              fontSize: 38,
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-              color: "#FF8C3C",
-            }}
-          >
-            # DIEZ
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 22,
-              fontWeight: 700,
-              padding: "10px 22px",
-              borderRadius: 999,
-              background: "rgba(255, 255, 255, 0.15)",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-            }}
-          >
-            {/* Single concatenated string — JSX template literals with
-                interpolation create separate text nodes, and Satori counts
-                them as multiple children which would require display:flex. */}
-            {`${difficultyLabel} · ${song.key}`}
-          </div>
+        {/* Left — album cover. 630×630 square so it fills the card height
+            edge to edge. Satori's <img> fetches the URL at render time. */}
+        <div
+          style={{
+            display: "flex",
+            width: 630,
+            height: 630,
+            background: song.coverColor ?? "#1A1A1A",
+            position: "relative",
+          }}
+        >
+          {song.coverImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={song.coverImage}
+              width={630}
+              height={630}
+              style={{ width: 630, height: 630, objectFit: "cover" }}
+              alt=""
+            />
+          )}
         </div>
 
-        {/* Title + artist — the visual centerpiece */}
+        {/* Right — metadata column */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             flex: 1,
-            justifyContent: "center",
-            marginTop: 24,
+            padding: "48px 56px",
+            justifyContent: "space-between",
           }}
         >
+          {/* Top row — brand + difficulty/key pill */}
           <div
             style={{
-              fontSize: 32,
-              fontWeight: 600,
-              opacity: 0.85,
-              marginBottom: 8,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {song.artist}
-          </div>
-          <div
-            style={{
-              fontSize: 96,
-              fontWeight: 900,
-              lineHeight: 1.05,
-              letterSpacing: "-0.04em",
-              color: "#FFFFFF",
               display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            {titleDisplay}
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: 900,
+                letterSpacing: "-0.04em",
+                color: "#FF8C3C",
+              }}
+            >
+              # DIEZ
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 18,
+                fontWeight: 700,
+                padding: "8px 18px",
+                borderRadius: 999,
+                background: "rgba(255, 255, 255, 0.1)",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+              }}
+            >
+              {`${difficultyLabel} · ${song.key}`}
+            </div>
           </div>
-        </div>
 
-        {/* Footer — chord names. The whole point: a guitarist scrolling the
-            chat preview sees the chord set without clicking. */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            fontSize: 36,
-            fontWeight: 700,
-            color: "rgba(255, 255, 255, 0.9)",
-            letterSpacing: "0.02em",
-          }}
-        >
-          {chords}
+          {/* Middle — title and artist */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 600,
+                opacity: 0.6,
+                letterSpacing: "-0.01em",
+                marginBottom: 4,
+              }}
+            >
+              {song.artist}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 72,
+                fontWeight: 900,
+                lineHeight: 1.05,
+                letterSpacing: "-0.04em",
+              }}
+            >
+              {titleDisplay}
+            </div>
+          </div>
+
+          {/* Bottom — chord pill row */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+            }}
+          >
+            {song.chords.slice(0, 6).map((c) => (
+              <div
+                key={c}
+                style={{
+                  display: "flex",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  padding: "10px 20px",
+                  borderRadius: 999,
+                  background: "rgba(255, 140, 60, 0.15)",
+                  color: "#FF8C3C",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {c}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     ),
