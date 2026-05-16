@@ -68,6 +68,7 @@ export async function updateSession(request: NextRequest) {
     "/about",
     "/privacy",
     "/terms",
+    "/copyright",
     "/lists",
     "/tuner",
     "/chords",
