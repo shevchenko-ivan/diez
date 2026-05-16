@@ -21,7 +21,7 @@ const NAV_COLUMNS = [
     title: "Проєкт",
     links: [
       { label: "Про Diez",         href: "/about" },
-      { label: "Зворотний зв'язок", href: "mailto:hello@diez.ua" },
+      { label: "Зворотний зв'язок", href: "mailto:hello@diez.net.ua" },
     ],
   },
 ];
