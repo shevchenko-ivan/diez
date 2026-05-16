@@ -77,7 +77,7 @@ export async function updateSession(request: NextRequest) {
   // Without this guard the proxy 307s to /auth/login, which makes the entire
   // catalogue invisible to search engines (one of the most common reasons
   // a Next.js + Supabase MVP gets zero organic traffic).
-  const seoFiles = ["/robots.txt", "/sitemap.xml", "/manifest.webmanifest"];
+  const seoFiles = ["/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/llms.txt"];
 
   const isPublic =
     request.nextUrl.pathname === "/" ||
