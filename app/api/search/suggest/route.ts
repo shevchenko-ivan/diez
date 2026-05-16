@@ -12,6 +12,44 @@ function getClient() {
   );
 }
 
+// ─── Rate limiting ───────────────────────────────────────────────────────────
+// Token bucket per client IP. The route already has CDN caching (60s s-maxage
+// + 300s stale-while-revalidate), so repeated queries don't hit the function
+// at all — but a hostile script could send unique `q` values to bypass that
+// and burn through Supabase egress.
+//
+// 60 req/min/IP is roughly 1 req/sec, which is 10× what a real typing user
+// produces (the client-side debounce caps it at ~3 req/sec maximum during
+// rapid typing, then most hit the CDN). Anything sustained above that is a
+// bot.
+//
+// Edge runtime spreads across instances, so this is best-effort — but
+// abusers usually hit one instance at a time and even partial throttling
+// disincentivizes scripted scraping.
+const RATE_LIMIT = 60;
+const WINDOW_MS = 60_000;
+const buckets = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimit(ip: string): boolean {
+  const now = Date.now();
+  const bucket = buckets.get(ip);
+  if (!bucket || bucket.resetAt < now) {
+    buckets.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    // Opportunistic cleanup so the Map doesn't grow unbounded over the
+    // instance's lifetime. Cap at 1000 entries — far more than concurrent
+    // search users we'll ever realistically see on free tier.
+    if (buckets.size > 1000) {
+      for (const [k, v] of buckets) {
+        if (v.resetAt < now) buckets.delete(k);
+      }
+    }
+    return true;
+  }
+  if (bucket.count >= RATE_LIMIT) return false;
+  bucket.count++;
+  return true;
+}
+
 type SongRow = {
   slug: string;
   title: string;
@@ -52,9 +90,23 @@ function matchTier(row: SongRow, qNorm: string): number {
 }
 
 export async function GET(req: Request) {
+  // Rate limit by client IP — x-forwarded-for is set by Vercel's edge.
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!rateLimit(ip)) {
+    return NextResponse.json(
+      { songs: [], lyricsSongs: [], artists: [], hasMore: false, error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   const url = new URL(req.url);
-  const q = (url.searchParams.get("q") ?? "").trim();
-  const offset = Math.max(0, Number.parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
+  // Bound q at 200 chars — Supabase ILIKE doesn't care about length, but a
+  // bot sending 1 MB strings would burn parse time and edge memory.
+  const q = (url.searchParams.get("q") ?? "").trim().slice(0, 200);
+  // Bound offset — paginating to offset=999999 is always abuse; the real
+  // dropdown caps at a few pages.
+  const rawOffset = Number.parseInt(url.searchParams.get("offset") ?? "0", 10) || 0;
+  const offset = Math.max(0, Math.min(rawOffset, 500));
   if (!hasEnvVars || q.length < 2) {
     return NextResponse.json({ songs: [], lyricsSongs: [], artists: [], hasMore: false });
   }
