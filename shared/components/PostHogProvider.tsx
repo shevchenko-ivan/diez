@@ -1,52 +1,75 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import posthog from "posthog-js";
-import { PostHogProvider as PHProvider } from "posthog-js/react";
+import type posthogJsType from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 /**
  * PostHog client-side provider.
  *
- * Initializes PostHog once on mount and captures `$pageview` manually on
- * every route change — Next.js App Router doesn't fire a full navigation
- * event, so the SDK's auto-pageview misses client-side transitions.
+ * Initializes PostHog **lazily** — the SDK (~100 KB minified, plus the
+ * session-recorder which is even heavier) is dynamically imported only
+ * after the first paint / idle moment, so it doesn't enter the critical
+ * JS bundle and blow up TBT (PageSpeed flagged 850ms blocking time on
+ * desktop before this change).
+ *
+ * Captures `$pageview` manually on every route change — Next.js App Router
+ * doesn't fire a full navigation event, so the SDK's auto-pageview misses
+ * client-side transitions.
  *
  * Privacy:
- * - Session replay enabled, but password inputs are masked by default and
- *   we additionally mask any input with `data-ph-mask` or type=email.
+ * - Session replay enabled, but password and email inputs are masked.
  * - Disabled in development to keep local noise out of the dashboard.
  */
+type PostHogClient = typeof posthogJsType;
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const [ph, setPh] = useState<PostHogClient | null>(null);
+
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
     if (!key || process.env.NODE_ENV !== "production") return;
 
-    posthog.init(key, {
-      api_host: host || "https://eu.i.posthog.com",
-      capture_pageview: false, // we capture manually below
-      capture_pageleave: true,
-      person_profiles: "identified_only",
-      session_recording: {
-        maskAllInputs: false,
-        maskInputOptions: {
-          password: true,
-          email: true,
-        },
-      },
+    // Defer SDK load until the browser is idle. requestIdleCallback is the
+    // standard "low-priority work" scheduler; the setTimeout fallback covers
+    // Safari (which still lacks it as of 2026).
+    const schedule =
+      (typeof window !== "undefined" &&
+        (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback) ||
+      ((cb: () => void) => setTimeout(cb, 1));
+
+    let cancelled = false;
+    schedule(() => {
+      if (cancelled) return;
+      void import("posthog-js").then(({ default: posthog }) => {
+        if (cancelled) return;
+        posthog.init(key, {
+          api_host: host || "https://eu.i.posthog.com",
+          capture_pageview: false, // captured manually below
+          capture_pageleave: true,
+          person_profiles: "identified_only",
+          session_recording: {
+            maskAllInputs: false,
+            maskInputOptions: { password: true, email: true },
+          },
+        });
+        setPh(posthog);
+      });
     });
+
+    return () => { cancelled = true; };
   }, []);
 
   return (
-    <PHProvider client={posthog}>
+    <>
       <Suspense fallback={null}>
-        <PageviewTracker />
+        <PageviewTracker posthog={ph} />
       </Suspense>
-      <AuthIdentifier />
+      <AuthIdentifier posthog={ph} />
       {children}
-    </PHProvider>
+    </>
   );
 }
 
@@ -59,9 +82,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
  * - On logout → `reset()` so the next visit gets a fresh anonymous id and
  *   doesn't leak between accounts on shared devices.
  */
-function AuthIdentifier() {
+function AuthIdentifier({ posthog }: { posthog: PostHogClient | null }) {
   useEffect(() => {
-    if (!posthog.__loaded) return;
+    if (!posthog) return;
     const sb = createClient();
 
     sb.auth.getSession().then(({ data: { session } }) => {
@@ -79,21 +102,21 @@ function AuthIdentifier() {
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [posthog]);
 
   return null;
 }
 
-function PageviewTracker() {
+function PageviewTracker({ posthog }: { posthog: PostHogClient | null }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!pathname || !posthog.__loaded) return;
+    if (!pathname || !posthog) return;
     const qs = searchParams?.toString();
     const url = qs ? `${pathname}?${qs}` : pathname;
     posthog.capture("$pageview", { $current_url: window.location.origin + url });
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, posthog]);
 
   return null;
 }
