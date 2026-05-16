@@ -134,10 +134,11 @@ export async function SiteFooter() {
           <p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
             © 2026 Diez. Всі права захищені.
           </p>
-          <nav className="flex items-center gap-4" aria-label="Юридичні документи">
+          <nav className="flex items-center gap-4 flex-wrap" aria-label="Юридичні документи">
             {[
               { label: "Конфіденційність", href: "/privacy" },
               { label: "Умови використання", href: "/terms" },
+              { label: "Авторські права", href: "/copyright" },
             ].map((link) => (
               <Link
                 key={link.href}
