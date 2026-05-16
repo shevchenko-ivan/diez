@@ -1,5 +1,5 @@
 import { type MetadataRoute } from "next";
-import { getAllSongSlugs } from "@/features/song/services/songs";
+import { getAllSongCovers } from "@/features/song/services/songs";
 import { getRankedArtists } from "@/features/artist/services/artists";
 import { TOPICS } from "@/features/song/data/topics";
 import { siteUrl } from "@/lib/utils";
@@ -17,15 +17,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Run both queries in parallel — sitemap rebuilds on `revalidate` and we
   // don't want it to become the slowest route.
   const [songs, artists] = await Promise.all([
-    getAllSongSlugs(),
+    getAllSongCovers(),
     getRankedArtists(),
   ]);
-  // Use real artist slugs from the `artists` table. `slugify(name)` does NOT
-  // match `/artists/[slug]` (Cyrillic names get transliterated, aliases get
-  // canonicalized). The previous dumb fallback dumped Cyrillic-slugged URLs
-  // into the sitemap that 404'd on every search-engine crawl — making the
-  // entire catalogue look broken to Google.
-  const artistSlugs = artists.map((a) => a.slug);
+  // Note: artist slugs come from the `artists` table — `slugify(name)` does
+  // NOT match `/artists/[slug]` (Cyrillic names get transliterated, aliases
+  // get canonicalized). The previous dumb fallback dumped Cyrillic-slugged
+  // URLs that 404'd on every search-engine crawl.
 
   return [
     {
@@ -52,17 +50,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    // Songs with their cover image attached — Google's image-sitemap
+    // extension feeds Google Images search. Each cover-bearing song becomes
+    // a candidate for queries like «обкладинка <song>», which a chord-site
+    // wouldn't naturally rank for otherwise.
     ...songs.map((s) => ({
       url: `${siteUrl}/songs/${s.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.8,
+      ...(s.cover_image ? { images: [s.cover_image] } : {}),
     })),
-    ...artistSlugs.map((slug) => ({
-      url: `${siteUrl}/artists/${slug}`,
+    ...artists.map((a) => ({
+      url: `${siteUrl}/artists/${a.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.7,
+      ...(a.photo_url ? { images: [a.photo_url] } : {}),
     })),
     // Topic landing pages — `?topic=` query strings are real, indexable URLs
     // with their own SEO-tuned title/description per /songs/page.tsx. They
