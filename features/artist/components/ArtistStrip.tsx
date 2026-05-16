@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { loadMoreArtists } from "../actions/strip";
 import type { Artist } from "../services/artists";
@@ -83,11 +84,18 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
               }}
             >
               {artist.photo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                // Use next/image — these photos come from external CDNs
+                // (wikimedia, scdn, etc.) and a raw <img> ships the original
+                // multi-MB source unmodified. With <Image> Next emits an
+                // optimized 120×120 webp/avif via /_next/image proxy,
+                // shrinking ~11 MB Wikipedia portraits down to ~10 KB.
+                <Image
                   src={artist.photo_url}
                   alt={`${artist.name} — фото виконавця`}
                   title={artist.name}
+                  width={120}
+                  height={120}
+                  sizes="120px"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (
