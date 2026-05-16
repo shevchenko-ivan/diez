@@ -32,15 +32,6 @@ export const metadata: Metadata = {
     title: "Diez — Акорди для гітари",
     description: "Дієз — українська платформа гітарних акордів. Пісні з акордами, підбір акордів, тексти пісень.",
   },
-  // hreflang self-reference. Site is Ukrainian-only, but declaring it lets
-  // Google know the language explicitly (in addition to `<html lang="uk">`)
-  // and silences hreflang-missing flags in third-party SEO auditors.
-  alternates: {
-    languages: {
-      uk: siteUrl,
-      "x-default": siteUrl,
-    },
-  },
 };
 
 export const viewport: Viewport = {
@@ -59,6 +50,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" suppressHydrationWarning>
+      <head>
+        {/* hreflang self-reference. Site is Ukrainian-only, but declaring
+            it explicitly lets Google read the language signal (in addition
+            to `<html lang="uk">`) and silences "hreflang missing" warnings
+            in third-party SEO auditors. Rendered directly in <head> because
+            Next's `alternates.languages` metadata is overridden whenever a
+            page sets its own `alternates.canonical` — which every page does. */}
+        <link rel="alternate" hrefLang="uk" href={siteUrl} />
+        <link rel="alternate" hrefLang="x-default" href={siteUrl} />
+      </head>
       <body className="antialiased" suppressHydrationWarning>
         {/* WebSite schema with SearchAction makes Google show a sitelinks
             search box under our brand result. Rendered inline in SSR (not via
