@@ -12,7 +12,7 @@ import Image from "next/image";
 import { ArtistSongsList } from "./ArtistSongsList";
 import { TeButton } from "@/shared/components/TeButton";
 import { BackButton } from "@/shared/components/BackButton";
-import { siteUrl, hasEnvVars } from "@/lib/utils";
+import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 export async function generateMetadata({
@@ -125,12 +125,12 @@ export default async function ArtistPage({
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbsLd) }}
       />
       <div className="mb-6 flex items-center justify-between gap-3">
         <BackButton fallback="/artists" label="Виконавці" />

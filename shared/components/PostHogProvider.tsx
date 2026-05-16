@@ -50,6 +50,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
           capture_pageview: false, // captured manually below
           capture_pageleave: true,
           person_profiles: "identified_only",
+          // Auto-capture uncaught exceptions and unhandled promise rejections,
+          // surfacing them in PostHog's Error Tracking view. Without this, a
+          // user encountering a broken page is invisible until they email us.
+          // Zero perf cost — only fires when an error actually throws.
+          capture_exceptions: true,
           session_recording: {
             maskAllInputs: false,
             maskInputOptions: { password: true, email: true },

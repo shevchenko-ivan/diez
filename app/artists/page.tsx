@@ -6,7 +6,7 @@ import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { BackButton } from "@/shared/components/BackButton";
 import { getSavedArtistSlugs, getArtistsWithSavedSongs } from "@/features/playlist/actions/artist-playlists";
-import { siteUrl } from "@/lib/utils";
+import { siteUrl, jsonLdScript } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",
@@ -93,12 +93,12 @@ export default async function ArtistsPage() {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionLd) }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbsLd) }}
       />
       <div className="relative flex items-center mb-6 -mt-2">
         <BackButton fallback="/" />

@@ -8,7 +8,7 @@ import { LoadingState } from "@/shared/components/LoadingState";
 import { SortSelect } from "./SortSelect";
 import { SongsInfiniteList } from "./SongsInfiniteList";
 import { SearchSubmitButton } from "./SearchSubmitButton";
-import { siteUrl } from "@/lib/utils";
+import { siteUrl, jsonLdScript } from "@/lib/utils";
 
 export async function generateMetadata({ searchParams }: SearchProps): Promise<Metadata> {
   const params = await searchParams;
@@ -109,12 +109,12 @@ async function SongsContent({ searchParams }: SearchProps) {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionLd) }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbsLd) }}
       />
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text)", letterSpacing: "-0.03em" }}>

@@ -15,7 +15,7 @@ import { SongCard } from "@/features/song/components/SongCard";
 import { Pencil } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
 import { TeButton } from "@/shared/components/TeButton";
-import { siteUrl, hasEnvVars } from "@/lib/utils";
+import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
 import { getArtistSlugByName } from "@/features/artist/services/artists";
 import { createClient } from "@/lib/supabase/server";
@@ -164,18 +164,18 @@ export default async function SongPage({
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbsLd) }}
       />
       {videoLd && (
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(videoLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(videoLd) }}
         />
       )}
       <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
