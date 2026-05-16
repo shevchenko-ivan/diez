@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getRankedArtists } from "@/features/artist/services/artists";
 
 const NAV_COLUMNS = [
   {
@@ -25,7 +26,16 @@ const NAV_COLUMNS = [
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  // Top artists row — every page footer ships ~12 crawlable links to the
+  // most-played artist pages. This is the single most leveraged internal-
+  // linking move on a content site: it concentrates PageRank from the long
+  // tail of song pages onto the canonical artist hubs, which then rank for
+  // brand-name queries ("акорди Океан Ельзи").
+  // `getRankedArtists` is unstable_cache'd at 30 min so this doesn't add
+  // per-request load.
+  const topArtists = (await getRankedArtists()).slice(0, 12);
+
   return (
     <footer
       className="mt-auto px-6 pt-12 pb-8"
@@ -83,6 +93,38 @@ export function SiteFooter() {
             </nav>
           ))}
         </div>
+
+        {/* Top artists row — sitewide internal links to the most popular
+            artist hubs. Rendered as a wrapping inline list, not a column,
+            so 12 names fit in one screen-width slot without dominating. */}
+        {topArtists.length > 0 && (
+          <nav aria-label="Популярні виконавці" className="mb-8">
+            <p
+              className="uppercase tracking-widest mb-3"
+              style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.12em" }}
+            >
+              Популярні виконавці
+            </p>
+            <div className="flex flex-wrap gap-x-3 gap-y-2">
+              {topArtists.map((a, i) => (
+                <span key={a.slug} className="inline-flex items-center gap-3">
+                  <Link
+                    href={`/artists/${a.slug}`}
+                    className="footer-link"
+                    style={{ fontSize: "0.8rem", color: "var(--text-mid)", fontWeight: 500 }}
+                  >
+                    {a.name}
+                  </Link>
+                  {i < topArtists.length - 1 && (
+                    <span aria-hidden style={{ color: "var(--text-muted)", opacity: 0.4, fontSize: "0.7rem" }}>
+                      ·
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </nav>
+        )}
 
         {/* Bottom row */}
         <div

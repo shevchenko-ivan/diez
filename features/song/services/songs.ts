@@ -143,6 +143,22 @@ export const getAllSongSlugs = unstable_cache(
   { revalidate: 3600, tags: ["songs"] },
 );
 
+/**
+ * All published songs with the minimum columns needed for an image-sitemap
+ * entry. Separate from `getAllSongSlugs` so we don't bloat the cached payload
+ * for callers that only need slugs (sitemap of pages, route-revalidation, …).
+ */
+export const getAllSongCovers = unstable_cache(
+  async (): Promise<{ slug: string; title: string; artist: string; cover_image: string | null }[]> => {
+    if (!hasEnvVars) return [];
+    return fetchAllPublishedSongs<{ slug: string; title: string; artist: string; cover_image: string | null }>(
+      "slug, title, artist, cover_image",
+    );
+  },
+  ["all-song-covers"],
+  { revalidate: 3600, tags: ["songs"] },
+);
+
 // Paginate through all published-song rows for a given column set.
 // Supabase caps a single select at 1000 rows — without this helper, aggregates
 // over the full songs table silently truncate (any artist past row 1000 shows 0).
