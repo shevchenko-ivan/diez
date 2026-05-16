@@ -64,6 +64,30 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // 301 every request to the auto-generated Vercel deployment URL onto
+      // the canonical domain. Without this, Google indexes both hosts and
+      // treats them as duplicates — canonical tags mitigate but a hard
+      // permanent redirect is strictly better. `redirects()` runs before
+      // proxy middleware, so the auth check never fires for these requests.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "diez-ten.vercel.app" }],
+        destination: "https://diez.net.ua/:path*",
+        permanent: true,
+      },
+      // Preview deployments (diez-<hash>-shevchenko-ivans-projects.vercel.app)
+      // are short-lived per-branch URLs — fine for testing, but if Google
+      // ever stumbles on one we want it on the canonical domain too.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "(.*).shevchenko-ivans-projects.vercel.app" }],
+        destination: "https://diez.net.ua/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
