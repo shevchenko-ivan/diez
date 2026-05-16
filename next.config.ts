@@ -1,10 +1,47 @@
 import type { NextConfig } from "next";
 
+// Content-Security-Policy in *Report-Only* mode — logs violations to the
+// browser console / report endpoint but does NOT block anything. Lets us
+// confirm we've enumerated every domain we actually load from over a week
+// or two of real traffic, then we can flip to enforcing later by changing
+// the header name to "Content-Security-Policy".
+//
+// Sources whitelisted:
+// - self: our own origin
+// - inline scripts: 'unsafe-inline' is required because Next.js streams
+//   inline runtime config + we ship inline JSON-LD scripts. The
+//   alternative is per-request nonces which is a bigger refactor.
+// - PostHog: eu-assets/eu.i for SDK + ingest
+// - Supabase: project subdomain for auth + DB
+// - Vercel: live feedback + analytics
+// - Image CDNs we already whitelist for next/image
+// - YouTube: for the embedded player iframe on song pages
+const cspReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://va.vercel-scripts.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://upload.wikimedia.org https://*.supabase.co https://*.mzstatic.com https://i.ytimg.com https://i.scdn.co https://*.dzcdn.net https://*.musify.club https://*.posthog.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co https://eu.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://vitals.vercel-insights.com",
+  "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join("; ");
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
+  // HSTS — tell browsers to refuse plain-HTTP for 2 years. Vercel already
+  // 301s http→https but HSTS removes that round-trip and protects against
+  // SSL-strip attacks on first visit (for repeat visitors).
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  // Report-Only — violations log but don't block. Flip name to
+  // "Content-Security-Policy" once we've verified clean traffic.
+  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
 ];
 
 const nextConfig: NextConfig = {
