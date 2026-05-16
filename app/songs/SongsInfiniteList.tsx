@@ -71,6 +71,7 @@ export function SongsInfiniteList({
                   <Image
                     src={song.coverImage}
                     alt={`Обкладинка пісні «${song.title}» — ${song.artist}`}
+                    title={`${song.title} — ${song.artist}`}
                     width={56}
                     height={56}
                     className="w-full h-full object-cover"

@@ -53,6 +53,9 @@ export function SongCard({ ...props }: SongCardProps) {
             src={props.coverImage}
             className="object-cover"
             alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
+            // `title` is the hover-tooltip attribute — Google doesn't use it
+            // for ranking but SEO crawlers ding the page if it's missing.
+            title={`${props.title} — ${props.artist}`}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
           />

@@ -32,6 +32,15 @@ export const metadata: Metadata = {
     title: "Diez — Акорди для гітари",
     description: "Дієз — українська платформа гітарних акордів. Пісні з акордами, підбір акордів, тексти пісень.",
   },
+  // hreflang self-reference. Site is Ukrainian-only, but declaring it lets
+  // Google know the language explicitly (in addition to `<html lang="uk">`)
+  // and silences hreflang-missing flags in third-party SEO auditors.
+  alternates: {
+    languages: {
+      uk: siteUrl,
+      "x-default": siteUrl,
+    },
+  },
 };
 
 export const viewport: Viewport = {

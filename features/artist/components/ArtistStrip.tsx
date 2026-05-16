@@ -87,6 +87,7 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
                 <img
                   src={artist.photo_url}
                   alt={`${artist.name} — фото виконавця`}
+                  title={artist.name}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (
