@@ -6,6 +6,7 @@ import { getAllArtists } from "@/features/artist/services/artists";
 import { ArtistCard } from "@/features/artist/components/ArtistCard";
 import { BackButton } from "@/shared/components/BackButton";
 import { getSavedArtistSlugs, getArtistsWithSavedSongs } from "@/features/playlist/actions/artist-playlists";
+import { siteUrl } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",
@@ -66,8 +67,39 @@ export default async function ArtistsPage() {
       return a.name.localeCompare(b.name, "uk");
     });
 
+  // CollectionPage + BreadcrumbList JSON-LD — same rationale as /songs:
+  // tells Google this is an index, gives the "Diez › Виконавці" trail.
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Виконавці",
+    description: "Усі виконавці в каталозі Diez.",
+    url: `${siteUrl}/artists`,
+    inLanguage: "uk",
+    isPartOf: { "@type": "WebSite", name: "Diez", url: siteUrl },
+    numberOfItems: artists.length,
+  };
+  const breadcrumbsLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Diez", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Виконавці", item: `${siteUrl}/artists` },
+    ],
+  };
+
   return (
     <PageShell>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+      />
       <div className="relative flex items-center mb-6 -mt-2">
         <BackButton fallback="/" />
         <h1 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold uppercase tracking-wider">Виконавці</h1>

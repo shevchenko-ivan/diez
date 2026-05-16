@@ -8,6 +8,7 @@ import { LoadingState } from "@/shared/components/LoadingState";
 import { SortSelect } from "./SortSelect";
 import { SongsInfiniteList } from "./SongsInfiniteList";
 import { SearchSubmitButton } from "./SearchSubmitButton";
+import { siteUrl } from "@/lib/utils";
 
 export async function generateMetadata({ searchParams }: SearchProps): Promise<Metadata> {
   const params = await searchParams;
@@ -75,8 +76,46 @@ async function SongsContent({ searchParams }: SearchProps) {
     ? topic.description
     : "Тисячі пісень. Шукайте за назвою або виконавцем.";
 
+  // Structured data for the catalog/topic index. CollectionPage tells Google
+  // this is a list page (not a single article), and the BreadcrumbList lets
+  // SERPs render "Diez › Пісні › <topic>" trails. We don't enumerate every
+  // song into itemListElement here — there are thousands, and Google's
+  // crawler will discover them via the sitemap + on-page links anyway.
+  const pageUrl = topic ? `${siteUrl}/songs?topic=${topic.slug}` : `${siteUrl}/songs`;
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: heading,
+    description: subheading,
+    url: pageUrl,
+    inLanguage: "uk",
+    isPartOf: { "@type": "WebSite", name: "Diez", url: siteUrl },
+    numberOfItems: total,
+  };
+  const breadcrumbsLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Diez", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Пісні", item: `${siteUrl}/songs` },
+      ...(topic
+        ? [{ "@type": "ListItem", position: 3, name: topic.pageHeading, item: pageUrl }]
+        : []),
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+      />
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text)", letterSpacing: "-0.03em" }}>
           {heading}
