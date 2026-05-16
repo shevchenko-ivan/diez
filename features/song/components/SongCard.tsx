@@ -58,6 +58,11 @@ export function SongCard({ ...props }: SongCardProps) {
             title={`${props.title} — ${props.artist}`}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
+            // First few cards above the fold (home page "Топ популярних")
+            // are almost always the LCP element. `priority` skips lazy
+            // loading and lets Next preload them — drops LCP by 3-5 seconds
+            // on slow connections per PageSpeed Insights audit.
+            priority={typeof props.index === "number" && props.index < 4}
           />
         ) : (
           <div

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { slugify } from "@/lib/slugify";
 import { SaveArtistButton } from "./SaveArtistButton";
@@ -29,11 +30,16 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
         }}
       >
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          // next/image proxies external photos through /_next/image — without
+          // this, a raw <img> ships the original multi-MB Wikipedia portrait
+          // straight to the browser and tanks LCP on /artists.
+          <Image
             src={image}
-            alt={name}
-            className="absolute inset-0 w-full h-full object-cover"
+            alt={`${name} — фото виконавця`}
+            title={name}
+            fill
+            sizes="(max-width: 768px) 50vw, 25vw"
+            className="object-cover"
           />
         ) : (
           <div
