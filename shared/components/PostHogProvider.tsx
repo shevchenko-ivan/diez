@@ -4,6 +4,7 @@ import { useEffect, Suspense, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import type posthogJsType from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
+import { readConsent } from "./CookieBanner";
 
 /**
  * PostHog client-side provider.
@@ -28,43 +29,67 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [ph, setPh] = useState<PostHogClient | null>(null);
 
   useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
-    if (!key || process.env.NODE_ENV !== "production") return;
-
-    // Defer SDK load until the browser is idle. requestIdleCallback is the
-    // standard "low-priority work" scheduler; the setTimeout fallback covers
-    // Safari (which still lacks it as of 2026).
-    const schedule =
-      (typeof window !== "undefined" &&
-        (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback) ||
-      ((cb: () => void) => setTimeout(cb, 1));
+    if (!apiKey || process.env.NODE_ENV !== "production") return;
+    // Bind to a non-nullable local for the nested closures below — TS
+    // doesn't carry the early-return narrowing through the inner function.
+    const key: string = apiKey;
 
     let cancelled = false;
-    schedule(() => {
-      if (cancelled) return;
-      void import("posthog-js").then(({ default: posthog }) => {
-        if (cancelled) return;
-        posthog.init(key, {
-          api_host: host || "https://eu.i.posthog.com",
-          capture_pageview: false, // captured manually below
-          capture_pageleave: true,
-          person_profiles: "identified_only",
-          // Auto-capture uncaught exceptions and unhandled promise rejections,
-          // surfacing them in PostHog's Error Tracking view. Without this, a
-          // user encountering a broken page is invisible until they email us.
-          // Zero perf cost — only fires when an error actually throws.
-          capture_exceptions: true,
-          session_recording: {
-            maskAllInputs: false,
-            maskInputOptions: { password: true, email: true },
-          },
-        });
-        setPh(posthog);
-      });
-    });
+    let loaded = false;
 
-    return () => { cancelled = true; };
+    function tryInit() {
+      if (loaded || cancelled) return;
+      // Consent gate: don't init PostHog until the user has chosen, and only
+      // if they opted in. Until they click "Прийняти" in the cookie banner
+      // (or toggle analytics on in settings), this returns early and the
+      // SDK never enters the bundle.
+      const consent = readConsent();
+      if (!consent?.analytics) return;
+      loaded = true;
+
+      // Defer the actual SDK download until idle — even with consent we don't
+      // want PostHog blocking the main thread during initial paint.
+      const schedule =
+        (typeof window !== "undefined" &&
+          (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback) ||
+        ((cb: () => void) => setTimeout(cb, 1));
+
+      schedule(() => {
+        if (cancelled) return;
+        void import("posthog-js").then(({ default: posthog }) => {
+          if (cancelled) return;
+          posthog.init(key, {
+            api_host: host || "https://eu.i.posthog.com",
+            capture_pageview: false, // captured manually below
+            capture_pageleave: true,
+            person_profiles: "identified_only",
+            // Auto-capture uncaught exceptions and unhandled promise rejections,
+            // surfacing them in PostHog's Error Tracking view. Zero perf cost
+            // — only fires when an error actually throws.
+            capture_exceptions: true,
+            session_recording: {
+              maskAllInputs: false,
+              maskInputOptions: { password: true, email: true },
+            },
+          });
+          setPh(posthog);
+        });
+      });
+    }
+
+    // 1. Try immediately on mount (returning users with prior consent).
+    tryInit();
+    // 2. Listen for the banner's accept event so a fresh accept on this page
+    //    starts tracking immediately, without requiring a reload.
+    const onConsentChange = () => tryInit();
+    window.addEventListener("diez:consent-changed", onConsentChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("diez:consent-changed", onConsentChange);
+    };
   }, []);
 
   return (

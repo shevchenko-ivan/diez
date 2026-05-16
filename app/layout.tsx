@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
+import { CookieBanner } from "@/shared/components/CookieBanner";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
 import { PostHogProvider } from "@/shared/components/PostHogProvider";
@@ -98,6 +99,7 @@ export default function RootLayout({
             </a>
             {children}
             <Toaster />
+            <CookieBanner />
           </ThemeProvider>
         </PostHogProvider>
         <Analytics />
