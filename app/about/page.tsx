@@ -37,8 +37,8 @@ export default function AboutPage() {
           </p>
           <p>
             Питання та пропозиції:{" "}
-            <a href="mailto:hello@diez.ua" style={{ color: "var(--orange-text)" }}>
-              hello@diez.ua
+            <a href="mailto:hello@diez.net.ua" style={{ color: "var(--orange-text)" }}>
+              hello@diez.net.ua
             </a>
           </p>
         </div>
