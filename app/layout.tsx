@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { siteUrl } from "@/lib/utils";
+import { siteUrl, jsonLdScript } from "@/lib/utils";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
 import { PostHogProvider } from "@/shared/components/PostHogProvider";
@@ -69,7 +69,7 @@ export default function RootLayout({
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: jsonLdScript({
               "@context": "https://schema.org",
               "@type": "WebSite",
               name: "Diez",
