@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Search } from "lucide-react";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
+import { useLiteMode } from "@/shared/components/LiteModeProvider";
 import { SaveHeartButton } from "./SaveHeartButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ export interface SongCardProps {
 }
 
 export function SongCard({ ...props }: SongCardProps) {
+  const lite = useLiteMode();
   const base = props.slug
     ? `/songs/${props.slug}`
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
@@ -48,7 +50,7 @@ export function SongCard({ ...props }: SongCardProps) {
             advise alt="" so the link text isn't repeated, but here the title
             and artist are visually beside the image; for SEO + a11y the
             descriptive alt wins. */}
-        {props.coverImage ? (
+        {props.coverImage && !lite ? (
           <Image
             src={props.coverImage}
             className="object-cover"
@@ -125,6 +127,7 @@ function stringToColor(str: string) {
 
 export function HeroSearch() {
   const router = useRouter();
+  const lite = useLiteMode();
   const [q, setQ] = useState("");
   const [songs, setSongs] = useState<SongSuggestion[]>([]);
   const [lyricsSongs, setLyricsSongs] = useState<SongSuggestion[]>([]);
@@ -354,7 +357,7 @@ export function HeroSearch() {
                         color: `${color}`,
                       }}
                     >
-                      {a.photo_url ? (
+                      {a.photo_url && !lite ? (
                         <Image src={a.photo_url} alt={a.name} width={36} height={36} className="w-full h-full object-cover" />
                       ) : (
                         a.name.charAt(0).toUpperCase()
@@ -375,6 +378,7 @@ export function HeroSearch() {
               onActivate={setActiveIndex}
               onSelect={() => setOpen(false)}
               activeStyle={activeStyle}
+              lite={lite}
             />
           )}
           {lyricsSongs.length > 0 && (
@@ -386,6 +390,7 @@ export function HeroSearch() {
               onActivate={setActiveIndex}
               onSelect={() => setOpen(false)}
               activeStyle={activeStyle}
+              lite={lite}
             />
           )}
           {loadingMore && (
@@ -405,9 +410,10 @@ interface SongResultGroupProps {
   onActivate: (idx: number) => void;
   onSelect: () => void;
   activeStyle: React.CSSProperties;
+  lite: boolean;
 }
 
-function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, onSelect, activeStyle }: SongResultGroupProps) {
+function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, onSelect, activeStyle, lite }: SongResultGroupProps) {
   return (
     <div className="py-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
       <div className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
@@ -436,7 +442,7 @@ function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, on
                 background: s.cover_image ? undefined : `linear-gradient(135deg, ${fallback}aa, ${fallback}55)`,
               }}
             >
-              {s.cover_image ? (
+              {s.cover_image && !lite ? (
                 <Image src={s.cover_image} alt={s.title} width={36} height={36} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xs font-bold" style={{ color: `${fallback}` }}>{s.artist.charAt(0).toUpperCase()}</span>

@@ -7,6 +7,7 @@ import { Volume2 } from "lucide-react";
 import { type Song } from "@/features/song/types";
 import { SaveHeartButton } from "@/features/song/components/SaveHeartButton";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { useLiteMode } from "@/shared/components/LiteModeProvider";
 import { fetchSongsPage } from "./actions";
 import { type SongsPageArgs } from "@/features/song/services/songs";
 
@@ -28,6 +29,7 @@ export function SongsInfiniteList({
   const [isPending, startTransition] = useTransition();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const saved = new Set(savedSlugs);
+  const lite = useLiteMode();
 
   const hasMore = songs.length < total;
 
@@ -62,12 +64,12 @@ export function SongsInfiniteList({
               <div
                 className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
                 style={{
-                  background: song.coverImage
+                  background: song.coverImage && !lite
                     ? undefined
                     : `linear-gradient(135deg, ${song.coverColor ?? "#C8D5E8"}CC, ${song.coverColor ?? "#C8D5E8"}66)`,
                 }}
               >
-                {song.coverImage && (
+                {song.coverImage && !lite && (
                   <Image
                     src={song.coverImage}
                     alt={`Обкладинка пісні «${song.title}» — ${song.artist}`}

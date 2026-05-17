@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
 import { CookieBanner } from "@/shared/components/CookieBanner";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
 import { PostHogProvider } from "@/shared/components/PostHogProvider";
+import { LiteModeProvider } from "@/shared/components/LiteModeProvider";
 import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -44,14 +46,40 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // `Save-Data: on` — Chrome / Edge / Opera send this when the user enables
+  // data-saver in browser settings. Read it server-side so the first render
+  // already skips cover images (preload links etc. never even ship).
+  const h = await headers();
+  const initialLite = h.get("save-data")?.toLowerCase() === "on";
   return (
     <html lang="uk" suppressHydrationWarning>
       <head>
+        {/* Preload the two Stolzl weights actually used above the fold
+            (Regular 400 for body/UI text, Bold 700 for h1 + nav). Without
+            these the browser only discovers them after parsing the CSS, by
+            which time it has already rendered fallback text — then a swap
+            shifts everything below it. Was a primary contributor to CLS
+            0.45 on the home page (per Speed Insights). */}
+        <link
+          rel="preload"
+          href="/fonts/Stolzl-Regular.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/Stolzl-Bold.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+
         {/* hreflang self-reference. Site is Ukrainian-only, but declaring
             it explicitly lets Google read the language signal (in addition
             to `<html lang="uk">`) and silences "hreflang missing" warnings
@@ -91,16 +119,18 @@ export default function RootLayout({
         />
         <ScrollbarAutoHide />
         <PostHogProvider>
-          <ThemeProvider>
-            {/* Skip link — first focusable element on every page (WCAG 2.4.1).
-                Visually hidden until focused, then anchored to the top-left. */}
-            <a href="#main-content" className="skip-to-content">
-              Перейти до основного вмісту
-            </a>
-            {children}
-            <Toaster />
-            <CookieBanner />
-          </ThemeProvider>
+          <LiteModeProvider initialLite={initialLite}>
+            <ThemeProvider>
+              {/* Skip link — first focusable element on every page (WCAG 2.4.1).
+                  Visually hidden until focused, then anchored to the top-left. */}
+              <a href="#main-content" className="skip-to-content">
+                Перейти до основного вмісту
+              </a>
+              {children}
+              <Toaster />
+              <CookieBanner />
+            </ThemeProvider>
+          </LiteModeProvider>
         </PostHogProvider>
         <Analytics />
         <SpeedInsights />

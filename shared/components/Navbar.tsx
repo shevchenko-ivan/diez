@@ -152,8 +152,16 @@ export function Navbar() {
           })}
         </div>
 
-        {/* Desktop right area */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Desktop right area.
+            `minWidth: 232px` reserves space for the worst-case content
+            (Увійти + Реєстрація buttons + theme toggle). Without this the
+            slot collapses while auth state is "loading" and snaps wider once
+            the skeleton swaps to real buttons — caused ~0.4 CLS hit on
+            home/artist pages per Speed Insights. */}
+        <div
+          className="hidden md:flex items-center gap-3 justify-end"
+          style={{ minWidth: 232 }}
+        >
 
           <TeButton
             shape="pill"
