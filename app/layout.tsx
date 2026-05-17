@@ -35,6 +35,21 @@ export const metadata: Metadata = {
     title: "Diez — Акорди для гітари",
     description: "Дієз — українська платформа гітарних акордів. Пісні з акордами, підбір акордів, тексти пісень.",
   },
+  // Without these icons iOS Safari uses a generic screenshot when the user
+  // "Add to Home Screen"s the site, and Android Chrome falls back to a
+  // letter chip. Manifest.ts already declares 192/512 PNGs for PWA install,
+  // but Apple specifically reads `<link rel="apple-touch-icon">` from the
+  // <head>, not the manifest.
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon-192.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
