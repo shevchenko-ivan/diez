@@ -124,6 +124,24 @@ async function SongsContent({ searchParams }: SearchProps) {
           {subheading}
         </p>
 
+        {/* Long-form intro paragraph — only on topic landing pages, and only
+            on the unfiltered view (no `q`). When the user starts searching
+            in a topic the intro becomes irrelevant noise and we hide it.
+            Critical for SEO: without ~120+ words of body text these topic
+            pages get classified as thin content by Google. */}
+        {topic && !q && (
+          <p
+            className="mb-6 max-w-3xl"
+            style={{
+              fontSize: "0.9rem",
+              lineHeight: 1.65,
+              color: "var(--text-mid)",
+            }}
+          >
+            {topic.seoIntro}
+          </p>
+        )}
+
         <form method="GET" action="/songs" className="flex items-center gap-3 w-full">
           {sort && <input type="hidden" name="sort" value={sort} />}
           {topic && <input type="hidden" name="topic" value={topic.slug} />}
