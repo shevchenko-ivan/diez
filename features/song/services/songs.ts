@@ -149,10 +149,14 @@ export const getAllSongSlugs = unstable_cache(
  * for callers that only need slugs (sitemap of pages, route-revalidation, …).
  */
 export const getAllSongCovers = unstable_cache(
-  async (): Promise<{ slug: string; title: string; artist: string; cover_image: string | null }[]> => {
+  async (): Promise<{ slug: string; title: string; artist: string; cover_image: string | null; updated_at: string | null }[]> => {
     if (!hasEnvVars) return [];
-    return fetchAllPublishedSongs<{ slug: string; title: string; artist: string; cover_image: string | null }>(
-      "slug, title, artist, cover_image",
+    // `updated_at` is included so sitemap.ts can emit per-URL `<lastmod>`
+    // values. Google trusts a real changing lastmod ~10× more than a
+    // global `new Date()` — uncrawled pages with stale lastmod get
+    // re-prioritised when the value actually moves.
+    return fetchAllPublishedSongs<{ slug: string; title: string; artist: string; cover_image: string | null; updated_at: string | null }>(
+      "slug, title, artist, cover_image, updated_at",
     );
   },
   ["all-song-covers"],

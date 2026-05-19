@@ -133,6 +133,57 @@ export default async function SongPage({
     ],
   };
 
+  // ──────────────────────────────────────────────────────────────
+  // FAQPage schema — Google may render the questions directly under
+  // the SERP result (the "People also ask"-style accordion). On
+  // long-tail queries like «акорди обійми океан ельзи» this can boost
+  // CTR by 15-30%. Pure JSON-LD, invisible to humans on the page.
+  // Answers are derived from real song data so they're substantive.
+  // ──────────────────────────────────────────────────────────────
+  const uniqueChords = Array.from(new Set(song.chords ?? [])).slice(0, 8);
+  const hasBarre = (song.chords ?? []).some((c) =>
+    /^([A-G][#b]?m?)/.test(c) && ["F", "B", "Bb", "F#", "C#", "G#", "D#", "Bm", "F#m", "C#m"].includes(c.replace(/^([A-G][#b]?m?).*$/, "$1")),
+  );
+  const faqItems: { q: string; a: string }[] = [
+    {
+      q: `Яка тональність пісні «${song.title}»?`,
+      a: song.key
+        ? `Оригінальна тональність — ${song.key}. На Diez ви можете транспонувати акорди на пів-тону вгору або вниз, щоб підлаштувати під свій голос.`
+        : `Тональність вказана над акордами на сторінці пісні. На Diez ви можете транспонувати акорди на будь-яку кількість пів-тонів.`,
+    },
+    {
+      q: `Які акорди потрібні для гри «${song.title}»?`,
+      a: uniqueChords.length > 0
+        ? `Для пісні потрібні акорди: ${uniqueChords.join(", ")}. Усі акорди розставлені прямо над відповідними словами в тексті.`
+        : `Список акордів і їхнє розташування над текстом ви знайдете на сторінці пісні.`,
+    },
+    {
+      q: `Чи потрібно грати баре в пісні «${song.title}»?`,
+      a: hasBarre
+        ? `Так, у пісні є акорди, які зазвичай грають із баре (наприклад, F або B). Якщо вам важко з баре — спробуйте функцію капо або транспонуйте тональність на сторінці пісні.`
+        : `Ні, пісня грається на відкритих акордах без баре — підходить для початківців.`,
+    },
+    ...(song.capo
+      ? [{
+          q: `На якому ладі ставити капо для «${song.title}»?`,
+          a: `Рекомендоване положення капо — ${song.capo} лад. Це дозволяє грати простіші відкриті акорди в потрібній тональності.`,
+        }]
+      : []),
+    {
+      q: `Де знайти текст пісні «${song.title}»?`,
+      a: `Повний текст пісні «${song.title}» виконавця ${song.artist} з акордами, розставленими прямо над словами, доступний на сторінці пісні на Diez.`,
+    },
+  ];
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+
   // VideoObject schema for songs with a YouTube player. Google indexes these
   // separately in Video Search and may render a video thumbnail next to the
   // SERP result. Skipped when there's no embed (no value to claim a video).
@@ -178,6 +229,11 @@ export default async function SongPage({
           dangerouslySetInnerHTML={{ __html: jsonLdScript(videoLd) }}
         />
       )}
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }}
+      />
       <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
 
         {/* ── Header (single row, centered title, no surface) ─────────── */}

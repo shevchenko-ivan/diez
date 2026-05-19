@@ -56,7 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // wouldn't naturally rank for otherwise.
     ...songs.map((s) => ({
       url: `${siteUrl}/songs/${s.slug}`,
-      lastModified: new Date(),
+      // Real per-row `updated_at` (set by the songs upsert trigger). A
+      // moving lastmod tells Googlebot to re-crawl just the rows that
+      // actually changed, instead of skipping the whole sitemap when
+      // every URL shares the same global timestamp.
+      lastModified: s.updated_at ? new Date(s.updated_at) : new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.8,
       ...(s.cover_image ? { images: [s.cover_image] } : {}),
