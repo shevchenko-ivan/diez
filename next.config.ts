@@ -86,6 +86,17 @@ const nextConfig: NextConfig = {
         destination: "https://diez.net.ua/:path*",
         permanent: true,
       },
+      // Old query-string topic URLs → path-based canonical. Path URLs
+      // rank better than query strings (Google docs + every SEO audit).
+      // The `has` matcher captures the `topic` query param via the named
+      // group `slug`; the destination then references `:slug`. Permanent
+      // = 301 so any existing inbound links consolidate to the new URL.
+      {
+        source: "/songs",
+        has: [{ type: "query", key: "topic", value: "(?<slug>.+)" }],
+        destination: "/songs/topic/:slug",
+        permanent: true,
+      },
     ];
   },
 };

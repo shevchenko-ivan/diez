@@ -115,7 +115,7 @@ export default async function HomePage() {
             {TOPICS.map((t) => (
               <HapticLink
                 key={t.slug}
-                href={`/songs?topic=${t.slug}`}
+                href={`/songs/topic/${t.slug}`}
                 className="te-surface te-pressable p-5 flex flex-col justify-between"
                 style={{ borderRadius: "1.25rem", minHeight: 100 }}
               >

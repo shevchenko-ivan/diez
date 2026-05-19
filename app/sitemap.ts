@@ -72,12 +72,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
       ...(a.photo_url ? { images: [a.photo_url] } : {}),
     })),
-    // Topic landing pages — `?topic=` query strings are real, indexable URLs
-    // with their own SEO-tuned title/description per /songs/page.tsx. They
-    // target broad evergreen queries ("акорди для початківців", "пісні біля
-    // вогнища") which a single-song page can't rank for.
+    // Topic landing pages — path-based URLs (`/songs/topic/<slug>`)
+    // target broad evergreen queries ("акорди для початківців", "пісні
+    // біля вогнища") which a single-song page can't rank for. Old
+    // `/songs?topic=<slug>` URLs 301 → here via next.config redirects.
     ...TOPICS.map((t) => ({
-      url: `${siteUrl}/songs?topic=${t.slug}`,
+      url: `${siteUrl}/songs/topic/${t.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.7,

@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 // Next.js's route-level and fetch-level caches.
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { getSongBySlug, getSongsByArtist, applyVariant } from "@/features/song/services/songs";
+import { getSongBySlug, getSongsByArtist, getSongsSharingChords, applyVariant } from "@/features/song/services/songs";
 import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongActions } from "@/features/song/components/SongActions";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
@@ -302,6 +302,15 @@ export default async function SongPage({
           <RelatedSongs artist={song.artist} excludeSlug={slug} artistSlug={artistSlug} />
         </Suspense>
 
+        {/* ── Songs that share at least 3 chords with this one ─────────
+            Internal linking by harmonic similarity — helps users find
+            their next song based on what they already know how to play,
+            and feeds Google a strong "topically related" graph between
+            song pages (boosts crawl + ranking). */}
+        <Suspense>
+          <SongsWithSameChords chords={song.chords ?? []} excludeSlug={slug} />
+        </Suspense>
+
       </main>
       <SiteFooter />
     </div>
@@ -399,6 +408,43 @@ async function RelatedSongs({
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {otherSongs.map(({ key: _k, ...s }) => (
+          <SongCard key={s.slug} {...s} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Songs you can play with the same chords" — picks 4 songs that share
+ * the most chords with the current one. Renders nothing if there aren't
+ * at least 4 viable matches (avoid showing a weak relation).
+ *
+ * Same visual shape as <RelatedSongs /> (4 SongCard tiles) — so it
+ * blends into the existing page rhythm and doesn't introduce a new
+ * pattern.
+ */
+async function SongsWithSameChords({
+  chords,
+  excludeSlug,
+}: {
+  chords: string[];
+  excludeSlug: string;
+}) {
+  const songs = await getSongsSharingChords(chords, { excludeSlug, limit: 4 });
+  if (songs.length < 4) return null;
+  return (
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-4">
+        <h2
+          className="uppercase tracking-wider"
+          style={{ fontSize: "0.65rem", fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.12em" }}
+        >
+          Грається тими ж акордами
+        </h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {songs.map(({ key: _k, ...s }) => (
           <SongCard key={s.slug} {...s} />
         ))}
       </div>

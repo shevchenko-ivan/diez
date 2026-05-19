@@ -367,6 +367,55 @@ export const getSongsByArtist = unstable_cache(
   { revalidate: 1800, tags: ["songs"] },
 );
 
+/**
+ * Songs that share **chords** with a given song — used for the
+ * "Пісні з тими ж акордами" internal-linking block on song-detail pages.
+ *
+ * Strategy: pull rows whose `chords` array overlaps with the seed song's
+ * chord list, then sort client-side by overlap count desc. This produces
+ * songs that are most similar harmonically, which is a far stronger
+ * "you might also like" signal than same-artist (which we render
+ * separately).
+ *
+ * Postgres `&&` array-overlap operator via `.overlaps()` filters before
+ * Postgres hits 1000 rows, so this stays cheap even on the full catalog.
+ */
+export const getSongsSharingChords = unstable_cache(
+  async (
+    chords: string[],
+    options: { excludeSlug: string; limit?: number },
+  ): Promise<Song[]> => {
+    if (!hasEnvVars) return [];
+    if (!chords || chords.length === 0) return [];
+    const seed = new Set(chords);
+    const { data, error } = await getClient()
+      .from("songs")
+      .select(SONG_LIST_COLUMNS)
+      .eq("status", "published")
+      .neq("slug", options.excludeSlug)
+      .overlaps("chords", chords)
+      .order("views", { ascending: false })
+      .limit((options.limit ?? 4) * 8);
+    if (error || !data) return [];
+    // Rank by overlap count desc, then by views (preserved from query).
+    return data
+      .map((row) => {
+        const song = mapRow(row);
+        const overlap = (song.chords ?? []).reduce(
+          (n, c) => (seed.has(c) ? n + 1 : n),
+          0,
+        );
+        return { song, overlap };
+      })
+      .filter((x) => x.overlap >= 3) // require at least 3 shared chords
+      .sort((a, b) => b.overlap - a.overlap)
+      .slice(0, options.limit ?? 4)
+      .map((x) => x.song);
+  },
+  ["songs-sharing-chords"],
+  { revalidate: 1800, tags: ["songs"] },
+);
+
 // Song + all of its published variants. The viewer decides which variant to
 // render based on a `?v=<id>` query param; default is primary.
 // Not using unstable_cache here — in Next.js 16 its tag-based invalidation

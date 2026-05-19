@@ -15,15 +15,21 @@ export async function generateMetadata({ searchParams }: SearchProps): Promise<M
   const topicSlug = typeof params.topic === "string" ? params.topic : undefined;
   const topic = getTopicBySlug(topicSlug);
   if (topic) {
+    // Defensive: this branch normally doesn't fire because next.config
+    // redirects `/songs?topic=<slug>` → `/songs/topic/<slug>` with 301
+    // before this metadata runs. But if the redirect ever misfires, point
+    // canonical at the new path-based URL so search engines still
+    // consolidate at the right place.
+    const canonical = `/songs/topic/${topic.slug}`;
     return {
       title: `${topic.pageHeading} — Акорди для гітари | Diez`,
       description: topic.description,
-      alternates: { canonical: `/songs?topic=${topic.slug}` },
+      alternates: { canonical },
       openGraph: {
         title: `${topic.pageHeading} — Diez`,
         description: topic.description,
         type: "website",
-        url: `/songs?topic=${topic.slug}`,
+        url: canonical,
       },
     };
   }

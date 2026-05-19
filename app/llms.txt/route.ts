@@ -39,7 +39,7 @@ export async function GET(): Promise<Response> {
   sections.push("## Topic collections");
   sections.push("");
   for (const t of TOPICS) {
-    sections.push(`- [${t.pageHeading}](${siteUrl}/songs?topic=${t.slug}): ${t.description}`);
+    sections.push(`- [${t.pageHeading}](${siteUrl}/songs/topic/${t.slug}): ${t.description}`);
   }
   sections.push("");
 
