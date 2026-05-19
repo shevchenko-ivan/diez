@@ -15,7 +15,7 @@ function getClient() {
 }
 
 const SONG_COLUMNS =
-  "id, slug, title, artist, album, genre, key, capo, time_signature, difficulty, chords, views, sections, cover_image, cover_color, youtube_id, primary_variant_id";
+  "id, slug, title, artist, album, genre, key, capo, time_signature, difficulty, chords, views, sections, cover_image, cover_color, youtube_id, primary_variant_id, created_at";
 
 // Slim column set for list views — excludes heavy JSONB (sections) so the
 // cached payload stays under Next.js's 2MB unstable_cache limit.
@@ -114,6 +114,10 @@ function mapRow(row: Record<string, unknown>): Song {
     coverImage: (row.cover_image as string | null) ?? undefined,
     coverColor: (row.cover_color as string | null) ?? undefined,
     youtubeId: (row.youtube_id as string | null) ?? undefined,
+    // `created_at` is exposed on Song so the song-detail page can stamp it
+    // into the VideoObject `uploadDate` field — Google's structured-data
+    // checker rejects date-only or missing-timezone values.
+    createdAt: (row.created_at as string | null) ?? undefined,
     primaryVariantId,
     variants,
   };

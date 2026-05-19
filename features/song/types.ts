@@ -88,6 +88,9 @@ export interface Song {
   youtubeId?: string;
   coverImage?: string;
   coverColor?: string;
+  /** Row creation timestamp (Postgres `timestamptz` → ISO string). Used by
+   *  the song page to emit a valid `VideoObject.uploadDate` for Google. */
+  createdAt?: string;
   variants?: SongVariant[];
   primaryVariantId?: string;
   activeVariantId?: string;

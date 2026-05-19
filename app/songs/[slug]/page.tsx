@@ -187,6 +187,20 @@ export default async function SongPage({
   // VideoObject schema for songs with a YouTube player. Google indexes these
   // separately in Video Search and may render a video thumbnail next to the
   // SERP result. Skipped when there's no embed (no value to claim a video).
+  //
+  // `uploadDate` must be a full ISO 8601 datetime WITH timezone — date-only
+  // strings ("2026-05-18") trigger GSC's "Недійсне значення дати/часу" and
+  // "Відсутній часовий пояс" warnings. We use the song row's createdAt (the
+  // moment this catalog entry — and therefore this video association —
+  // first existed on Diez), normalised to a full ISO timestamp.
+  // `new Date(...).toISOString()` always emits the UTC `Z` suffix, which
+  // satisfies the timezone requirement.
+  const uploadIso = (() => {
+    const raw = song.createdAt;
+    if (!raw) return new Date().toISOString();
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  })();
   const videoLd = song.youtubeId
     ? {
         "@context": "https://schema.org",
@@ -197,12 +211,12 @@ export default async function SongPage({
           `https://i.ytimg.com/vi/${song.youtubeId}/hqdefault.jpg`,
           `https://i.ytimg.com/vi/${song.youtubeId}/maxresdefault.jpg`,
         ],
-        // YouTube API gives us no uploadDate cheaply; using the song's
-        // canonical URL as `contentUrl` keeps Google happy — embedUrl points
-        // to the actual iframe target, which is required for rich video.
+        // `contentUrl` points to our canonical song page (the actual video
+        // host is YouTube, but Google still wants a watch URL on our side
+        // for the rich result); `embedUrl` is the iframe target.
         contentUrl: `${siteUrl}/songs/${song.slug}`,
         embedUrl: `https://www.youtube.com/embed/${song.youtubeId}`,
-        uploadDate: new Date().toISOString().slice(0, 10),
+        uploadDate: uploadIso,
       }
     : null;
 
