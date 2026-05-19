@@ -72,16 +72,16 @@ export default async function RootLayout({
             0.45 on the home page (per Speed Insights). */}
         <link
           rel="preload"
-          href="/fonts/Stolzl-Regular.ttf"
+          href="/fonts/Stolzl-Regular.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/fonts/Stolzl-Bold.ttf"
+          href="/fonts/Stolzl-Bold.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
 
