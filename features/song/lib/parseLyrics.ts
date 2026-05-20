@@ -193,12 +193,65 @@ function parseInlineBracketsLine(line: string): ChordLine {
 }
 
 // Build a ChordLine when a chord-line and a lyric-line are paired (UG-style).
+//
+// When the chord-line is wider than the lyric-line, or any chord sits past the
+// end of the lyric, the chord positions are very likely misaligned (this is a
+// known side-effect of the mychords scraper, which can drop a few spaces when
+// walking nested chord-row markup). In that case we snap each chord to the
+// start of the word it falls within in the lyric — that's what mychords does
+// visually anyway. Lines that look OK (chord row fits inside the lyric line
+// and every chord position lands on a non-space character) are left alone, so
+// hand-authored songs with intentional mid-word chord placement aren't
+// affected.
 function mergeChordOverLyric(chordLine: string, lyricLine: string): ChordLine {
   const chords = extractChordPositions(chordLine);
   const leadingMatch = lyricLine.match(/^(\s*)/);
   const lyricsCol = leadingMatch ? leadingMatch[1].length : 0;
   const lyrics = lyricLine.slice(lyricsCol).replace(/\s+$/, "");
-  return { chords, lyrics, lyricsCol };
+
+  const lyricLineLen = lyricsCol + lyrics.length;
+  const needsSnap =
+    chordLine.length > lyricLineLen ||
+    chords.some((c) => {
+      const ch = lyricLine[c.col];
+      return ch === undefined || ch === " " || ch === "\t";
+    });
+  const snapped = needsSnap ? snapChordsToWordStarts(chords, lyricLine) : chords;
+
+  return { chords: snapped, lyrics, lyricsCol };
+}
+
+// For each chord, find the start of the word in `lyricLine` that the chord
+// column falls within (or before). If the column is past the lyric end, snap
+// to the last word start.
+function snapChordsToWordStarts(
+  chords: { chord: string; col: number }[],
+  lyricLine: string,
+): { chord: string; col: number }[] {
+  if (chords.length === 0) return chords;
+
+  // Indices in `lyricLine` where a new word begins (transition from
+  // whitespace → non-whitespace, or at column 0 if the line starts with a
+  // word).
+  const wordStarts: number[] = [];
+  for (let i = 0; i < lyricLine.length; i++) {
+    const cur = lyricLine[i];
+    if (cur === " " || cur === "\t") continue;
+    const prev = i === 0 ? " " : lyricLine[i - 1];
+    if (prev === " " || prev === "\t") wordStarts.push(i);
+  }
+  if (wordStarts.length === 0) return chords;
+
+  return chords.map(({ chord, col }) => {
+    // Largest wordStart that is <= col. If col is before the first word
+    // start (rare), use the first word start.
+    let snapped = wordStarts[0];
+    for (const ws of wordStarts) {
+      if (ws <= col) snapped = ws;
+      else break;
+    }
+    return { chord, col: snapped };
+  });
 }
 
 // Chord-only line, rendered by itself (no lyrics).
