@@ -777,8 +777,16 @@ export function SongViewer({
                       return (
                       <div
                         key={i}
-                        className="font-mono"
                         style={{
+                          // Tahoma + Verdana mirror what mychords / amdm use
+                          // for song lyrics. They render Ukrainian Cyrillic
+                          // cleanly and — combined with the lyric-prefix
+                          // chord-positioning trick below — give us a layout
+                          // close to mychords without losing per-word chord
+                          // alignment. We keep a mono fallback at the end so
+                          // chord positions still look reasonable if a font
+                          // outage downgrades us to a system mono.
+                          fontFamily: 'Tahoma, Verdana, "Segoe UI", -apple-system, sans-serif',
                           fontSize: `${fontSize}px`,
                           color: "var(--text)",
                           marginTop: prevWrapped ? 14 : 0,
@@ -831,27 +839,100 @@ export function SongViewer({
                                 </span>
                               )}
                               {hasChords && (
-                                <div style={{ position: "relative", height: `${fontSize * 1.3}px`, whiteSpace: "pre" }}>
-                                  {seg.chords.map(({ chord, col }, j) => {
-                                    const tr = transposeChord(chord, transpose);
-                                    return (
-                                      <span
-                                        key={j}
-                                        style={{
-                                          position: "absolute",
-                                          left: `${col}ch`,
-                                          top: 0,
-                                          color: "var(--orange)",
-                                          fontWeight: 700,
-                                          letterSpacing: "-0.02em",
-                                        }}
-                                      >
-                                        <ChordHover chord={tr} voicingState={voicingState}>
-                                          {tr}
-                                        </ChordHover>
-                                      </span>
-                                    );
-                                  })}
+                                <div
+                                  style={{
+                                    height: `${fontSize * 1.3}px`,
+                                    whiteSpace: "pre",
+                                    color: "var(--orange)",
+                                    fontWeight: 700,
+                                    letterSpacing: "-0.02em",
+                                  }}
+                                >
+                                  {/* Font-independent chord positioning. We
+                                      render the lyric text inline as the
+                                      spacer for each chord — invisible (so
+                                      only chords appear visually). Because the
+                                      chord row and the lyric row below it
+                                      share the same font and the same upstream
+                                      character sequence, each chord lands
+                                      pixel-perfectly above the lyric column
+                                      it targets — proportional Tahoma vs
+                                      monospace doesn't matter. Each chord
+                                      itself is `display: inline-block;
+                                      width: 0` so its rendered width does NOT
+                                      push the next invisible prefix sideways. */}
+                                  {(() => {
+                                    const sortedChords = [...seg.chords].sort((a, b) => a.col - b.col);
+                                    const out: React.ReactNode[] = [];
+                                    // Leading indent that matches the lyric row's leading whitespace.
+                                    if (seg.lyricsCol > 0) {
+                                      out.push(
+                                        <span key="indent" style={{ visibility: "hidden" }} aria-hidden>
+                                          {" ".repeat(seg.lyricsCol)}
+                                        </span>,
+                                      );
+                                    }
+                                    let cursor = 0; // index within seg.lyrics
+                                    sortedChords.forEach(({ chord, col }, j) => {
+                                      const localCol = Math.max(0, col - seg.lyricsCol);
+                                      if (localCol > cursor && localCol <= seg.lyrics.length) {
+                                        out.push(
+                                          <span
+                                            key={`pad-${j}`}
+                                            style={{ visibility: "hidden" }}
+                                            aria-hidden
+                                          >
+                                            {seg.lyrics.slice(cursor, localCol)}
+                                          </span>,
+                                        );
+                                        cursor = localCol;
+                                      } else if (localCol > seg.lyrics.length) {
+                                        // Chord wants to sit past end of lyric.
+                                        // Pad with full remaining lyric then plain spaces.
+                                        if (cursor < seg.lyrics.length) {
+                                          out.push(
+                                            <span
+                                              key={`pad-rest-${j}`}
+                                              style={{ visibility: "hidden" }}
+                                              aria-hidden
+                                            >
+                                              {seg.lyrics.slice(cursor)}
+                                            </span>,
+                                          );
+                                          cursor = seg.lyrics.length;
+                                        }
+                                        const extra = localCol - seg.lyrics.length;
+                                        if (extra > 0) {
+                                          out.push(
+                                            <span
+                                              key={`pad-spc-${j}`}
+                                              style={{ visibility: "hidden" }}
+                                              aria-hidden
+                                            >
+                                              {" ".repeat(extra)}
+                                            </span>,
+                                          );
+                                        }
+                                      }
+                                      const tr = transposeChord(chord, transpose);
+                                      out.push(
+                                        <span
+                                          key={`chord-${j}`}
+                                          style={{
+                                            display: "inline-block",
+                                            width: 0,
+                                            overflow: "visible",
+                                            whiteSpace: "nowrap",
+                                          }}
+                                        >
+                                          <ChordHover chord={tr} voicingState={voicingState}>
+                                            {tr}
+                                          </ChordHover>
+                                        </span>,
+                                      );
+                                    });
+                                    return out;
+                                  })()}
                                 </div>
                               )}
                               {hasLyrics && !inlineMode && (
