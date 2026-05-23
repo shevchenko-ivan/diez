@@ -224,6 +224,12 @@ function mergeChordOverLyric(chordLine: string, lyricLine: string): ChordLine {
 // For each chord, find the start of the word in `lyricLine` that the chord
 // column falls within (or before). If the column is past the lyric end, snap
 // to the last word start.
+//
+// When two chords would land on the same word (e.g. four chords above
+// "Дума:" — same source col, different chord names), each subsequent chord
+// is bumped to the next available word start (or, if there is no next word,
+// to the previous chord's right edge + 1) so the absolute-positioned chord
+// spans don't visually stack on top of each other.
 function snapChordsToWordStarts(
   chords: { chord: string; col: number }[],
   lyricLine: string,
@@ -242,16 +248,45 @@ function snapChordsToWordStarts(
   }
   if (wordStarts.length === 0) return chords;
 
-  return chords.map(({ chord, col }) => {
-    // Largest wordStart that is <= col. If col is before the first word
-    // start (rare), use the first word start.
-    let snapped = wordStarts[0];
-    for (const ws of wordStarts) {
-      if (ws <= col) snapped = ws;
+  // Process chords in source-col order so the "bump to next word" logic can
+  // track which word slots are already taken.
+  const ordered = chords
+    .map((c, srcIdx) => ({ ...c, srcIdx }))
+    .sort((a, b) => a.col - b.col);
+
+  const placed: { chord: string; col: number; srcIdx: number }[] = [];
+  let minNextCol = -1; // earliest col the next chord may take
+
+  for (const { chord, col, srcIdx } of ordered) {
+    // Candidate: largest wordStart that is ≤ col.
+    let snapIdx = 0;
+    for (let k = 0; k < wordStarts.length; k++) {
+      if (wordStarts[k] <= col) snapIdx = k;
       else break;
     }
-    return { chord, col: snapped };
-  });
+    let snapped = wordStarts[snapIdx];
+
+    // If this would land on or before the previous placed chord, bump
+    // forward to the next word start until we find a free one.
+    while (snapped <= minNextCol && snapIdx + 1 < wordStarts.length) {
+      snapIdx++;
+      snapped = wordStarts[snapIdx];
+    }
+
+    // Still colliding (no more words available) — place chord immediately
+    // after the previous one with a single-char gap. Better than stacking.
+    if (snapped <= minNextCol) {
+      snapped = minNextCol + 1;
+    }
+
+    placed.push({ chord, col: snapped, srcIdx });
+    minNextCol = snapped + chord.length;
+  }
+
+  // Restore original source order so callers that depend on input order
+  // (e.g. some downstream styling) don't see a reshuffle.
+  placed.sort((a, b) => a.srcIdx - b.srcIdx);
+  return placed.map(({ chord, col }) => ({ chord, col }));
 }
 
 // Chord-only line, rendered by itself (no lyrics).
