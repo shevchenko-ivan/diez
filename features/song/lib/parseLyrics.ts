@@ -248,6 +248,14 @@ function snapChordsToWordStarts(
   }
   if (wordStarts.length === 0) return chords;
 
+  // Single-word lyric lines (e.g. an indented "Ау!" or "Ой!" exclamation) —
+  // the chord row above usually encodes a 3-4 chord progression played
+  // during that one syllable. Snapping all of them to the single word
+  // collapses meaningful timing information. Leave chord positions
+  // untouched — chord-row's own spacing is the source of truth here, the
+  // way mychords renders it too.
+  if (wordStarts.length === 1) return chords;
+
   // Process chords in source-col order so the "bump to next word" logic can
   // track which word slots are already taken.
   const ordered = chords
