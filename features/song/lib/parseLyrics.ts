@@ -266,6 +266,19 @@ function snapChordsToWordStarts(
   let minNextCol = -1; // earliest col the next chord may take
 
   for (const { chord, col, srcIdx } of ordered) {
+    // If the chord sits BEFORE the first word (i.e. in the lyric's leading
+    // whitespace), preserve its position — that's how mychords renders an
+    // intro chord that's read just before the line starts ("C#m / ⏎ Я скінчу
+    // страждання"). Snapping it forward onto the first word loses that
+    // pre-lyric anchor and visually merges chord+word.
+    if (col < wordStarts[0]) {
+      // Still respect collisions with previously placed chords.
+      const safe = col > minNextCol ? col : minNextCol + 1;
+      placed.push({ chord, col: safe, srcIdx });
+      minNextCol = safe + chord.length;
+      continue;
+    }
+
     // Candidate: largest wordStart that is ≤ col.
     let snapIdx = 0;
     for (let k = 0; k < wordStarts.length; k++) {
