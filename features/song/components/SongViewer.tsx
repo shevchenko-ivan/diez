@@ -715,7 +715,9 @@ export function SongViewer({
                   <div className="mb-2 flex items-center gap-3">
                     <span
                       className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap"
-                      style={{ color: "var(--text-muted)", opacity: 0.75 }}
+                      // opacity bumped 0.75 → 1.0 to clear WCAG AA in dark mode
+                      // (10px bold needs 4.5:1; var(--text-muted) alone is enough).
+                      style={{ color: "var(--text-muted)" }}
                     >
                       {section.label}
                     </span>
@@ -975,7 +977,8 @@ export function SongViewer({
                 active={expandedTool === "tuner"}
                 icon={Gauge}
                 iconSize={14}
-                title="Тюнер — клавіша T"
+                title="Тюнер (T) — клавіша T"
+                aria-label="Тюнер (T) — клавіша T"
                 className="flex-1 py-2 text-xs font-bold"
                 style={{ borderRadius: "1rem", color: expandedTool === "tuner" ? "var(--orange)" : "var(--text-muted)" }}
               >
@@ -995,8 +998,8 @@ export function SongViewer({
                   <TeButton
                     shape="pill"
                     onClick={handleScrollToggle}
-                    title="Зупинити прокрутку — клавіша Пробіл"
-                    aria-label="Зупинити прокрутку — клавіша Пробіл"
+                    title="Пауза (Пробіл) — зупинити прокрутку"
+                    aria-label="Пауза (Пробіл) — зупинити прокрутку"
                     className="flex-1 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5"
                     style={{ borderRadius: "0.5rem", color: "var(--orange)" }}
                   >
@@ -1010,8 +1013,8 @@ export function SongViewer({
                 <TeButton
                   shape="pill"
                   onClick={handleScrollToggle}
-                  title="Почати прокрутку — клавіша Пробіл"
-                  aria-label="Почати прокрутку — клавіша Пробіл"
+                  title="Старт (Пробіл) — почати прокрутку"
+                  aria-label="Старт (Пробіл) — почати прокрутку"
                   className="w-full py-1.5 text-xs font-bold flex items-center justify-center gap-1.5"
                   style={{ borderRadius: "0.5rem", color: "var(--text-muted)" }}
                 >

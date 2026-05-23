@@ -61,6 +61,9 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
       videoId: youtubeId,
       width: 1,
       height: 1,
+      // Use the privacy-enhanced domain to avoid third-party cookies until
+      // the user actually plays the video.
+      host: "https://www.youtube-nocookie.com",
       playerVars: {
         autoplay: 0,
         controls: 0,

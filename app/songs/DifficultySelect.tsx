@@ -29,6 +29,7 @@ export function DifficultySelect({ value, basePath = "/songs" }: { value: string
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label="Складність пісень"
         className="te-inset px-3 py-2 text-xs font-bold outline-none bg-transparent"
         style={{ borderRadius: "0.75rem", color: "var(--text)" }}
       >

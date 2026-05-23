@@ -170,7 +170,9 @@ export function CookieBanner() {
             // reads as the obvious next action.
             style={{
               background: "var(--orange)",
-              color: "#FFFFFF",
+              // Dark text on orange — white-on-#FF8800 fails WCAG AA (2.39:1).
+              // #1a1a1a gives ~7.4:1 (AAA) and matches the TE/brand vibe.
+              color: "#1a1a1a",
               border: "none",
               borderRadius: 999,
               padding: "10px 24px",
@@ -325,7 +327,7 @@ export function CookieBanner() {
                 onClick={() => commit(analyticsToggle)}
                 style={{
                   background: "var(--orange)",
-                  color: "#FFFFFF",
+                  color: "#1a1a1a",
                   border: "none",
                   borderRadius: 999,
                   padding: "10px 24px",

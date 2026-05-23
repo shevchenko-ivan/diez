@@ -115,6 +115,7 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
                   <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
                 </Link>
                 <span
+                  role="img"
                   title={hasPlayer ? "Є плеєр з музикою" : "Без плеєра"}
                   aria-label={hasPlayer ? "Є плеєр з музикою" : "Без плеєра"}
                   className="inline-flex items-center justify-center"

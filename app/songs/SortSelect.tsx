@@ -29,6 +29,7 @@ export function SortSelect({ value, basePath = "/songs" }: { value: string; base
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label="Сортування пісень"
         className="te-inset pl-3 py-2 text-xs font-bold outline-none bg-transparent appearance-none"
         style={{
           borderRadius: "0.75rem",
