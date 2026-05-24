@@ -287,7 +287,7 @@ export default async function SongPage({
               <AdminEditButton slug={slug} variantId={song.activeVariantId} />
             </Suspense>
             <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
-            <TabsToggleButton />
+            {song.sections.some((s) => s.tab) && <TabsToggleButton />}
             <SongActions slug={song.slug} isSaved={saveState.isSaved} variantId={song.activeVariantId} />
           </div>
         </div>
