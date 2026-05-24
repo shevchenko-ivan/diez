@@ -60,7 +60,19 @@ export function SongsInfiniteList({
         {songs.map((song) => {
           const hasPlayer = Boolean(song.youtubeId);
           return (
-            <li key={song.slug} className="te-surface flex items-center gap-3 p-3" style={{ borderRadius: "1rem" }}>
+            <li
+              key={song.slug}
+              className="te-surface flex items-center gap-3 p-3"
+              style={{
+                borderRadius: "1rem",
+                // Skip layout/paint for rows outside the viewport. Each row
+                // is ~80px (h-14 cover + p-3 padding); the placeholder size
+                // prevents scroll-jump when content unboxes. Baseline since
+                // 2025-09; older browsers just ignore these properties.
+                contentVisibility: "auto",
+                containIntrinsicSize: "auto 80px",
+              }}
+            >
               <div
                 className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
                 style={{

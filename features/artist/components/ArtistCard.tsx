@@ -18,7 +18,15 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
   const href = `/artists/${resolvedSlug}`;
 
   return (
-    <div className="flex flex-col items-center gap-2 pt-1">
+    <div
+      className="flex flex-col items-center gap-2 pt-1"
+      style={{
+        // Skip layout/paint for cards outside the viewport (helps long /artists
+        // grid). Placeholder height ≈ avatar + 2 lines of label. Baseline 2025-09.
+        contentVisibility: "auto",
+        containIntrinsicSize: "auto 220px",
+      }}
+    >
       {/* Round avatar — only the circle is pressable */}
       <HapticLink
         href={href}

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { getSongBySlug, getSongsByArtist, getSongsSharingChords, applyVariant } from "@/features/song/services/songs";
 import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongActions } from "@/features/song/components/SongActions";
+import { TranslateLyricsButton } from "@/features/song/components/TranslateLyricsButton";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
@@ -286,6 +287,7 @@ export default async function SongPage({
               <AdminEditButton slug={slug} variantId={song.activeVariantId} />
             </Suspense>
             <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
+            <TranslateLyricsButton sections={song.sections} />
             <SongActions slug={song.slug} isSaved={saveState.isSaved} variantId={song.activeVariantId} />
           </div>
         </div>

@@ -55,6 +55,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Cross-document view transitions ───────────────────────────────────────
+   Opt-in to native page-to-page transitions in browsers that support them
+   (Chrome 126+, Edge 126+, Safari 18.2+; Firefox falls back to instant
+   navigation, which is the prior behaviour — zero regression).
+
+   Gated on prefers-reduced-motion so users who opt out of animation in
+   their OS settings keep snap-cut navigation.
+
+   Tuned soft: 200ms cross-fade. Aggressive slide effects on /songs lists
+   would feel choppy on long pages where new view is taller than viewport. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-old(root) {
+    animation: 180ms cubic-bezier(0.4, 0, 1, 1) both vt-fade-out;
+  }
+  ::view-transition-new(root) {
+    animation: 220ms cubic-bezier(0, 0, 0.2, 1) both vt-fade-in;
+  }
+  @keyframes vt-fade-out {
+    to { opacity: 0; }
+  }
+  @keyframes vt-fade-in {
+    from { opacity: 0; }
+  }
+}
+
 /* ── Teenage Engineering / OP-1 design system ─────────────────────────────── */
 
 :root {
@@ -130,6 +158,10 @@
     font-weight: 450;
     -webkit-font-smoothing: antialiased;
     cursor: default;
+    /* Normalize fallback x-height to Inter's so the layout doesn't shift
+       when Inter (web) swaps in over -apple-system. Baseline since 2024-07
+       (Chrome/Edge 127, Safari 17, Firefox 118); older browsers ignore. */
+    font-size-adjust: from-font;
   }
 
   input, textarea, select {

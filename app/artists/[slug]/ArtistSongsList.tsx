@@ -89,7 +89,14 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
               <li
                 key={song.slug}
                 className="te-surface flex items-center gap-3 p-3"
-                style={{ borderRadius: "1rem" }}
+                style={{
+                  borderRadius: "1rem",
+                  // Skip layout/paint for rows outside the viewport. Each row
+                  // is ~80px; placeholder size prevents scroll-jump. Baseline
+                  // since 2025-09; ignored by older browsers.
+                  contentVisibility: "auto",
+                  containIntrinsicSize: "auto 80px",
+                }}
               >
                 <div
                   className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
