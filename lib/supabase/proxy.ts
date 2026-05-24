@@ -72,6 +72,10 @@ export async function updateSession(request: NextRequest) {
     "/lists",
     "/tuner",
     "/chords",
+    // Hero-search autocomplete on `/` (and 404 page) — guests must be able
+    // to call it; without this the API silently 307s to /auth/login and the
+    // dropdown shows "Нічого не знайдено" for every query.
+    "/api/search",
   ];
 
   // SEO endpoints — Google / Bing must be able to crawl these without auth.
