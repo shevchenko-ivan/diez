@@ -823,9 +823,22 @@ export function SongViewer({
                               )}
                               {hasChords && (
                                 <div style={{ position: "relative", height: `${fontSize * 1.3}px`, whiteSpace: "pre" }}>
-                                  {seg.chords.map(({ chord, col }, j) => {
-                                    const tr = transposeChord(chord, transpose);
-                                    return (
+                                  {(() => {
+                                    // Sort by col so the cluster-collision pass works left-to-right.
+                                    // mychords stores trailing chord clusters like "C#m B F#m G#" with
+                                    // a single space between names; in monospace those would overlap
+                                    // because chord names are wider than 1ch. Push subsequent chords
+                                    // right so each gets at least 1ch of breathing room after the
+                                    // previous chord ends.
+                                    const sorted = [...seg.chords].sort((a, b) => a.col - b.col);
+                                    let lastEnd = -1;
+                                    const placed = sorted.map(({ chord, col }) => {
+                                      const tr = transposeChord(chord, transpose);
+                                      const renderCol = col > lastEnd ? col : lastEnd + 1;
+                                      lastEnd = renderCol + tr.length;
+                                      return { chord, col: renderCol, tr };
+                                    });
+                                    return placed.map(({ tr, col }, j) => (
                                       <span
                                         key={j}
                                         style={{
@@ -841,8 +854,8 @@ export function SongViewer({
                                           {tr}
                                         </ChordHover>
                                       </span>
-                                    );
-                                  })}
+                                    ));
+                                  })()}
                                 </div>
                               )}
                               {hasLyrics && !inlineMode && (
