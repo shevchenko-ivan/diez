@@ -210,16 +210,31 @@ function mergeChordOverLyric(chordLine: string, lyricLine: string): ChordLine {
   const lyrics = lyricLine.slice(lyricsCol).replace(/\s+$/, "");
 
   const lyricLineLen = lyricsCol + lyrics.length;
-  // Snap when the chord row was clearly misaligned by the legacy scraper —
-  // i.e. the row is wider than the lyric (trailing chord past the end). A
-  // chord landing on a SPACE between two words is *not* a snap trigger:
-  // mychords intentionally renders chords in mid-line gaps (e.g. "Em" on
-  // the space between "тонка" and "діагональ"), and snapping to the nearest
-  // word start shifts the chord by ±1 character, losing that anchor.
+  // Chords are split into two buckets:
+  //   in-lyric  — col is inside the lyric range. May get snapped to fix
+  //               legacy mis-alignment when the chord row is much wider than
+  //               the lyric (the classic mychords-import bug).
+  //   past-end  — col is at or past the lyric end. mychords intentionally
+  //               renders trailing turn-around chords past the last word
+  //               (e.g. row 1 of Latexfauna's «Сьогодні в мене …морщин» has
+  //               A floating ~10 chars past "морщин"). Snapping them back
+  //               onto the last word collapses that visual gap.
+  // Past-end chords are NEVER snapped. In-lyric chords get the legacy snap
+  // only if the IN-LYRIC chords themselves indicate corruption — i.e. one
+  // lands on whitespace. Trailing past-end chords don't count.
+  const inLyric = chords.filter((c) => c.col < lyricLineLen);
+  const pastEnd = chords.filter((c) => c.col >= lyricLineLen);
   const needsSnap =
-    chordLine.length > lyricLineLen ||
-    chords.some((c) => c.col >= lyricLineLen);
-  const snapped = needsSnap ? snapChordsToWordStarts(chords, lyricLine) : chords;
+    inLyric.some((c) => {
+      const ch = lyricLine[c.col];
+      return ch === undefined || ch === " " || ch === "\t";
+    });
+  const snappedInLyric = needsSnap
+    ? snapChordsToWordStarts(inLyric, lyricLine)
+    : inLyric;
+  // Concatenate without re-sorting — extractChordPositions returns chords in
+  // source order already, and renderer doesn't care about array order.
+  const snapped = [...snappedInLyric, ...pastEnd];
 
   return { chords: snapped, lyrics, lyricsCol };
 }
