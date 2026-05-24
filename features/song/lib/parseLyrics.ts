@@ -279,11 +279,17 @@ function snapChordsToWordStarts(
       continue;
     }
 
-    // Candidate: largest wordStart that is ≤ col.
+    // Candidate: NEAREST wordStart to `col`. Snapping to the previous word
+    // start is wrong when the source position is in the gap between two words
+    // — e.g. mychords renders C#m on the space after "він" (col 14) inside
+    // "Без упину, він летів, летів". Previous-only snap pulls C#m back onto
+    // "він" (col 11), losing the "after він" anchor; nearest-snap correctly
+    // moves it forward to "летів" (col 15), matching mychords' visual.
     let snapIdx = 0;
+    let bestDist = Infinity;
     for (let k = 0; k < wordStarts.length; k++) {
-      if (wordStarts[k] <= col) snapIdx = k;
-      else break;
+      const d = Math.abs(wordStarts[k] - col);
+      if (d < bestDist) { bestDist = d; snapIdx = k; }
     }
     let snapped = wordStarts[snapIdx];
 
