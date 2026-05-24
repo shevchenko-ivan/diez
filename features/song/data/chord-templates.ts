@@ -18,6 +18,15 @@ export const FLAT_TO_SHARP: Record<string, string> = {
   Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#",
 };
 
+// Rare cross-name enharmonics — these aren't flat/sharp pairs but real
+// alternate spellings used in some songbooks (B# = C, E# = F, Cb = B,
+// Fb = E). mychords occasionally renders chord rows with "B#m" instead
+// of "Cm" — without this map the voicing lookup returns null and the
+// diagram panel shows an empty box.
+export const RARE_ENHARMONICS: Record<string, string> = {
+  "B#": "C", "E#": "F", Cb: "B", Fb: "E",
+};
+
 export const SHARP_TO_FLAT: Record<string, string> = {
   "C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab", "A#": "Bb",
 };
@@ -594,6 +603,7 @@ export function transposeChord(chord: string, semitones: number): string {
   const wasFlat = root.includes("b") || root === "H";
 
   if (root === "H") root = "B";
+  if (RARE_ENHARMONICS[root]) root = RARE_ENHARMONICS[root];
   if (FLAT_TO_SHARP[root]) root = FLAT_TO_SHARP[root];
 
   const index = NOTES.indexOf(root as typeof NOTES[number]);
@@ -637,6 +647,9 @@ function normalizeForDB(chord: string): string {
   if (!match) return chord;
   let root = match[1];
   const modifier = match[2];
+  // Cross-name enharmonics first (B# → C, Cb → B, etc.) — these never
+  // appear as DB keys, so we always rewrite before any other lookup.
+  if (RARE_ENHARMONICS[root]) root = RARE_ENHARMONICS[root];
   if (FLAT_TO_SHARP[root]) root = FLAT_TO_SHARP[root];
   const result = root + modifier;
   if (CHORD_DB[result]?.length) return result;
