@@ -210,12 +210,15 @@ function mergeChordOverLyric(chordLine: string, lyricLine: string): ChordLine {
   const lyrics = lyricLine.slice(lyricsCol).replace(/\s+$/, "");
 
   const lyricLineLen = lyricsCol + lyrics.length;
+  // Snap when the chord row was clearly misaligned by the legacy scraper —
+  // i.e. the row is wider than the lyric (trailing chord past the end). A
+  // chord landing on a SPACE between two words is *not* a snap trigger:
+  // mychords intentionally renders chords in mid-line gaps (e.g. "Em" on
+  // the space between "тонка" and "діагональ"), and snapping to the nearest
+  // word start shifts the chord by ±1 character, losing that anchor.
   const needsSnap =
     chordLine.length > lyricLineLen ||
-    chords.some((c) => {
-      const ch = lyricLine[c.col];
-      return ch === undefined || ch === " " || ch === "\t";
-    });
+    chords.some((c) => c.col >= lyricLineLen);
   const snapped = needsSnap ? snapChordsToWordStarts(chords, lyricLine) : chords;
 
   return { chords: snapped, lyrics, lyricsCol };
