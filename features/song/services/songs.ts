@@ -299,19 +299,35 @@ export const getSongsPage = unstable_cache(
     }
     if (difficulty) qry = qry.eq("difficulty", difficulty);
     if (q) {
-      // Resolve aliases: if the query matches an artist's alias (e.g. "DZIDZIO"),
-      // also search songs whose artist equals the canonical name ("Дзідзьо").
+      // Token-AND search: split on whitespace and require EACH token to match
+      // somewhere (title OR artist OR lyrics_text). Natural multi-word queries
+      // like "Скрябін Мам" then work — token1 matches artist, token2 matches
+      // title — even though the full phrase isn't in any single column.
+      // Aliases are still resolved against the full query (e.g. "DZIDZIO" →
+      // canonical "Дзідзьо") and OR'd into the FIRST token's clause so a
+      // matching artist still appears regardless of other tokens.
       const canonicalNames = await resolveArtistNamesByAlias(q);
-      const escaped = q.replace(/[%,()]/g, "\\$&");
-      const clauses = [
-        `title.ilike.%${escaped}%`,
-        `artist.ilike.%${escaped}%`,
-        ...canonicalNames.map(n => `artist.eq.${n.replace(/[,()]/g, "\\$&")}`),
-      ];
-      // Lyrics search activates for queries of 3+ chars (avoids matching
-      // every "a"/"і" in the catalogue and keeps trigram index efficient).
-      if (q.length >= 3) clauses.push(`lyrics_text.ilike.%${escaped}%`);
-      qry = qry.or(clauses.join(","));
+      const tokens = q.trim().split(/\s+/).filter((t) => t.length >= 2);
+      const usedTokens = tokens.length ? tokens : [q]; // fallback for 1-char queries
+      usedTokens.forEach((token, i) => {
+        const escaped = token.replace(/[%,()]/g, "\\$&");
+        const clauses = [
+          `title.ilike.%${escaped}%`,
+          `artist.ilike.%${escaped}%`,
+        ];
+        // Lyrics search activates for tokens of 3+ chars (avoids matching every
+        // "a"/"і" in the catalogue and keeps trigram index efficient).
+        if (token.length >= 3) clauses.push(`lyrics_text.ilike.%${escaped}%`);
+        // Alias-resolved canonical artist names attach to the first token's
+        // OR group — that's enough to surface alias-matched songs without
+        // having to repeat them across every token.
+        if (i === 0) {
+          clauses.push(
+            ...canonicalNames.map((n) => `artist.eq.${n.replace(/[,()]/g, "\\$&")}`),
+          );
+        }
+        qry = qry.or(clauses.join(","));
+      });
     }
     if (sortBy === "created_at_desc") qry = qry.order("created_at", { ascending: false });
     else if (sortBy === "created_at_asc") qry = qry.order("created_at", { ascending: true });
