@@ -77,15 +77,25 @@ function foldConfusables(s: string): string {
   return s.replace(CONFUSABLES_RE, (ch) => CYR_TO_LAT[ch] ?? ch);
 }
 
-// 0 = exact title, 1 = title prefix, 2 = title contains, 3 = artist contains,
-// 4 = lyrics-only. Lower wins; ties broken by views desc.
-function matchTier(row: SongRow, qNorm: string): number {
+// 0 = exact title, 1 = title prefix, 2 = title contains all tokens (or
+// title+artist mix), 3 = artist contains all tokens, 4 = lyrics-only.
+// Lower wins; ties broken by views desc. `tokens` are already lowercased+folded.
+function matchTier(row: SongRow, qNorm: string, tokens: string[]): number {
   const title = foldConfusables(row.title.toLowerCase().trim());
   const artist = foldConfusables(row.artist.toLowerCase());
-  if (title === qNorm) return 0;
-  if (title.startsWith(qNorm)) return 1;
-  if (title.includes(qNorm)) return 2;
-  if (artist.includes(qNorm)) return 3;
+  // Single-token shortcut preserves the original tight ranking (exact > prefix > contains).
+  if (tokens.length <= 1) {
+    if (title === qNorm) return 0;
+    if (title.startsWith(qNorm)) return 1;
+    if (title.includes(qNorm)) return 2;
+    if (artist.includes(qNorm)) return 3;
+    return 4;
+  }
+  const inTitle = tokens.every((t) => title.includes(t));
+  const inArtist = tokens.every((t) => artist.includes(t));
+  if (inTitle) return 2;
+  if (inArtist) return 3;
+  if (tokens.every((t) => title.includes(t) || artist.includes(t))) return 2;
   return 4;
 }
 
@@ -113,30 +123,39 @@ export async function GET(req: Request) {
 
   const sb = getClient();
 
-  // Build LIKE patterns for both the original query and the confusable-folded
-  // variant so a Latin-i title matches a Cyrillic-і query (and vice versa).
+  // Split query into tokens (≥2 chars) for token-AND matching across
+  // title/artist/lyrics. Lets "Скрябін Мам" match a row with artist "Скрябін"
+  // and title "Мам" — neither column contains the whole phrase.
+  const rawTokens = q.trim().split(/\s+/).filter((t) => t.length >= 2);
+  const tokens = rawTokens.length ? rawTokens : [q];
+  // Confusable-folded variants per token so Latin-i ⇄ Cyrillic-і still matches.
+  const tokenFilters = tokens.map((token) => {
+    const tFolded = foldConfusables(token);
+    const tVariants = tFolded === token ? [token] : [token, tFolded];
+    const tFields = token.length >= 3 ? ["title", "artist", "lyrics_text"] : ["title", "artist"];
+    return tVariants.flatMap((v) => tFields.map((f) => `${f}.ilike.%${v}%`)).join(",");
+  });
   const qFoldedRaw = foldConfusables(q);
-  const variants = qFoldedRaw === q ? [q] : [q, qFoldedRaw];
-  const fields = q.length >= 3 ? ["title", "artist", "lyrics_text"] : ["title", "artist"];
-  const songOr = variants.flatMap((v) => fields.map((f) => `${f}.ilike.%${v}%`)).join(",");
-  const artistOr = variants.map((v) => `name.ilike.%${v}%`).join(",");
-  // Lowercase + folded form for the in-JS tier comparison (matches the same
-  // transform applied to row titles inside matchTier).
+  const artistVariants = qFoldedRaw === q ? [q] : [q, qFoldedRaw];
+  const artistOr = artistVariants.map((v) => `name.ilike.%${v}%`).join(",");
+  // Lowercased + folded forms for the in-JS tier comparison.
   const qNorm = foldConfusables(q.toLowerCase());
+  const tokensNorm = tokens.map((t) => foldConfusables(t.toLowerCase()));
 
   // First page widens the raw window so tier ranking can lift a low-views
   // exact-title match into the visible top-10. Later pages fetch only PAGE_SIZE
   // since they just append below the already-shown results.
   const isFirstPage = offset === 0;
   const rawSize = isFirstPage ? FIRST_PAGE_RAW : PAGE_SIZE;
+  // Chain .or() per token so PostgREST ANDs the token groups together.
+  let songsQuery = sb
+    .from("songs")
+    .select("slug, title, artist, difficulty, cover_image, cover_color, views")
+    .eq("status", "published");
+  for (const tf of tokenFilters) songsQuery = songsQuery.or(tf);
+  songsQuery = songsQuery.order("views", { ascending: false }).range(offset, offset + rawSize - 1);
   const [songsRes, artistsRes] = await Promise.all([
-    sb
-      .from("songs")
-      .select("slug, title, artist, difficulty, cover_image, cover_color, views")
-      .eq("status", "published")
-      .or(songOr)
-      .order("views", { ascending: false })
-      .range(offset, offset + rawSize - 1),
+    songsQuery,
     // Artists list is short and only useful at the top of the dropdown — load
     // it once on the first page and skip it on subsequent infinite-scroll fetches.
     offset === 0
@@ -151,7 +170,7 @@ export async function GET(req: Request) {
 
   const rows = (songsRes.data ?? []) as SongRow[];
   const ranked = rows
-    .map((r) => ({ row: r, tier: matchTier(r, qNorm) }))
+    .map((r) => ({ row: r, tier: matchTier(r, qNorm, tokensNorm) }))
     .sort((a, b) => {
       if (a.tier !== b.tier) return a.tier - b.tier;
       return (b.row.views ?? 0) - (a.row.views ?? 0);
