@@ -10,6 +10,7 @@ import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
 import { ControlBlock } from "@/shared/components/ControlBlock";
 import { useFocusMode } from "@/shared/hooks/useFocusMode";
+import { useShowTabs } from "@/shared/hooks/useShowTabs";
 
 // Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
 const StrumPatternList = dynamic(
@@ -165,6 +166,7 @@ export function SongViewer({
   const [noBarreMode, setNoBarreMode] = useState(false);
   const [beginnerMode, setBeginnerMode] = useState(false);
   const [focusMode, , toggleFocusMode] = useFocusMode();
+  const [showTabs] = useShowTabs();
   const sectionsRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLSpanElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -728,37 +730,24 @@ export function SongViewer({
                   </div>
                 )}
                 <div className="space-y-1">
-                  {/* Tab block (collapsible) */}
-                  {section.tab && (
-                    <details className="group">
-                      <summary
-                        className="cursor-pointer select-none text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 py-1"
-                        style={{ color: "var(--text-muted)" }}
+                  {/* Tab block — global toggle (header button) gates visibility.
+                      Hidden by default; renders above the chord/lyric rows when on. */}
+                  {section.tab && showTabs && (
+                    <div
+                      className="mb-2 te-inset rounded-xl overflow-x-auto scrollbar-none"
+                      style={{ WebkitOverflowScrolling: "touch" }}
+                    >
+                      <pre
+                        className="px-3 py-2.5 font-mono leading-[1.15] whitespace-pre"
+                        style={{
+                          fontSize: `${Math.max(11, fontSize * 0.7)}px`,
+                          color: "var(--text)",
+                          opacity: 0.85,
+                        }}
                       >
-                        <span
-                          className="inline-block transition-transform group-open:rotate-90"
-                          style={{ fontSize: "8px" }}
-                        >
-                          ▶
-                        </span>
-                        Табулатура
-                      </summary>
-                      <div
-                        className="mt-2 te-inset rounded-xl overflow-x-auto scrollbar-none"
-                        style={{ WebkitOverflowScrolling: "touch" }}
-                      >
-                        <pre
-                          className="px-3 py-2.5 font-mono leading-[1.15] whitespace-pre"
-                          style={{
-                            fontSize: `${Math.max(11, fontSize * 0.7)}px`,
-                            color: "var(--text)",
-                            opacity: 0.85,
-                          }}
-                        >
-                          {section.tab}
-                        </pre>
-                      </div>
-                    </details>
+                        {section.tab}
+                      </pre>
+                    </div>
                   )}
                   {(() => {
                     // Pre-compute all segments so each line knows if the previous

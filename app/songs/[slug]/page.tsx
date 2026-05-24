@@ -10,6 +10,7 @@ import { getSongBySlug, getSongsByArtist, getSongsSharingChords, applyVariant } 
 import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongActions } from "@/features/song/components/SongActions";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
+import { TabsToggleButton } from "@/features/song/components/TabsToggleButton";
 import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Pencil } from "lucide-react";
@@ -286,6 +287,7 @@ export default async function SongPage({
               <AdminEditButton slug={slug} variantId={song.activeVariantId} />
             </Suspense>
             <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
+            <TabsToggleButton />
             <SongActions slug={song.slug} isSaved={saveState.isSaved} variantId={song.activeVariantId} />
           </div>
         </div>
