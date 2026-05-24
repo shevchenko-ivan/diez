@@ -530,9 +530,9 @@ function VoicingSwitcher({
       <span
         style={{
           fontSize: fontSize * 0.8,
-          // Bumped from 0.4 → 0.7 to clear WCAG AA contrast on the
-          // 1/N voicing counter (was failing Lighthouse at 11px small text).
-          opacity: 0.7,
+          // Use var(--text-muted) directly; opacity tweaks fail WCAG AA at
+          // 11px (small text needs 4.5:1; --text-muted is calibrated for it).
+          color: "var(--text-muted)",
           fontVariantNumeric: "tabular-nums",
         }}
       >

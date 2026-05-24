@@ -48,6 +48,8 @@ next-env.d.ts
 # editor / local tooling state
 /.vscode/
 /.claude/
+/.agents/
+/skills-lock.json
 
 # supabase CLI local state
 /supabase/.branches/

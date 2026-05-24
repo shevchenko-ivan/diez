@@ -43,6 +43,12 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
+  // YouTube IFrame API loads from www.youtube.com and sets third-party
+  // cookies on its first request. Gating the script + iframe behind the
+  // first user interaction is the standard "facade" pattern — it removes
+  // the cookies from the initial pageload (the issue Lighthouse Best
+  // Practices was flagging) and shaves the third-party request from LCP.
+  const [activated, setActivated] = useState(false);
   // Tap on play before YT API has finished loading — queue the intent and
   // fire it the moment the player goes ready.
   const pendingPlayRef = useRef(false);
@@ -100,6 +106,10 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
   }, [youtubeId]);
 
   useEffect(() => {
+    // Facade pattern: don't load the YT iframe API until the user has
+    // actually pressed play. Until then, the page is a static <button> +
+    // waveform — no third-party cookies, no extra TLS handshake.
+    if (!activated) return;
     // Poll for window.YT.Player instead of relying on the global
     // onYouTubeIframeAPIReady callback — when two SongPlayer instances mount
     // (mobile compact + desktop full) the callback gets overwritten and
@@ -131,7 +141,7 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
       try { playerRef.current?.stopVideo?.(); } catch {}
       playerRef.current?.destroy();
     };
-  }, [initPlayer]);
+  }, [activated, initPlayer]);
 
   useEffect(() => {
     if (playing) {
@@ -150,6 +160,13 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
     setPlayBtnAnim("press");
     setTimeout(() => setPlayBtnAnim("launch"), 100);
     setTimeout(() => setPlayBtnAnim("idle"), 400);
+    // First press: flip the facade — the init effect picks this up and
+    // loads the YT API + iframe. Queue the play so onReady fires it.
+    if (!activated) {
+      setActivated(true);
+      pendingPlayRef.current = true;
+      return;
+    }
     if (!ready) {
       // Queue play intent; onReady will drain it.
       pendingPlayRef.current = !pendingPlayRef.current;
@@ -174,7 +191,8 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
         const tag = t.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable) return;
       }
-      if (!ready) return;
+      // K activates the facade on first press; J/L only work once playing.
+      if (code !== "KeyK" && !ready) return;
       e.preventDefault();
       if (code === "KeyK") togglePlay();
       else if (code === "KeyJ") skip(-10);
@@ -183,7 +201,7 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, playing]);
+  }, [ready, playing, activated]);
 
   const skip = (secs: number) => {
     if (!ready) return;
