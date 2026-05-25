@@ -51,8 +51,14 @@ const SECTION_KEYWORDS = [
   "intro", "verse", "chorus", "bridge", "outro", "coda", "solo",
   "pre-chorus", "prechorus", "interlude", "break", "hook",
 ];
+// Strip leading non-letter glyphs (emoji, digits, keycap modifiers, arrows,
+// brackets, whitespace, punctuation) so labels like "1️⃣Куплет", "⬇️Приспів",
+// "➡️Програш 1 раз", "►Куплет" still match the keyword whitelist.
+const LEADING_NON_LETTER_RE =
+  /^[^\p{L}]+/u;
 function isSectionLabel(text: string): boolean {
-  const first = text.trim().toLowerCase().split(/[\s\d]/)[0];
+  const stripped = text.trim().replace(LEADING_NON_LETTER_RE, "").toLowerCase();
+  const first = stripped.split(/[\s\d]/)[0];
   return SECTION_KEYWORDS.includes(first);
 }
 
@@ -412,9 +418,22 @@ export function parseLyricsWithChords(raw: string): {
       colonLabel.length <= 30 &&
       colonLabel.split(/\s+/).length <= 4 &&
       isSectionLabel(colonLabel);
-    if (colonIsHeader || pipeMatch || bracketIsHeader) {
+    // Standalone label line (no `:` or `.` terminator) — short emoji/digit-
+    // prefixed labels like "➡️Програш 1 раз", "►Куплет 2", "🎵Бридж" still
+    // need to be promoted to section headers.
+    const standaloneIsHeader =
+      !colonIsHeader && !pipeMatch && !bracketIsHeader &&
+      trimmed.length > 0 && trimmed.length <= 30 &&
+      trimmed.split(/\s+/).length <= 4 &&
+      isSectionLabel(trimmed);
+    if (colonIsHeader || pipeMatch || bracketIsHeader || standaloneIsHeader) {
       if (currentGroup) groups.push(currentGroup);
-      const label = (colonIsHeader ? colonLabel : pipeMatch ? pipeMatch[1] : bracketMatch![1]).trim();
+      const label = (
+        colonIsHeader ? colonLabel
+        : pipeMatch ? pipeMatch[1]
+        : bracketIsHeader ? bracketMatch![1]
+        : trimmed
+      ).trim();
       currentGroup = { label, dataLines: [] };
       continue;
     }
