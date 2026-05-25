@@ -824,49 +824,16 @@ export function SongViewer({
                               {hasChords && (
                                 <div style={{ position: "relative", height: `${fontSize * 1.3}px`, whiteSpace: "pre" }}>
                                   {(() => {
-                                    // Two-pass chord placement:
-                                    //
-                                    // 1. Tahoma→monospace translation. mychords authors place chords
-                                    //    in Tahoma proportional layout where a space (~4px) is about
-                                    //    half a letter (~7.5px). Their stored chord col is "chars
-                                    //    from start of chord row" in Tahoma terms. In our monospace
-                                    //    render (8px per char), col N would visually appear ~2x too
-                                    //    far right. We approximate the author's intended visual
-                                    //    position by walking the chord row and converting each
-                                    //    chord's pixel offset (using Tahoma widths) into a
-                                    //    monospace col.
-                                    //
-                                    // 2. Cluster-overlap fix on the translated cols. mychords stores
-                                    //    trailing turnaround clusters like "C#m B F#m G#" with a
-                                    //    single space between names; after translation cols can land
-                                    //    close enough to overlap. Push subsequent chords right so
-                                    //    each gets at least 1ch of breathing room.
-                                    // Tahoma 16px measured widths (from mychords): space=5px,
-                                    // chord letter ≈ 11.6px, avg Cyrillic lyric char ≈ 7.36px.
-                                    // mychords renders both chord row and lyric in Tahoma, so a
-                                    // chord at chord-row pixel X visually lands above the lyric
-                                    // char closest to lyric pixel X. We translate to a monospace
-                                    // col by dividing the chord-row pixel position by the avg
-                                    // Tahoma lyric-char width (≈7.36) — the result is the lyric
-                                    // CHAR INDEX where the chord should sit. Our monospace lyric
-                                    // also indexes chars 1:1 with ch, so that col lands the chord
-                                    // visually where the mychords author intended.
-                                    const SPACE_PX = 5;
-                                    const CHORD_LETTER_PX = 11.6;
-                                    const LYRIC_AVG_PX = 7.36;
+                                    // Tahoma→monospace translation happens at SCRAPE time (see
+                                    // scripts/scrape-mychords.ts renderChordLine). So the stored
+                                    // chord col is already the lyric char index where the chord
+                                    // should sit, and render is straight absolute positioning.
+                                    // Single-pass cluster-overlap fix only — push subsequent chords
+                                    // right so each gets at least 1ch of breathing room.
                                     const sorted = [...seg.chords].sort((a, b) => a.col - b.col);
-                                    let pixelPos = 0;
-                                    let prevSrcEnd = 0;
-                                    const translated = sorted.map(({ chord, col }) => {
-                                      const tr = transposeChord(chord, transpose);
-                                      pixelPos += Math.max(0, col - prevSrcEnd) * SPACE_PX;
-                                      const renderColBase = Math.round(pixelPos / LYRIC_AVG_PX);
-                                      pixelPos += chord.length * CHORD_LETTER_PX;
-                                      prevSrcEnd = col + chord.length;
-                                      return { tr, col: renderColBase };
-                                    });
                                     let lastEnd = -1;
-                                    const placed = translated.map(({ tr, col }) => {
+                                    const placed = sorted.map(({ chord, col }) => {
+                                      const tr = transposeChord(chord, transpose);
                                       const finalCol = col > lastEnd ? col : lastEnd + 1;
                                       lastEnd = finalCol + tr.length;
                                       return { tr, col: finalCol };
