@@ -109,6 +109,28 @@ function fitBaseFret(strings: number[]): { strings: number[]; baseFret: number }
   return { strings, baseFret: minF };
 }
 
+// Drop uncommon quality extensions down to a voicing the ukulele
+// templates know about. Mirrors the guitar-side simplifyQuality in
+// chord-templates.ts. Without this, e.g. "Dmadd9/A" returns null
+// because there's no "madd9" template — but "Dm" (and "Dm/A") exists.
+function simplifyQualityUke(suffix: string): string | null {
+  const rules: [RegExp, string][] = [
+    [/madd9$/, "m"],
+    [/add\d+$/, ""],
+    [/maj(9|11|13)$/, "maj7"],
+    [/m(9|11|13)$/, "m7"],
+    [/(11|13)$/, "7"],
+    [/sus[24]?$/, ""],
+  ];
+  for (const [re, rep] of rules) {
+    if (re.test(suffix)) {
+      const next = suffix.replace(re, rep);
+      if (next !== suffix) return next;
+    }
+  }
+  return null;
+}
+
 export function lookupChordUke(chord: string): ChordDef[] | null {
   const normalized = normalizeName(chord);
   const override = OVERRIDES[normalized];
@@ -118,14 +140,22 @@ export function lookupChordUke(chord: string): ChordDef[] | null {
   if (!parsed) return null;
   // Slash chord (e.g. "G/B", "Am/A") — ukulele's 4 strings can't reliably
   // voice a bass inversion, so fall back to the base chord.
-  const coreSuffix = parsed.suffix.includes("/")
-    ? parsed.suffix.slice(0, parsed.suffix.indexOf("/"))
-    : parsed.suffix;
+  const slashIdx = parsed.suffix.indexOf("/");
+  const coreSuffix = slashIdx >= 0 ? parsed.suffix.slice(0, slashIdx) : parsed.suffix;
+  const slashTail = slashIdx >= 0 ? parsed.suffix.slice(slashIdx) : "";
   // Prefer the open-position override for the base chord before transposing.
   const baseOverride = OVERRIDES[parsed.root + coreSuffix];
   if (baseOverride) return [baseOverride];
   const tmpl = TEMPLATES_C[coreSuffix];
-  if (!tmpl) return null;
+  if (!tmpl) {
+    // Drop uncommon extension (e.g. madd9 → m) and retry. Preserve the
+    // slash tail so the caller still gets the bass-inverted chord shape.
+    const simpler = simplifyQualityUke(coreSuffix);
+    if (simpler !== null && simpler !== coreSuffix) {
+      return lookupChordUke(parsed.root + simpler + slashTail);
+    }
+    return null;
+  }
 
   const rootIdx = NOTES.indexOf(parsed.root as typeof NOTES[number]);
   if (rootIdx < 0) return null;
