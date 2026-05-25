@@ -459,21 +459,62 @@ export function parseLyricsWithChords(raw: string): {
 
   const sections: SongSection[] = groups.map((group) => {
     // Extract tab blocks (≥4 consecutive standard-tuning string lines).
+    // Also absorb a preceding short non-chord label line (e.g. "Ex.1",
+    // "Ex.2     Ex.3", "Riff 1") and compress runs of 4+ spaces inside
+    // tab content to 2 spaces (mychords uses wide spacer gaps in Tahoma
+    // that look excessive in our monospace).
     const tabBlocks: string[] = [];
     const nonTabLines: string[] = [];
     let tabAccum: string[] = [];
+    let labelForTab: string | null = null;
+
+    function looksLikeTabLabel(line: string): boolean {
+      const t = line.trim();
+      if (!t || t.length > 80) return false;
+      if (t.includes("|")) return false; // would conflict with tab marker / chord row
+      // All whitespace-separated tokens look label-ish: letters with optional
+      // dots, digits, a trailing period. Rejects normal lyric sentences.
+      const tokens = t.split(/\s+/);
+      if (tokens.length > 4) return false;
+      return tokens.every((tok) => /^[A-Za-zА-Яа-яІіЇїЄєҐґ]{1,8}\.?\d*$/.test(tok));
+    }
+    function compressTabSpaces(line: string): string {
+      return line.replace(/ {4,}/g, "  ");
+    }
+
     for (const line of group.dataLines) {
       if (TAB_LINE_RE.test(line.trim())) {
-        tabAccum.push(line.trimEnd());
+        // Starting a new tab block — try to absorb the preceding label line.
+        if (tabAccum.length === 0 && nonTabLines.length > 0 && labelForTab === null) {
+          const prev = nonTabLines[nonTabLines.length - 1];
+          if (looksLikeTabLabel(prev)) {
+            // Compress wide label spacing too — mychords uses 20+ spaces
+            // between adjacent labels in Tahoma; in monospace 2 is enough.
+            labelForTab = compressTabSpaces(nonTabLines.pop()!.replace(/\s+$/, ""));
+          }
+        }
+        tabAccum.push(compressTabSpaces(line.trimEnd()));
       } else {
-        if (tabAccum.length >= 4) tabBlocks.push(tabAccum.join("\n"));
-        else nonTabLines.push(...tabAccum);
+        if (tabAccum.length >= 4) {
+          const block = (labelForTab ? labelForTab + "\n" : "") + tabAccum.join("\n");
+          tabBlocks.push(block);
+        } else {
+          // Not a tab block after all — restore the absorbed label and accum.
+          if (labelForTab) nonTabLines.push(labelForTab);
+          nonTabLines.push(...tabAccum);
+        }
         tabAccum = [];
+        labelForTab = null;
         nonTabLines.push(line);
       }
     }
-    if (tabAccum.length >= 4) tabBlocks.push(tabAccum.join("\n"));
-    else nonTabLines.push(...tabAccum);
+    if (tabAccum.length >= 4) {
+      const block = (labelForTab ? labelForTab + "\n" : "") + tabAccum.join("\n");
+      tabBlocks.push(block);
+    } else {
+      if (labelForTab) nonTabLines.push(labelForTab);
+      nonTabLines.push(...tabAccum);
+    }
     const tab = tabBlocks.length > 0 ? tabBlocks.join("\n\n") : undefined;
 
     // Classify each line: inline-brackets, chord-only, or plain.
