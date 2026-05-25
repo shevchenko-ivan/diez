@@ -101,7 +101,11 @@ function tryInlineHeader(line: string): { label: string; rest: string } | null {
 }
 const HEADER_PIPE_RE = /^\|([^|]+)\|\s*:?\s*$/;
 const HEADER_BRACKETS_RE = /^\[([^\]]+)\]\s*:?\s*$/;
-const TAB_LINE_RE = /^[eEBGDA]\|[-0-9h p/\\~x().^sbt\s|]+$/;
+// Tab line: any note letter (A-G + optional #/b) followed by "|" and tab
+// content. Standard guitar tuning uses E B G D A E, but mychords transposes
+// the string labels along with chord transposition (so e.g. a +1 transpose
+// renders strings as F C G# etc.), so we accept any chromatic note letter.
+const TAB_LINE_RE = /^[A-Ga-g][#b]?\|[-0-9h p/\\~x().^sbt\s|]+$/;
 
 // Cyrillic→Latin homoglyph map — songbooks frequently mix layouts and
 // "Аm" (Cyrillic А) vs "Am" (Latin A) are visually identical. Without this
