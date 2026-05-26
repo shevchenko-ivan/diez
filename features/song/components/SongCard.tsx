@@ -344,6 +344,7 @@ export function HeroSearch() {
                     href={`/artists/${a.slug}`}
                     onClick={() => setOpen(false)}
                     onMouseEnter={() => setActiveIndex(idx)}
+                    onFocus={() => setActiveIndex(idx)}
                     data-idx={idx}
                     id={`hero-search-item-${idx}`}
                     role="option"
@@ -430,6 +431,7 @@ function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, on
             href={`/songs/${s.slug}`}
             onClick={onSelect}
             onMouseEnter={() => onActivate(idx)}
+            onFocus={() => onActivate(idx)}
             data-idx={idx}
             id={`hero-search-item-${idx}`}
             role="option"

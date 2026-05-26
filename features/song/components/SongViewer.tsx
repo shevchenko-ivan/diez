@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "re
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Music, Gauge, Minus, Plus, ChevronDown, ChevronUp, AArrowDown, AArrowUp, Sparkles, Pause, Pencil, X } from "lucide-react";
+import { Gauge, Minus, Plus, ChevronDown, AArrowDown, AArrowUp, Sparkles, Pause, Pencil, X } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
@@ -712,7 +712,23 @@ export function SongViewer({
               абвгдеєжзи
             </span>
             {song.sections.map((section: SongSection, sIdx: number) => (
-              <div key={sIdx} className={sIdx > 0 ? "mt-5" : ""}>
+              <div
+                key={sIdx}
+                className={sIdx > 0 ? "mt-5" : ""}
+                // Defer paint for off-screen song sections after the first two
+                // (which are above-the-fold on most songs and shouldn't have
+                // any first-paint hiccup). `containIntrinsicSize: auto 500px`
+                // reserves a placeholder; once the browser has measured the
+                // real height on the first render, it remembers that value —
+                // so `sectionsRef.current.getBoundingClientRect().bottom`
+                // stays accurate and the auto-scroll loop stops at the right
+                // place. Baseline since 2025-09; older browsers ignore.
+                style={
+                  sIdx >= 2
+                    ? { contentVisibility: "auto", containIntrinsicSize: "auto 500px" }
+                    : undefined
+                }
+              >
                 {section.label && (
                   <div className="mb-2 flex items-center gap-3">
                     <span
