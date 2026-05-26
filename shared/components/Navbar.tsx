@@ -206,8 +206,11 @@ export function Navbar() {
                   style={{ background: userAvatarUrl ? "transparent" : "var(--orange)" }}
                 >
                   {userAvatarUrl ? (
+                    // Raw <img> (не next/image) бо аватарка з 3rd-party
+                    // (Google/Supabase) — пропускаємо /_next/image proxy.
+                    // width/height — щоб уникнути CLS при swap-у з ініціала.
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={userAvatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={userAvatarUrl} alt="" width={28} height={28} className="w-full h-full object-cover" />
                   ) : (
                     userInitial
                   )}

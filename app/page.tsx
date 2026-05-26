@@ -55,9 +55,13 @@ export default async function HomePage() {
               maxWidth: 640,
               margin: "0 auto",
               fontWeight: 800,
+              // text-wrap: balance — браузер сам ділить два рядки рівно
+              // замість hardcoded <br />. Baseline since 2025-09; старі
+              // браузери просто роблять standard wrap (graceful no-op).
+              textWrap: "balance",
             }}
           >
-            Грай більше,<br />шукай менше.
+            Грай більше, шукай менше.
           </h1>
           <p
             className="font-medium mb-6 mx-auto"

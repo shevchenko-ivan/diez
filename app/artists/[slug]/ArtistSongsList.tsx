@@ -47,12 +47,16 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
       {showSearch && (
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <div className="relative flex-1">
+          <label htmlFor="artist-songs-search" className="sr-only">Пошук пісень виконавця</label>
           <Search
             size={16}
+            aria-hidden="true"
             className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none"
           />
           <input
+            id="artist-songs-search"
             type="search"
+            autoComplete="off"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Пошук пісні…"

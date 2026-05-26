@@ -263,6 +263,7 @@ export function HeroSearch() {
   return (
     <div ref={wrapRef} className="relative max-w-lg w-full">
       <form onSubmit={submit} className="flex items-center gap-2 w-full">
+        <label htmlFor="hero-search" className="sr-only">Пошук пісень, виконавців або тексту</label>
         <div
           className="te-inset flex-1 flex items-center gap-2 px-3 py-3"
           style={{ borderRadius: "999px" }}

@@ -481,8 +481,13 @@ export function GuitarTuner() {
           </span>
         </div>
 
-        {/* Status badge */}
+        {/* Status badge — `aria-live="polite"` announce-ить «В строї» /
+            «Нижче на 5¢» для screen-reader users. Це **основна** функція
+            тюнера для blind users — без announce вони не отримують feedback. */}
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           style={{
             display: "flex",
             justifyContent: "center",

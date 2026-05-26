@@ -166,6 +166,9 @@ export default async function ArtistPage({
                   alt={artistName}
                   width={96}
                   height={96}
+                  // Артист hero photo — LCP-кандидат на цій сторінці.
+                  // Без `priority` Next lazy-loads → 200-400ms LCP delay.
+                  priority
                   className="object-cover w-full h-full"
                 />
               ) : (
