@@ -481,13 +481,13 @@ export function GuitarTuner() {
           </span>
         </div>
 
-        {/* Status badge — `aria-live="polite"` announce-ить «В строї» /
-            «Нижче на 5¢» для screen-reader users. Це **основна** функція
-            тюнера для blind users — без announce вони не отримують feedback. */}
+        {/* Status badge.
+            SR-only live region announces coarse direction («В строї» /
+            «Нижче» / «Вище») without the cents value — so screen readers
+            don't drone on every single ¢ change while the user is tuning.
+            The visible badge keeps the precise cents readout for sighted
+            users. Both stay in sync because they read the same state. */}
         <div
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
           style={{
             display: "flex",
             justifyContent: "center",
@@ -495,8 +495,20 @@ export function GuitarTuner() {
             minHeight: "44px",
           }}
         >
+          {/* Coarse direction for screen readers. Text changes only when
+              the state flips (e.g. «Нижче» → «В строї»), not on every cent,
+              so the announce queue stays usable. */}
+          <span
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {!noteName ? "" : inTune ? "В строї" : cents < 0 ? "Нижче" : "Вище"}
+          </span>
           {noteName && (
             <div
+              aria-hidden="true"
               style={{
                 background: inTune
                   ? "rgba(34,197,94,0.14)"

@@ -1787,3 +1787,18 @@ html[data-theme="dark"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Prevent iOS Safari auto-zoom on input focus ─────────────────────────────
+   Safari zooms the viewport in whenever a focused form field has
+   font-size < 16px (an a11y heuristic for tiny text). On a designed UI
+   where 13-14px inputs are intentional, this reads as a viewport jump.
+   On touch-only devices we force ≥ 16px so the heuristic doesn't fire.
+   Desktop (hover:hover / pointer:fine) is left untouched.
+   Declared outside @layer so it overrides Tailwind utilities like text-sm. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
