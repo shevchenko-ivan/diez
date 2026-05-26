@@ -6,7 +6,7 @@ UI language: Ukrainian (buttons, labels, status text — all in Ukrainian).
 
 ## Current priority
 Post-launch polish: cover enrichment, lyrics search, artist dedupe, per-page tweaks.
-MVP is live at `https://diez-ten.vercel.app`.
+Live at `https://diez.net.ua`.
 
 ---
 
@@ -16,6 +16,16 @@ MVP is live at `https://diez-ten.vercel.app`.
 - Do not introduce unnecessary abstractions
 - Preserve project consistency — check existing components before creating new ones
 - UI texts — Ukrainian
+
+---
+
+## Browser support
+
+Diez targets **Baseline Newly Available** features (e.g. `text-wrap: balance`,
+`content-visibility`, `:user-valid`). Custom fallbacks are welcome only if
+they fit in ≤20 lines. No polyfills. Features without a graceful fallback
+(e.g. CSS Anchor Positioning) — skip until they reach Baseline Widely
+Available.
 
 ---
 
