@@ -338,27 +338,133 @@ export function SongViewer({
     setExpandedTool((prev) => (prev === tool ? null : tool));
   };
 
-  // Mobile bottom sheet — houses beginner toggle, transpose, font size, tuner,
-  // chord diagrams, and (for admins) edit. Closes on backdrop tap or Escape.
+  // Mobile bottom sheet — built on popover="manual" + vertical scroll-snap.
+  // Browser handles the swipe-down dismissal gesture natively (momentum,
+  // velocity, snap-to-position). YouTube iframe inside stays mounted across
+  // open/close cycles because popover doesn't destroy DOM content. See
+  // .dz-bottom-sheet styles in globals.css for the CSS architecture.
   const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetDrawerRef = useRef<HTMLDivElement | null>(null);
+  const sheetScrollerRef = useRef<HTMLDivElement | null>(null);
+  const sheetContentRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-collapse the expanded tool (e.g. tuner) when the sheet closes —
+  // otherwise the mic would stay live in the background.
   useEffect(() => {
-    if (!sheetOpen) {
-      // Auto-collapse tools (e.g. tuner) when the sheet is closed — otherwise
-      // the mic stays live in the background.
-      setExpandedTool(null);
-      return;
+    if (!sheetOpen) setExpandedTool(null);
+  }, [sheetOpen]);
+
+  // Drive the popover lifecycle + initial scroll position from sheetOpen.
+  // Desktop (>=lg) is `display:none` on the drawer, so showPopover() would
+  // throw there — bail early.
+  useEffect(() => {
+    const drawer = sheetDrawerRef.current;
+    const scroller = sheetScrollerRef.current;
+    if (!drawer || !scroller) return;
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
+
+    if (sheetOpen && !drawer.matches(":popover-open")) {
+      drawer.showPopover();
+      // Browser opens the popover at scroll-initial-target (closed spacer
+      // at top). Now scroll to the bottom (open) — scroll-behavior:smooth
+      // animates the sheet in.
+      const animateOpen = () => {
+        scroller.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
+      };
+      if (CSS.supports("scroll-initial-target", "nearest")) {
+        animateOpen();
+      } else {
+        // Fallback (Safari/Firefox today): jump-scroll to closed first,
+        // wait two frames so the jump commits, then animate open.
+        scroller.scrollTo({ top: 0, behavior: "instant" });
+        requestAnimationFrame(() => requestAnimationFrame(animateOpen));
+      }
+    } else if (!sheetOpen && drawer.matches(":popover-open")) {
+      // Scroll to closed; the IntersectionObserver below hides the popover
+      // once the sheet has fully left the viewport, so the close animation
+      // is visible to the user.
+      scroller.scrollTo({ top: 0, behavior: "auto" });
     }
+  }, [sheetOpen]);
+
+  // IntersectionObserver — when the sheet leaves the viewport (closed via
+  // swipe or scroll), hide the popover so the next open starts fresh.
+  useEffect(() => {
+    const drawer = sheetDrawerRef.current;
+    const content = sheetContentRef.current;
+    if (!drawer || !content) return;
+    const threshold = Math.max(1 / window.innerHeight, 0.01);
+    const io = new IntersectionObserver(
+      (entries) => {
+        const entry = entries.at(-1);
+        if (!entry) return;
+        if (entry.intersectionRatio < threshold && drawer.matches(":popover-open")) {
+          drawer.hidePopover();
+          // Sync React state — important when dismissal came from a swipe
+          // (no setSheetOpen call would have fired from the markup itself).
+          setSheetOpen(false);
+        }
+      },
+      { root: drawer, threshold: [threshold, 1] },
+    );
+    io.observe(content);
+    return () => io.disconnect();
+  }, []);
+
+  // Backdrop fade fallback for browsers without scroll-driven animations
+  // (Firefox today). Mirrors the @keyframes in globals.css.
+  useEffect(() => {
+    const scroller = sheetScrollerRef.current;
+    const drawer = sheetDrawerRef.current;
+    if (!scroller || !drawer) return;
+    if (CSS.supports("animation-timeline: scroll()")) return;
+    const onScroll = () => {
+      const max = scroller.scrollHeight - scroller.clientHeight;
+      const ratio = max > 0 ? scroller.scrollTop / max : 0;
+      drawer.style.setProperty("--sheet-backdrop", String(ratio));
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Light-dismiss: tap on the backdrop region (anywhere in the drawer
+  // outside the sheet content) closes it. Done manually because
+  // popover="manual" disables the auto light-dismiss behaviour.
+  useEffect(() => {
+    const drawer = sheetDrawerRef.current;
+    if (!drawer) return;
+    const onClick = (e: MouseEvent) => {
+      const content = sheetContentRef.current;
+      if (content && !content.contains(e.target as Node)) {
+        setSheetOpen(false);
+      }
+    };
+    drawer.addEventListener("click", onClick);
+    return () => drawer.removeEventListener("click", onClick);
+  }, []);
+
+  // Esc key — popover="manual" doesn't handle Esc automatically (only "auto"
+  // does), so wire it up while the sheet is open.
+  useEffect(() => {
+    if (!sheetOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSheetOpen(false);
     };
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", onKey);
-    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [sheetOpen]);
+
+  // Haptic feedback at the user-perceived close moment. Open already gets
+  // haptic from the trigger button itself (the existing trigger("light")
+  // onClick), so this useEffect only fires on the open→close transition —
+  // covering all close paths (X button, light-dismiss tap, Esc, swipe-down).
+  const wasSheetOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasSheetOpenRef.current && !sheetOpen) {
+      trigger("light");
+    }
+    wasSheetOpenRef.current = sheetOpen;
+  }, [sheetOpen, trigger]);
 
   // Fade mask on the chord list — recomputes when chords, voicings, or transpose change
   // (voicing switches can change row count; transpose can change chord names).
@@ -461,47 +567,32 @@ export function SongViewer({
             <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />
           </button>
 
-          {/* Bottom sheet — always mounted to keep embedded YouTube player alive
-              across open/close (music keeps playing after closing the sheet). */}
+          {/* Bottom sheet — popover="manual" + vertical scroll-snap pattern.
+              Browser handles swipe-down dismissal natively (momentum,
+              velocity, snap-to-position). Always mounted in DOM so the
+              embedded YouTube iframe survives open/close cycles.
+
+              Architecture: drawer popover wraps a vertical scroller with
+              two snap stops — a viewport-height spacer at the top (closed)
+              and the sheet content at the bottom (open). The user swipes
+              the sheet down to dismiss; browser scroll-snap handles the
+              gesture physics. See .dz-bottom-sheet styles in globals.css. */}
           <div
-            className="lg:hidden fixed inset-0 z-50"
-            role="dialog"
-            aria-modal={sheetOpen}
-            aria-hidden={!sheetOpen}
+            ref={sheetDrawerRef}
+            popover="manual"
+            className="dz-bottom-sheet lg:hidden"
             aria-label="Інструменти"
-            style={{
-              pointerEvents: sheetOpen ? "auto" : "none",
-              visibility: sheetOpen ? "visible" : "hidden",
-              transition: "visibility 200ms",
-            }}
           >
-            {/* Backdrop */}
-            <div
-              onClick={() => setSheetOpen(false)}
-              style={{
-                position: "absolute",
-                inset: 0,
-                // Slightly darker so dimming reads even in Firefox <103 where
-                // backdrop-filter is unsupported and the blur is dropped.
-                background: "rgba(0,0,0,0.45)",
-                backdropFilter: "blur(2px)",
-                WebkitBackdropFilter: "blur(2px)",
-                opacity: sheetOpen ? 1 : 0,
-                transition: "opacity 200ms ease",
-              }}
-            />
-            {/* Sheet panel */}
-            <div
-              className="absolute left-0 right-0 bottom-0 te-surface flex flex-col"
-              style={{
-                borderTopLeftRadius: "1.25rem",
-                borderTopRightRadius: "1.25rem",
-                maxHeight: "85vh",
-                paddingBottom: "env(safe-area-inset-bottom, 0px)",
-                transform: sheetOpen ? "translateY(0)" : "translateY(100%)",
-                transition: "transform 220ms ease",
-              }}
-            >
+            <div ref={sheetScrollerRef} className="dz-bottom-sheet-scroller">
+              {/* Closed-stop spacer — the empty viewport region the sheet
+                  snaps to when dismissed. */}
+              <div className="dz-bottom-sheet-spacer" aria-hidden="true" />
+              {/* Open-stop content — the sheet itself. */}
+              <div
+                ref={sheetContentRef}
+                className="dz-bottom-sheet-content te-surface"
+                tabIndex={-1}
+              >
                 {/* Drag handle + header */}
                 <div className="flex flex-col items-center pt-2 pb-1 flex-shrink-0">
                   <span
@@ -530,13 +621,7 @@ export function SongViewer({
                     <X size={16} strokeWidth={2} />
                   </button>
                 </div>
-                <div className="overflow-y-auto px-4 pb-5 pt-4 flex flex-col gap-5" style={{ WebkitOverflowScrolling: "touch" }}>
-                <style jsx>{`
-                  @keyframes dz-sheet-up {
-                    from { transform: translateY(100%); }
-                    to { transform: translateY(0); }
-                  }
-                `}</style>
+                <div className="overflow-y-auto px-4 pb-5 pt-4 flex flex-col gap-5" style={{ WebkitOverflowScrolling: "touch" }}>{/* keyframes for translateY animation removed — scroll-snap drives the slide in/out now */}
               {/* Audio player (compact) — at top */}
               {song.youtubeId && (
                 <div className="pb-3" style={{ borderBottom: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
@@ -690,6 +775,7 @@ export function SongViewer({
                 </div>
               </div>
             </div>
+          </div>
 
           {/* Song sections — single unified block */}
           <div

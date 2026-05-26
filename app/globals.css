@@ -1818,3 +1818,106 @@ html[data-theme="dark"] {
 .artist-strip-card:active .artist-strip-avatar {
   transform: scale(0.98);
 }
+
+/* ── Native bottom sheet (SongViewer mobile tools) ────────────────────────────
+   popover="manual" + vertical scroll-snap. Browser handles the swipe-down
+   gesture nativey — momentum, velocity, snap-to-position all come for free,
+   no JS touch handlers needed. YouTube iframe inside stays mounted across
+   open/close because popover doesn't destroy content.
+
+   Architecture (from Modern Web Guidance `navigation-drawer`, adapted to
+   vertical):
+   - Scroller has two rows: empty spacer (top) + sheet content (bottom).
+   - Closed = scroll at top → sheet entirely off-screen below viewport.
+   - Open   = scroll at bottom → sheet fully in viewport, spacer above.
+   - User swipes finger DOWN → content scrolls UP relative to viewport →
+     scroll position decreases → snap-back to closed.
+   - Backdrop opacity is tied to scroll position via scroll-driven animation
+     (Firefox falls back to a JS scroll listener — see SongViewer.tsx).      */
+.dz-bottom-sheet {
+  --sheet-backdrop: 0;
+  /* Reset popover UA defaults (white bg, border, centered, sized to content). */
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: 100%;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.dz-bottom-sheet::backdrop {
+  background: black;
+  /* calc keeps the backdrop semi-transparent at full open. */
+  opacity: calc(var(--sheet-backdrop) / 2);
+}
+
+.dz-bottom-sheet-scroller {
+  display: grid;
+  /* Top row = closed-stop spacer (full viewport).
+     Bottom row = sheet content (capped at 85svh — never grows with
+     iOS Safari address bar shrink/expand mid-swipe). */
+  grid-template-rows: 100% 85svh;
+  height: 100dvh;
+  overflow-y: scroll;
+  /* Stop the swipe from chaining into the page's vertical scroll
+     when the user reaches either snap edge. */
+  overscroll-behavior: none;
+  scrollbar-width: none;
+  /* Mandatory snap = sheet always settles fully open or fully closed,
+     never half-state after a partial swipe. */
+  scroll-snap-type: y mandatory;
+}
+.dz-bottom-sheet-scroller::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .dz-bottom-sheet-scroller { scroll-behavior: smooth; }
+}
+
+.dz-bottom-sheet-spacer {
+  scroll-snap-align: start;
+  /* Browser opens the popover already scrolled to this stop, so the JS
+     just needs to scroll to the open position to animate it in. Falls
+     back gracefully in browsers without scroll-initial-target — see
+     SongViewer.tsx fallback path. */
+  scroll-initial-target: nearest;
+}
+
+.dz-bottom-sheet-content {
+  scroll-snap-align: end;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scroll-driven backdrop fade — top of scroller (closed) = transparent,
+   bottom (open) = visible. Only applied where supported; @property gates
+   ensure --sheet-backdrop is interpolatable (without @property the value
+   would jump between 0 and 1, no fade). */
+@supports (animation-timeline: scroll()) {
+  .dz-bottom-sheet {
+    timeline-scope: --dz-sheet-fade;
+    animation: dz-sheet-fade linear both;
+    animation-timeline: --dz-sheet-fade;
+  }
+  .dz-bottom-sheet-scroller {
+    scroll-timeline: --dz-sheet-fade y;
+  }
+  @property --sheet-backdrop {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+  }
+  @keyframes dz-sheet-fade {
+    0%   { --sheet-backdrop: 0; }   /* scroll top  = closed */
+    100% { --sheet-backdrop: 1; }   /* scroll max  = open   */
+  }
+}
