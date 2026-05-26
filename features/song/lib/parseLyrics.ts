@@ -99,8 +99,8 @@ function tryInlineHeader(line: string): { label: string; rest: string } | null {
   }
   return null;
 }
-const HEADER_PIPE_RE = /^\|([^|]+)\|\s*:?\s*$/;
-const HEADER_BRACKETS_RE = /^\[([^\]]+)\]\s*:?\s*$/;
+const HEADER_PIPE_RE = /^\|([^|]+)\|\s*(?:[xх]\s*\d+\s*)?:?\s*$/;
+const HEADER_BRACKETS_RE = /^\[([^\]]+)\]\s*(?:[xх]\s*\d+\s*)?:?\s*$/;
 // Tab line: any note letter (A-G + optional #/b) followed by "|" and tab
 // content. Standard guitar tuning uses E B G D A E, but mychords transposes
 // the string labels along with chord transposition (so e.g. a +1 transpose
