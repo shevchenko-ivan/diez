@@ -157,13 +157,6 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
         </div>
       )}
 
-      <style>{`
-        .artist-strip-avatar { transition: transform 160ms ease, filter 160ms ease; }
-        @media (hover: hover) {
-          .artist-strip-card:hover .artist-strip-avatar { transform: scale(1.05); }
-        }
-        .artist-strip-card:active .artist-strip-avatar { transform: scale(0.98); }
-      `}</style>
     </div>
   );
 }

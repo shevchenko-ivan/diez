@@ -220,6 +220,22 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
     setCurrent(t);
   };
 
+  // Keyboard-driven seek for the waveform "slider". ←/→ skip 5s,
+  // Home/End jump to start/end. Pairs with role="slider" + tabIndex
+  // on the waveform so SR users can scrub without a mouse.
+  const onSeekKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!ready || duration === 0) return;
+    let next = current;
+    if (e.key === "ArrowLeft") next = Math.max(0, current - 5);
+    else if (e.key === "ArrowRight") next = Math.min(duration, current + 5);
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = duration;
+    else return;
+    e.preventDefault();
+    playerRef.current?.seekTo(next, true);
+    setCurrent(next);
+  };
+
   const playBtnStyle = {
     idle:   { transform: "scale(1)",    transition: "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)" },
     press:  { transform: "scale(0.88)", transition: "transform 0.1s ease" },
@@ -254,7 +270,15 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
             className="relative cursor-pointer"
             style={{ height: 28 }}
             onClick={seekClick}
-            title="Клікни для перемотки"
+            onKeyDown={onSeekKey}
+            role="slider"
+            tabIndex={ready ? 0 : -1}
+            aria-label="Прогрес відтворення"
+            aria-valuemin={0}
+            aria-valuemax={duration || 0}
+            aria-valuenow={Math.floor(current)}
+            aria-valuetext={`${formatTime(current)} з ${formatTime(duration)}`}
+            title="Клікни для перемотки, ←/→ перемотка 5с"
           >
             <div className="absolute inset-0 flex items-end gap-[2px]">
               {bars.map((h, i) => {
@@ -289,6 +313,7 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
         <TeButton
           onClick={togglePlay}
           aria-label={playing ? "Пауза" : "Грати"}
+          aria-pressed={playing}
           title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
           style={{
             width: 44, height: 44,
@@ -327,7 +352,15 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
         className="relative mb-2 cursor-pointer"
         style={{ height: 52 }}
         onClick={seekClick}
-        title="Клікни для перемотки"
+        onKeyDown={onSeekKey}
+        role="slider"
+        tabIndex={ready ? 0 : -1}
+        aria-label="Прогрес відтворення"
+        aria-valuemin={0}
+        aria-valuemax={duration || 0}
+        aria-valuenow={Math.floor(current)}
+        aria-valuetext={`${formatTime(current)} з ${formatTime(duration)}`}
+        title="Клікни для перемотки, ←/→ перемотка 5с"
       >
         <div className="absolute inset-0 flex items-end gap-[2px]">
           {bars.map((h, i) => {
@@ -415,6 +448,7 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
           <TeButton
             onClick={togglePlay}
             aria-label={playing ? "Пауза" : "Грати"}
+            aria-pressed={playing}
             title={playing ? "Пауза — клавіша K" : "Грати — клавіша K"}
             style={{
               width: 56, height: 56,

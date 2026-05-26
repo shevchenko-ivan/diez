@@ -99,7 +99,6 @@ export function ChordIdentifier() {
     setMatches([]);
   }, []);
 
-  const activeFrets = frets.map(f => f === -2 ? -1 : f);
   const hasDots = frets.some(f => f >= 0);
 
   return (
@@ -366,13 +365,21 @@ export function ChordIdentifier() {
         >
           Очистити
         </TeButton>
-        {hasDots && (
-          <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {matches.length > 0
+        {/* aria-live announces match count to screen readers as the user
+            taps frets — without this the result label is silent on AT. */}
+        <span
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="text-sm"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {hasDots
+            ? matches.length > 0
               ? `Знайдено ${matches.length} ${matches.length === 1 ? "акорд" : matches.length < 5 ? "акорди" : "акордів"}`
-              : "Акорд не розпізнано"}
-          </span>
-        )}
+              : "Акорд не розпізнано"
+            : ""}
+        </span>
       </div>
 
       {/* ── Results ── */}

@@ -1802,3 +1802,19 @@ html[data-theme="dark"] {
     font-size: 16px;
   }
 }
+
+/* ── ArtistStrip hover/active scale ──────────────────────────────────────────
+   Previously rendered as an inline <style> tag inside ArtistStrip.tsx, which
+   re-inserted into the DOM on every component render. Moved here as static
+   CSS — same selectors, same visual behaviour, zero re-injection cost. */
+.artist-strip-avatar {
+  transition: transform 160ms ease, filter 160ms ease;
+}
+@media (hover: hover) {
+  .artist-strip-card:hover .artist-strip-avatar {
+    transform: scale(1.05);
+  }
+}
+.artist-strip-card:active .artist-strip-avatar {
+  transform: scale(0.98);
+}
