@@ -61,6 +61,14 @@ export default async function RootLayout({
   // already skips cover images (preload links etc. never even ship).
   const h = await headers();
   const initialLite = h.get("save-data")?.toLowerCase() === "on";
+
+  // Resolve the PostHog ingest origin from env so the preconnect points at
+  // the right CDN (eu vs us). Falls back to the EU default that matches
+  // PostHogProvider's own fallback.
+  const phOrigin = new URL(
+    process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com",
+  ).origin;
+
   return (
     <html lang="uk" suppressHydrationWarning>
       <head>
@@ -84,6 +92,23 @@ export default async function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
+
+        {/* Preconnect to third-party origins that ship JS on every page
+            (PostHog after idle, Vercel Analytics + Speed Insights at the
+            bottom of <body>). Establishes the TLS handshake early so when
+            these scripts actually fetch their requests aren't waiting on
+            DNS + handshake. Saves ~100-300ms per request on slow networks.
+            Capped at 3 preconnects — Lighthouse warns above 4. */}
+        <link rel="preconnect" href={phOrigin} crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://va.vercel-scripts.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://vitals.vercel-insights.com" crossOrigin="anonymous" />
+
+        {/* dns-prefetch (lighter than preconnect — only DNS, no TLS) for
+            YouTube. The iframe API is only loaded when the user taps play
+            on a song page, so a full preconnect would waste a handshake on
+            home/index views. DNS resolution alone shaves ~20-100ms when the
+            user does click play. */}
+        <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
 
         {/* hreflang self-reference. Site is Ukrainian-only, but declaring
             it explicitly lets Google read the language signal (in addition
