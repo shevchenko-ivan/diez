@@ -7,6 +7,7 @@ const NAV_COLUMNS = [
     links: [
       { label: "Пісні",     href: "/songs" },
       { label: "Виконавці", href: "/artists" },
+      { label: "Навчання",  href: "/learn" },
     ],
   },
   {

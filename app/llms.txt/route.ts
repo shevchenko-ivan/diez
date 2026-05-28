@@ -1,5 +1,6 @@
 import { getRankedArtists } from "@/features/artist/services/artists";
 import { TOPICS } from "@/features/song/data/topics";
+import { ARTICLES } from "@/features/learn/articles";
 import { siteUrl } from "@/lib/utils";
 
 // llms.txt — a proposed convention (https://llmstxt.org) for telling LLM
@@ -57,6 +58,17 @@ export async function GET(): Promise<Response> {
   sections.push("");
   sections.push(`- [Tuner](${siteUrl}/tuner): Web Audio guitar tuner with a 3D head.`);
   sections.push(`- [Chord Identifier](${siteUrl}/chords): Click fret positions, get the chord name. Triad detection works from three notes.`);
+  sections.push("");
+
+  // Learn — beginner guitar articles (Ukrainian). Evergreen informational
+  // content; lets agents answering "що таке баре" / "як налаштувати гітару"
+  // link straight to the explainer.
+  sections.push("## Learn (guitar basics, Ukrainian)");
+  sections.push("");
+  sections.push(`- [Навчання](${siteUrl}/learn): Beginner guitar guides hub.`);
+  for (const a of ARTICLES) {
+    sections.push(`- [${a.meta.title}](${siteUrl}/learn/${a.meta.slug}): ${a.meta.excerpt}`);
+  }
   sections.push("");
 
   // Optional sections — site meta, kept low-priority so LLMs that respect
