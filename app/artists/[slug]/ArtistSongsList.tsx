@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Search, X, Volume2 } from "lucide-react";
+import { Search, X, Music } from "lucide-react";
+import { SongCover } from "@/shared/components/SongCover";
 import { SaveHeartButton } from "@/features/song/components/SaveHeartButton";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { SortSelect } from "@/app/songs/SortSelect";
@@ -102,24 +102,15 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
                   containIntrinsicSize: "auto 80px",
                 }}
               >
-                <div
-                  className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
-                  style={{
-                    background: song.coverImage
-                      ? undefined
-                      : `linear-gradient(135deg, ${song.coverColor ?? "#C8D5E8"}CC, ${song.coverColor ?? "#C8D5E8"}66)`,
-                  }}
-                >
-                  {song.coverImage && (
-                    <Image
-                      src={song.coverImage}
-                      alt={`Обкладинка пісні «${song.title}» — ${song.artist}`}
-                      title={`${song.title} — ${song.artist}`}
-                      width={56}
-                      height={56}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+                <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                  <SongCover
+                    src={song.coverImage}
+                    alt={`Обкладинка пісні «${song.title}» — ${song.artist}`}
+                    title={`${song.title} — ${song.artist}`}
+                    width={56}
+                    height={56}
+                    iconSize={22}
+                  />
                 </div>
                 <Link href={`/songs/${song.slug}`} className="flex-1 min-w-0">
                   <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
@@ -137,7 +128,7 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
                     opacity: hasPlayer ? 1 : 0.25,
                   }}
                 >
-                  <Volume2 size={18} strokeWidth={2} />
+                  <Music size={18} strokeWidth={2} />
                 </span>
                 <SaveHeartButton
                   slug={song.slug}

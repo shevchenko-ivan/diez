@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type SongVariant, type Difficulty, type StrumPattern, type Stroke, type NoteLength } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
+import type { ChordDef } from "../data/chord-templates";
 import { getTopicBySlug, isNoBarreSong, type Topic } from "../data/topics";
 
 // Public read-only client — no auth needed for published song reads.
@@ -28,7 +29,7 @@ const SONG_LIST_COLUMNS =
 const VARIANT_COLUMNS_BASE =
   "id, label, sections, chords, key, capo, views, created_at";
 const VARIANT_COLUMNS =
-  `${VARIANT_COLUMNS_BASE}, chord_voicings`;
+  `${VARIANT_COLUMNS_BASE}, chord_voicings, custom_voicings`;
 
 // Re-parse sections from the stored `raw` text so old rows (saved in the
 // previous word-aligned format) render with the new column-preserving parser.
@@ -67,6 +68,11 @@ function mapVariantRow(row: Record<string, unknown>, primaryId: string | null): 
     rawVoicings && typeof rawVoicings === "object" && !Array.isArray(rawVoicings)
       ? (rawVoicings as Record<string, number>)
       : undefined;
+  const rawCustom = row.custom_voicings;
+  const customVoicings =
+    rawCustom && typeof rawCustom === "object" && !Array.isArray(rawCustom)
+      ? (rawCustom as Record<string, ChordDef>)
+      : undefined;
   return {
     id,
     label: row.label as string,
@@ -78,6 +84,7 @@ function mapVariantRow(row: Record<string, unknown>, primaryId: string | null): 
     createdAt: row.created_at as string,
     isPrimary: id === primaryId,
     chordVoicings,
+    customVoicings,
   };
 }
 
@@ -531,5 +538,6 @@ export function applyVariant(song: Song, variantId: string | undefined): Song {
     capo: target.capo ?? song.capo,
     activeVariantId: target.id,
     chordVoicings: target.chordVoicings ?? song.chordVoicings,
+    customVoicings: target.customVoicings ?? song.customVoicings,
   };
 }

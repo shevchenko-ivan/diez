@@ -37,6 +37,38 @@ function parseChordVoicings(raw: unknown): Record<string, number> | null {
   }
 }
 
+// Validate admin-drawn custom voicings: { chord -> { strings[6], baseFret, barre? } }.
+// strings entries: -1 (muted) .. 24 (fret). Anything malformed is dropped.
+function parseCustomVoicings(raw: unknown): Record<string, { strings: number[]; baseFret: number; barre?: number }> | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const out: Record<string, { strings: number[]; baseFret: number; barre?: number }> = {};
+    for (const [chord, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof chord !== "string" || chord.length > 16) continue;
+      if (!v || typeof v !== "object") continue;
+      const def = v as Record<string, unknown>;
+      const strings = def.strings;
+      if (!Array.isArray(strings) || strings.length !== 6) continue;
+      const cleanStrings = strings.map((s) => {
+        const n = typeof s === "number" ? s : Number(s);
+        return Number.isInteger(n) && n >= -1 && n <= 24 ? n : -1;
+      });
+      // Need at least one sounding string (open or fretted).
+      if (!cleanStrings.some((s) => s >= 0)) continue;
+      const baseFretN = typeof def.baseFret === "number" ? def.baseFret : Number(def.baseFret);
+      const baseFret = Number.isInteger(baseFretN) && baseFretN >= 1 && baseFretN <= 24 ? baseFretN : 1;
+      const barreN = typeof def.barre === "number" ? def.barre : Number(def.barre);
+      const barre = Number.isInteger(barreN) && barreN >= 1 && barreN <= 24 ? barreN : undefined;
+      out[chord] = barre !== undefined ? { strings: cleanStrings, baseFret, barre } : { strings: cleanStrings, baseFret };
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!value.startsWith("https://") && !value.startsWith("http://")) return null;
@@ -181,6 +213,7 @@ export async function createVariant(formData: FormData) {
 
   const parsed = parseLyricsWithChords(lyricsRaw);
   const voicings = parseChordVoicings(formData.get("chord_voicings"));
+  const customVoicings = parseCustomVoicings(formData.get("custom_voicings"));
   const admin = createAdminClient();
 
   const { data: variant, error } = await admin
@@ -195,6 +228,7 @@ export async function createVariant(formData: FormData) {
       status: "published",
       author_id: adminId,
       ...(voicings ? { chord_voicings: voicings } : {}),
+      ...(customVoicings ? { custom_voicings: customVoicings } : {}),
     })
     .select("id")
     .single();
@@ -483,6 +517,7 @@ export async function updateSongFull(formData: FormData) {
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
   const voicings = parseChordVoicings(formData.get("chord_voicings"));
+  const customVoicings = parseCustomVoicings(formData.get("custom_voicings"));
 
   const admin = createAdminClient();
 
@@ -510,6 +545,7 @@ export async function updateSongFull(formData: FormData) {
         : {}),
       ...(status === "published" ? { status: "published" } : {}),
       ...(voicings ? { chord_voicings: voicings } : {}),
+      ...(customVoicings ? { custom_voicings: customVoicings } : {}),
     })
     .eq("id", variantId);
   if (variantErr) throw new Error(`Помилка варіанта: ${variantErr.message}`);

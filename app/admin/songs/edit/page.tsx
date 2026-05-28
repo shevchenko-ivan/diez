@@ -18,8 +18,8 @@ import { StringAutocomplete } from "./StringAutocomplete";
 import { AlbumAutocomplete } from "./AlbumAutocomplete";
 import { Suspense } from "react";
 import { SavedToast } from "@/shared/components/SavedToast";
-import { ChordVoicingPicker } from "./ChordVoicingPicker";
-import { parseLyricsWithChords } from "@/features/song/lib/parseLyrics";
+import { VoicingsSection } from "./VoicingsSection";
+import type { ChordDef } from "@/features/song/components/ChordDiagram";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
@@ -166,7 +166,7 @@ export default async function EditSongPage({
   {
     const res = await admin
       .from("song_variants")
-      .select("id, label, created_at, views, key, capo, sections, chord_voicings")
+      .select("id, label, created_at, views, key, capo, sections, chord_voicings, custom_voicings")
       .eq("song_id", song.id)
       .order("created_at", { ascending: true });
     if (res.error && res.error.code === "42703") {
@@ -191,6 +191,7 @@ export default async function EditSongPage({
     capo: number | null;
     sections: unknown;
     chord_voicings?: Record<string, number> | null;
+    custom_voicings?: Record<string, ChordDef> | null;
   }>;
 
   const requested =
@@ -422,11 +423,12 @@ export default async function EditSongPage({
             </div>
           </div>
 
-          {/* ── Аплікатури акордів (per-variant default voicings) ───── */}
-          <ChordVoicingPicker
+          {/* ── Аплікатури акордів (on-demand, per-variant defaults) ── */}
+          <VoicingsSection
             key={activeVariant.id}
-            chords={parseLyricsWithChords(serializeSections(activeVariant.sections)).chords}
             initial={activeVariant.chord_voicings}
+            initialCustom={activeVariant.custom_voicings}
+            lyricsFieldName="lyrics_with_chords"
           />
 
           <div className="pt-6 flex justify-end">

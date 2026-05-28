@@ -8,6 +8,7 @@ import { Search } from "lucide-react";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
 import { useLiteMode } from "@/shared/components/LiteModeProvider";
+import { SongCover } from "@/shared/components/SongCover";
 import { SaveHeartButton } from "./SaveHeartButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
@@ -49,31 +50,18 @@ export function SongCard({ ...props }: SongCardProps) {
             screen-reader label. "Cover-link-to-text" patterns sometimes
             advise alt="" so the link text isn't repeated, but here the title
             and artist are visually beside the image; for SEO + a11y the
-            descriptive alt wins. */}
-        {props.coverImage && !lite ? (
-          <Image
-            src={props.coverImage}
-            className="object-cover"
-            alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
-            // `title` is the hover-tooltip attribute — Google doesn't use it
-            // for ranking but SEO crawlers ding the page if it's missing.
-            title={`${props.title} — ${props.artist}`}
-            fill
-            sizes="(max-width: 768px) 50vw, 25vw"
-            // First few cards above the fold (home page "Топ популярних")
-            // are almost always the LCP element. `priority` skips lazy
-            // loading and lets Next preload them — drops LCP by 3-5 seconds
-            // on slow connections per PageSpeed Insights audit.
-            priority={typeof props.index === "number" && props.index < 4}
-          />
-        ) : (
-          <div
-            className="w-full h-full"
-            style={{
-              background: `linear-gradient(145deg, ${props.coverColor || '#C8D5E8'}CC, ${props.coverColor || '#C8D5E8'}66)`,
-            }}
-          />
-        )}
+            descriptive alt wins. `priority` on the first few above-the-fold
+            cards (home "Топ популярних") skips lazy loading — drops LCP by
+            3-5s on slow connections per PageSpeed Insights audit. */}
+        <SongCover
+          src={lite ? null : props.coverImage}
+          alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
+          title={`${props.title} — ${props.artist}`}
+          fill
+          sizes="(max-width: 768px) 50vw, 25vw"
+          priority={typeof props.index === "number" && props.index < 4}
+          iconSize={40}
+        />
 
         {/* Chords Preview */}
         <div className="absolute bottom-2 left-2 flex gap-1 z-10">

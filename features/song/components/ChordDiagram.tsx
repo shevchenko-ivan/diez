@@ -443,6 +443,8 @@ interface ChordPanelProps {
   diagramWidth?: number;
   diagramHeight?: number;
   noBarreMode?: boolean;
+  /** Admin-drawn custom shapes per chord name, appended to that chord's list. */
+  customVoicings?: Record<string, ChordDef>;
 }
 
 // ─── Shared voicing state hook ───────────────────────────────────────────────
@@ -568,9 +570,11 @@ interface ChordHoverProps {
   chord: string;
   voicingState: VoicingState;
   children: React.ReactNode;
+  /** Admin-drawn custom shapes per chord name, appended to the voicing list. */
+  customVoicings?: Record<string, ChordDef>;
 }
 
-export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
+export function ChordHover({ chord, voicingState, children, customVoicings }: ChordHoverProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -580,7 +584,11 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
   const openFreqs = instrument === "ukulele" ? UKE_OPEN_FREQS : GUITAR_OPEN_FREQS;
 
   const pianoDefs = instrument === "piano" ? lookupChordPiano(chord) : null;
-  const defs = instrument === "piano" ? null : lookupChordForInstrument(chord, instrument);
+  const baseDefs = instrument === "piano" ? null : lookupChordForInstrument(chord, instrument);
+  const custom = instrument === "guitar" ? customVoicings?.[chord] : undefined;
+  const defs = baseDefs
+    ? (custom ? [...baseDefs, custom] : baseDefs)
+    : (custom ? [custom] : null);
   if (!defs && !pianoDefs) return <>{children}</>;
 
   const total = (pianoDefs ?? defs)!.length;
@@ -661,7 +669,7 @@ export function ChordHover({ chord, voicingState, children }: ChordHoverProps) {
   );
 }
 
-export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramWidth = 100, diagramHeight = 125, noBarreMode = false }: ChordPanelProps) {
+export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramWidth = 100, diagramHeight = 125, noBarreMode = false, customVoicings }: ChordPanelProps) {
   // Use external state if provided, otherwise create local
   const localState = useVoicings(songSlug);
   const { voicingIdx, setVoicingIdx } = voicingState || localState;
@@ -699,7 +707,10 @@ export function ChordPanel({ chords, transpose, songSlug, voicingState, diagramW
         // In no-barre mode prefer the dedicated alternative voicing if available (guitar only).
         const noBarreAlt = noBarreMode && instrument === "guitar" ? lookupNoBarreVoicing(transposed) : null;
         const base = lookupChordForInstrument(transposed, instrument);
-        const defs = noBarreAlt ? [noBarreAlt, ...(base ?? [])] : base;
+        const custom = instrument === "guitar" ? customVoicings?.[transposed] : undefined;
+        let defs: ChordDef[] | null = base ?? null;
+        if (noBarreAlt) defs = [noBarreAlt, ...(defs ?? [])];
+        if (custom) defs = [...(defs ?? []), custom];
 
         if (!defs) {
           return (

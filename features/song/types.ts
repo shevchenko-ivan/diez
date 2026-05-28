@@ -1,3 +1,5 @@
+import type { ChordDef } from "./data/chord-templates";
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 export interface ChordPlacement {
@@ -70,6 +72,8 @@ export interface SongVariant {
   isPrimary: boolean;
   /** Admin-picked default voicing index per chord name (e.g. {"Bb6": 0, "A7": 2}). */
   chordVoicings?: Record<string, number>;
+  /** Admin-drawn custom shapes per chord name. Appended to that chord's voicing list. */
+  customVoicings?: Record<string, ChordDef>;
 }
 
 export interface Song {
@@ -98,4 +102,6 @@ export interface Song {
   strumPatterns?: StrumPattern[];
   /** Admin-picked default voicing index per chord name (variant-scoped). */
   chordVoicings?: Record<string, number>;
+  /** Admin-drawn custom shapes per chord name (variant-scoped). */
+  customVoicings?: Record<string, ChordDef>;
 }

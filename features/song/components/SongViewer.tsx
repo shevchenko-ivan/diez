@@ -219,6 +219,16 @@ export function SongViewer({
       setBeginnerMode(true);
     }
   };
+  // Manual transpose breaks beginner mode's "no barre" guarantee: the chosen
+  // key no longer matches bestBeginnerTranspose and most chords become barre
+  // again. Drop the toggle so it doesn't stay lit while barre chords reappear.
+  const adjustTranspose = (delta: number) => {
+    setTranspose((p) => p + delta);
+    if (beginnerMode) {
+      setBeginnerMode(false);
+      setNoBarreMode(false);
+    }
+  };
   const { trigger } = useHaptics();
   const voicingState = useVoicings(song.slug, song.chordVoicings);
 
@@ -522,11 +532,11 @@ export function SongViewer({
           {/* Transpose */}
           <ControlBlock label="Транспонування">
             <div className="flex items-center justify-between">
-              <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон"><Minus size={16} strokeWidth={2} /></AdjusterButton>
+              <AdjusterButton onClick={() => adjustTranspose(-1)} aria-label="Понизити тон"><Minus size={16} strokeWidth={2} /></AdjusterButton>
               <span className="font-mono font-bold text-sm" style={{ color: "var(--text)" }}>
                 {transpose > 0 ? `+${transpose}` : transpose}
               </span>
-              <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон"><Plus size={16} strokeWidth={2} /></AdjusterButton>
+              <AdjusterButton onClick={() => adjustTranspose(1)} aria-label="Підвищити тон"><Plus size={16} strokeWidth={2} /></AdjusterButton>
             </div>
           </ControlBlock>
 
@@ -544,7 +554,7 @@ export function SongViewer({
                 WebkitOverflowScrolling: "touch",
               }}
             >
-              <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} noBarreMode={noBarreMode} />
+              <ChordPanel chords={song.chords} transpose={transpose} voicingState={voicingState} noBarreMode={noBarreMode} customVoicings={song.customVoicings} />
             </div>
           </div>
 
@@ -698,7 +708,7 @@ export function SongViewer({
                     Транспонування
                   </span>
                   <div className="flex items-center gap-2">
-                    <AdjusterButton onClick={() => setTranspose((p) => p - 1)} aria-label="Понизити тон">
+                    <AdjusterButton onClick={() => adjustTranspose(-1)} aria-label="Понизити тон">
                       <Minus size={16} strokeWidth={2} />
                     </AdjusterButton>
                     <span
@@ -707,7 +717,7 @@ export function SongViewer({
                     >
                       {transpose > 0 ? `+${transpose}` : transpose}
                     </span>
-                    <AdjusterButton onClick={() => setTranspose((p) => p + 1)} aria-label="Підвищити тон">
+                    <AdjusterButton onClick={() => adjustTranspose(1)} aria-label="Підвищити тон">
                       <Plus size={16} strokeWidth={2} />
                     </AdjusterButton>
                   </div>
@@ -720,6 +730,7 @@ export function SongViewer({
                   diagramWidth={92}
                   diagramHeight={115}
                   noBarreMode={noBarreMode}
+                  customVoicings={song.customVoicings}
                 />
               </div>
 
@@ -952,7 +963,7 @@ export function SongViewer({
                                           letterSpacing: "-0.02em",
                                         }}
                                       >
-                                        <ChordHover chord={tr} voicingState={voicingState}>
+                                        <ChordHover chord={tr} voicingState={voicingState} customVoicings={song.customVoicings}>
                                           {tr}
                                         </ChordHover>
                                       </span>
@@ -1025,7 +1036,7 @@ export function SongViewer({
                                             letterSpacing: "-0.02em",
                                           }}
                                         >
-                                          <ChordHover chord={tr} voicingState={voicingState}>
+                                          <ChordHover chord={tr} voicingState={voicingState} customVoicings={song.customVoicings}>
                                             {tr}
                                           </ChordHover>
                                         </span>
