@@ -13,6 +13,7 @@ import { useHaptics } from "@/shared/hooks/useHaptics";
 const NAV_LINKS = [
   { href: "/",                  label: "Головна" },
   { href: "/artists",           label: "Виконавці" },
+  { href: "/learn",             label: "Навчання" },
   { href: "/tuner",             label: "Тюнер" },
   { href: "/chords",            label: "Визначити акорд" },
 ];

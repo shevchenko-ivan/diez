@@ -2,6 +2,7 @@ import { type MetadataRoute } from "next";
 import { getAllSongCovers } from "@/features/song/services/songs";
 import { getRankedArtists } from "@/features/artist/services/artists";
 import { TOPICS } from "@/features/song/data/topics";
+import { ARTICLES } from "@/features/learn/articles";
 import { siteUrl } from "@/lib/utils";
 
 // Mirror the robots.ts guard: no sitemap on non-production deployments.
@@ -88,6 +89,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.6,
     },
+    // Learn hub + articles — evergreen informational content targeting broad
+    // beginner queries ("що таке баре", "як читати акорди") that build topical
+    // authority for the whole domain.
+    {
+      url: `${siteUrl}/learn`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    ...ARTICLES.map((a) => ({
+      url: `${siteUrl}/learn/${a.meta.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     {
       url: `${siteUrl}/about`,
       lastModified: new Date(),

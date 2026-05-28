@@ -1845,6 +1845,55 @@ html[data-theme="dark"] {
   .dz-page-open { animation: none; }
 }
 
+/* ── Article prose (Learn section) ───────────────────────────────────────────
+   No Tailwind typography plugin in this project — articles use semantic tags
+   wrapped in `.learn-prose`, styled here for consistent reading rhythm. */
+.learn-prose {
+  color: var(--text-mid);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.learn-prose p { margin: 0 0 1.1rem; }
+.learn-prose h2 {
+  color: var(--text);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 2.1rem 0 0.85rem;
+}
+.learn-prose ul,
+.learn-prose ol {
+  margin: 0 0 1.1rem;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.learn-prose ul { list-style: disc; }
+.learn-prose ol { list-style: decimal; }
+.learn-prose strong { color: var(--text); font-weight: 700; }
+.learn-prose em { font-style: italic; }
+.learn-prose a {
+  color: var(--orange-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.learn-prose a:hover { opacity: 0.82; }
+
+/* Theme-aware guitar anatomy image — show the cream-bg version in light theme,
+   the black-bg version in dark theme. Pure CSS, mirrors the project's theme
+   cascade (prefers-color-scheme + [data-theme] overrides). */
+.guitar-anatomy-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  .guitar-anatomy-light { display: none; }
+  .guitar-anatomy-dark { display: block; }
+}
+[data-theme="light"] .guitar-anatomy-light { display: block; }
+[data-theme="light"] .guitar-anatomy-dark { display: none; }
+[data-theme="dark"] .guitar-anatomy-light { display: none; }
+[data-theme="dark"] .guitar-anatomy-dark { display: block; }
+
 /* ── Native bottom sheet (SongViewer mobile tools) ────────────────────────────
    popover="manual" + vertical scroll-snap. Browser handles the swipe-down
    gesture nativey — momentum, velocity, snap-to-position all come for free,
