@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { type Song, type SongSection, type SongVariant, type Difficulty, type StrumPattern, type Stroke, type NoteLength } from "../types";
 import { hasEnvVars } from "@/lib/utils";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
+import { normalizeForSearch } from "../lib/translit";
 import type { ChordDef } from "../data/chord-templates";
 import { getTopicBySlug, isNoBarreSong, type Topic } from "../data/topics";
 
@@ -238,21 +239,26 @@ export const getArtistPopularity = unstable_cache(
   { revalidate: 1800, tags: ["songs"] },
 );
 
-// Look up canonical artist names whose alias array contains a value matching
-// the search query (case-insensitive substring). Used to expand the search so
-// that "DZIDZIO" also returns songs by "Дзідзьо".
+// Look up canonical artist names matching the search query. Matches against
+// aliases (case-insensitive substring) AND a transliterated, punctuation-free
+// form of the name, so that "DZIDZIO" → "Дзідзьо" and "оторвальд" → "O.Torvald"
+// both expand the search to the right artist.
 async function resolveArtistNamesByAlias(q: string): Promise<string[]> {
   if (!hasEnvVars || !q || q.length < 2) return [];
   const { data } = await getClient()
     .from("artists")
-    .select("name, aliases")
-    .not("aliases", "is", null);
+    .select("name, aliases");
   if (!data) return [];
   const needle = q.toLowerCase();
+  const nq = normalizeForSearch(q);
   const out: string[] = [];
   for (const row of data as { name: string; aliases: string[] | null }[]) {
     const als = row.aliases ?? [];
-    if (als.some(a => a.toLowerCase().includes(needle))) out.push(row.name);
+    const aliasMatch = als.some(
+      (a) => a.toLowerCase().includes(needle) || (nq.length >= 3 && normalizeForSearch(a).includes(nq)),
+    );
+    const nameMatch = nq.length >= 3 && normalizeForSearch(row.name).includes(nq);
+    if (aliasMatch || nameMatch) out.push(row.name);
   }
   return out;
 }

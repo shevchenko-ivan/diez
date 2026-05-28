@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { hasEnvVars } from "@/lib/utils";
+import { normalizeForSearch } from "@/features/song/lib/translit";
 
 export const runtime = "edge";
 
@@ -80,23 +81,32 @@ function foldConfusables(s: string): string {
 // 0 = exact title, 1 = title prefix, 2 = title contains all tokens (or
 // title+artist mix), 3 = artist contains all tokens, 4 = lyrics-only.
 // Lower wins; ties broken by views desc. `tokens` are already lowercased+folded.
-function matchTier(row: SongRow, qNorm: string, tokens: string[]): number {
+// `resolvedArtists` holds normalized names matched via transliteration (e.g.
+// "оторвальд" → "O.Torvald") — those rows are treated as artist matches so they
+// don't fall into the lyrics bucket.
+function matchTier(row: SongRow, qNorm: string, tokens: string[], resolvedArtists: Set<string>): number {
   const title = foldConfusables(row.title.toLowerCase().trim());
   const artist = foldConfusables(row.artist.toLowerCase());
-  // Single-token shortcut preserves the original tight ranking (exact > prefix > contains).
-  if (tokens.length <= 1) {
-    if (title === qNorm) return 0;
-    if (title.startsWith(qNorm)) return 1;
-    if (title.includes(qNorm)) return 2;
-    if (artist.includes(qNorm)) return 3;
+  const tier = (() => {
+    // Single-token shortcut preserves the original tight ranking (exact > prefix > contains).
+    if (tokens.length <= 1) {
+      if (title === qNorm) return 0;
+      if (title.startsWith(qNorm)) return 1;
+      if (title.includes(qNorm)) return 2;
+      if (artist.includes(qNorm)) return 3;
+      return 4;
+    }
+    const inTitle = tokens.every((t) => title.includes(t));
+    const inArtist = tokens.every((t) => artist.includes(t));
+    if (inTitle) return 2;
+    if (inArtist) return 3;
+    if (tokens.every((t) => title.includes(t) || artist.includes(t))) return 2;
     return 4;
-  }
-  const inTitle = tokens.every((t) => title.includes(t));
-  const inArtist = tokens.every((t) => artist.includes(t));
-  if (inTitle) return 2;
-  if (inArtist) return 3;
-  if (tokens.every((t) => title.includes(t) || artist.includes(t))) return 2;
-  return 4;
+  })();
+  // A transliteration-resolved artist (no direct substring hit) still ranks as
+  // an artist match rather than dropping into lyrics.
+  if (tier === 4 && resolvedArtists.has(normalizeForSearch(row.artist))) return 3;
+  return tier;
 }
 
 export async function GET(req: Request) {
@@ -135,18 +145,49 @@ export async function GET(req: Request) {
     const tFields = token.length >= 3 ? ["title", "artist", "lyrics_text"] : ["title", "artist"];
     return tVariants.flatMap((v) => tFields.map((f) => `${f}.ilike.%${v}%`)).join(",");
   });
-  const qFoldedRaw = foldConfusables(q);
-  const artistVariants = qFoldedRaw === q ? [q] : [q, qFoldedRaw];
-  const artistOr = artistVariants.map((v) => `name.ilike.%${v}%`).join(",");
   // Lowercased + folded forms for the in-JS tier comparison.
   const qNorm = foldConfusables(q.toLowerCase());
   const tokensNorm = tokens.map((t) => foldConfusables(t.toLowerCase()));
+  // Transliterated, punctuation-free query for alphabet-agnostic artist match.
+  const nq = normalizeForSearch(q);
 
   // First page widens the raw window so tier ranking can lift a low-views
   // exact-title match into the visible top-10. Later pages fetch only PAGE_SIZE
   // since they just append below the already-shown results.
   const isFirstPage = offset === 0;
   const rawSize = isFirstPage ? FIRST_PAGE_RAW : PAGE_SIZE;
+
+  // Resolve artists via transliteration first (first page only) so we can both
+  // show them in the dropdown and expand the song query to include their songs
+  // even when the Cyrillic query doesn't substring-match the Latin name.
+  let artists: { slug: string; name: string; photo_url: string | null }[] = [];
+  let resolvedNames: string[] = [];
+  if (isFirstPage && nq.length >= 2) {
+    const needle = q.toLowerCase();
+    const { data: allArtists } = await sb
+      .from("artists")
+      .select("slug, name, photo_url, aliases")
+      .order("name");
+    const matched = ((allArtists ?? []) as { slug: string; name: string; photo_url: string | null; aliases: string[] | null }[])
+      .filter((a) => {
+        if (normalizeForSearch(a.name).includes(nq)) return true;
+        return (a.aliases ?? []).some(
+          (al) => al.toLowerCase().includes(needle) || (nq.length >= 3 && normalizeForSearch(al).includes(nq)),
+        );
+      });
+    artists = matched.slice(0, 3).map(({ slug, name, photo_url }) => ({ slug, name, photo_url }));
+    // Expand songs only for queries long enough to be specific (avoids noise).
+    if (nq.length >= 3) resolvedNames = matched.map((a) => a.name).slice(0, 20);
+  }
+  const resolvedSet = new Set(resolvedNames.map(normalizeForSearch));
+
+  // Inject resolved artist names into the first token's OR group so their songs
+  // surface regardless of the other tokens (mirrors getSongsPage behaviour).
+  if (resolvedNames.length && tokenFilters.length) {
+    const extra = resolvedNames.map((n) => `artist.eq.${n.replace(/[,()]/g, "\\$&")}`).join(",");
+    tokenFilters[0] = `${tokenFilters[0]},${extra}`;
+  }
+
   // Chain .or() per token so PostgREST ANDs the token groups together.
   let songsQuery = sb
     .from("songs")
@@ -154,23 +195,11 @@ export async function GET(req: Request) {
     .eq("status", "published");
   for (const tf of tokenFilters) songsQuery = songsQuery.or(tf);
   songsQuery = songsQuery.order("views", { ascending: false }).range(offset, offset + rawSize - 1);
-  const [songsRes, artistsRes] = await Promise.all([
-    songsQuery,
-    // Artists list is short and only useful at the top of the dropdown — load
-    // it once on the first page and skip it on subsequent infinite-scroll fetches.
-    offset === 0
-      ? sb
-          .from("artists")
-          .select("slug, name, photo_url")
-          .or(artistOr)
-          .order("name")
-          .limit(3)
-      : Promise.resolve({ data: [] as { slug: string; name: string; photo_url: string | null }[] }),
-  ]);
+  const songsRes = await songsQuery;
 
   const rows = (songsRes.data ?? []) as SongRow[];
   const ranked = rows
-    .map((r) => ({ row: r, tier: matchTier(r, qNorm, tokensNorm) }))
+    .map((r) => ({ row: r, tier: matchTier(r, qNorm, tokensNorm, resolvedSet) }))
     .sort((a, b) => {
       if (a.tier !== b.tier) return a.tier - b.tier;
       return (b.row.views ?? 0) - (a.row.views ?? 0);
@@ -189,7 +218,7 @@ export async function GET(req: Request) {
     {
       songs: titleMatches,
       lyricsSongs: lyricsMatches,
-      artists: artistsRes.data ?? [],
+      artists,
       hasMore,
       nextOffset,
     },

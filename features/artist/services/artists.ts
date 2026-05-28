@@ -99,6 +99,34 @@ export async function getArtistBySlug(slug: string): Promise<Artist | undefined>
 }
 
 /**
+ * Lookup an artist's slug + aliases by exact name (case-insensitive), falling
+ * back to an alias match. Used by the song page to emit the artist's alternate
+ * spellings (e.g. "оторвальд" for "O.Torvald") into SEO metadata so Google
+ * associates Cyrillic queries with the Latin-named entity.
+ */
+export async function getArtistSeoByName(
+  name: string,
+): Promise<{ slug?: string; aliases: string[] }> {
+  if (!hasEnvVars || !name) return { aliases: [] };
+  const client = getClient();
+  const { data: byName } = await client
+    .from("artists")
+    .select("slug, aliases")
+    .ilike("name", name)
+    .limit(1)
+    .maybeSingle();
+  if (byName) return { slug: byName.slug as string, aliases: (byName.aliases as string[] | null) ?? [] };
+  const { data: byAlias } = await client
+    .from("artists")
+    .select("slug, aliases")
+    .contains("aliases", [name])
+    .limit(1)
+    .maybeSingle();
+  if (byAlias) return { slug: byAlias.slug as string, aliases: (byAlias.aliases as string[] | null) ?? [] };
+  return { aliases: [] };
+}
+
+/**
  * Lookup artist by exact name (case-insensitive). Used to resolve the real
  * stored slug, since `slugify(name)` doesn't always match `artists.slug`
  * (some slugs were generated with a different transliterator or edited).

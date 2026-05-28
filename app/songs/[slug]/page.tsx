@@ -18,7 +18,7 @@ import { BackButton } from "@/shared/components/BackButton";
 import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
-import { getArtistSlugByName } from "@/features/artist/services/artists";
+import { getArtistSeoByName } from "@/features/artist/services/artists";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteFooter } from "@/shared/components/SiteFooter";
@@ -37,6 +37,11 @@ export async function generateMetadata({
   const metaSong = await getSongBySlug(slug);
   if (!metaSong) return {};
 
+  // Artist alternate spellings (e.g. "оторвальд" for "O.Torvald") so the song
+  // page is indexable for Cyrillic queries of a Latin-named artist.
+  const { aliases: artistAliases } = await getArtistSeoByName(metaSong.artist);
+  const aliasKeywords = artistAliases.filter((a) => a && a !== metaSong.artist);
+
   const difficultyLabel =
     metaSong.difficulty === "easy" ? "легка" : metaSong.difficulty === "medium" ? "середня" : "складна";
   const title = `${metaSong.title} — ${metaSong.artist}: акорди, текст, тональність | Diez`;
@@ -54,6 +59,16 @@ export async function generateMetadata({
   return {
     title,
     description,
+    keywords: [
+      metaSong.title,
+      metaSong.artist,
+      ...aliasKeywords,
+      `${metaSong.title} акорди`,
+      `${metaSong.artist} акорди`,
+      ...aliasKeywords.map((a) => `${metaSong.title} ${a}`),
+      "текст пісні",
+      "гітара",
+    ],
     alternates: { canonical: `/songs/${slug}` },
     openGraph: {
       title: `${metaSong.title} — ${metaSong.artist}`,
@@ -99,9 +114,10 @@ export default async function SongPage({
   ]);
   if (!baseSong) return notFound();
 
-  // Artist slug needs the song row, so it runs after.
-  const realArtistSlug = await getArtistSlugByName(baseSong.artist);
-  const artistSlug = realArtistSlug ?? slugify(baseSong.artist);
+  // Artist slug + alternate spellings need the song row, so this runs after.
+  const artistSeo = await getArtistSeoByName(baseSong.artist);
+  const artistSlug = artistSeo.slug ?? slugify(baseSong.artist);
+  const artistAliases = artistSeo.aliases.filter((a) => a && a !== baseSong.artist);
 
   // ?v= takes priority; then the variant the user previously saved; then primary.
   const effectiveVariantId = variantId ?? saveState.variantId ?? undefined;
@@ -111,7 +127,12 @@ export default async function SongPage({
     "@context": "https://schema.org",
     "@type": "MusicComposition",
     name: song.title,
-    composer: { "@type": "MusicGroup", name: song.artist, url: `${siteUrl}/artists/${artistSlug}` },
+    composer: {
+      "@type": "MusicGroup",
+      name: song.artist,
+      ...(artistAliases.length > 0 && { alternateName: artistAliases }),
+      url: `${siteUrl}/artists/${artistSlug}`,
+    },
     musicalKey: song.key,
     genre: song.genre,
     url: `${siteUrl}/songs/${song.slug}`,
