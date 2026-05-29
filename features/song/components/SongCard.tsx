@@ -71,15 +71,6 @@ export function SongCard({ ...props }: SongCardProps) {
           priority={typeof props.index === "number" && props.index < 4}
           iconSize={40}
         />
-
-        {/* Chords Preview */}
-        <div className="absolute bottom-2 left-2 flex gap-1 z-10">
-          {props.chords.slice(0, 3).map(chord => (
-            <span key={chord} className="bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-black border border-black/10 shadow-sm">
-              {chord}
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* --- META ZONE --- */}
