@@ -10,7 +10,9 @@ import { type Song } from "../types";
 // the user nears the right edge.
 
 const PAGE_SIZE = 12;
-const CARD_W = 200;
+// Card width: compact on phones so more than one fits per screen, roomier on
+// tablet/desktop. Tailwind literal classes (responsive-safe).
+const CARD_W = "w-[150px] sm:w-[200px]";
 
 interface Props {
   initial: Song[];
@@ -73,7 +75,7 @@ export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Pro
       className="flex overflow-x-auto -my-4 py-7 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none"
     >
       {songs.map((s, i) => (
-        <div key={s.slug} className="flex-shrink-0" style={{ width: CARD_W }}>
+        <div key={s.slug} className={`flex-shrink-0 ${CARD_W}`}>
           <SongCard
             slug={s.slug}
             title={s.title}
@@ -95,15 +97,15 @@ export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Pro
         <div
           ref={sentinelRef}
           className="flex-shrink-0 flex gap-3"
-          style={{ width: loading ? CARD_W * 2 + 12 : 1 }}
+          style={{ paddingLeft: 1 }}
           aria-hidden
         >
           {loading &&
             Array.from({ length: 2 }).map((_, i) => (
               <div
                 key={i}
-                className="flex-shrink-0 te-card-thick"
-                style={{ width: CARD_W, borderRadius: "1.5rem", padding: 10 }}
+                className={`flex-shrink-0 te-card-thick ${CARD_W}`}
+                style={{ borderRadius: "1.5rem", padding: 10 }}
               >
                 <div
                   className="te-card-well w-full aspect-square"
