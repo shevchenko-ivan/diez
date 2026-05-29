@@ -38,6 +38,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false;
     let loaded = false;
+    // Teardown for the deferred session-recording starter (assigned once
+    // PostHog actually inits below); called on unmount to drop its listeners.
+    let recTeardown = () => {};
 
     function tryInit() {
       if (loaded || cancelled) return;
@@ -69,12 +72,43 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             // surfacing them in PostHog's Error Tracking view. Zero perf cost
             // — only fires when an error actually throws.
             capture_exceptions: true,
+            // We don't use PostHog Surveys or dead-click autocapture — turning
+            // them off stops surveys.js / dead-clicks-autocapture.js from ever
+            // downloading (each is a separate lazy bundle fetched after init).
+            disable_surveys: true,
+            capture_dead_clicks: false,
+            // Session replay stays on, but we start it lazily (below) so the
+            // recorder bundle — the single heaviest PostHog asset — doesn't
+            // pile onto the post-idle window where it dragged INP. The masking
+            // config is kept here so it applies the instant recording starts.
+            disable_session_recording: true,
             session_recording: {
               maskAllInputs: false,
               maskInputOptions: { password: true, email: true },
             },
           });
           setPh(posthog);
+
+          // Defer the session-recorder download until the user actually
+          // engages or a few seconds pass — whichever comes first — so
+          // recorder.js loads in a genuine idle gap, not right after init.
+          let recStarted = false;
+          const startRec = () => {
+            if (recStarted || cancelled) return;
+            recStarted = true;
+            recTeardown();
+            posthog.startSessionRecording();
+          };
+          const recTimer = setTimeout(startRec, 4000);
+          window.addEventListener("pointerdown", startRec, { passive: true });
+          window.addEventListener("keydown", startRec);
+          window.addEventListener("scroll", startRec, { passive: true });
+          recTeardown = () => {
+            clearTimeout(recTimer);
+            window.removeEventListener("pointerdown", startRec);
+            window.removeEventListener("keydown", startRec);
+            window.removeEventListener("scroll", startRec);
+          };
         });
       });
     }
@@ -88,6 +122,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      recTeardown();
       window.removeEventListener("diez:consent-changed", onConsentChange);
     };
   }, []);
