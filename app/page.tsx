@@ -2,6 +2,7 @@ import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
+import { SongStrip } from "@/features/song/components/SongStrip";
 import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
 import { TOPICS } from "@/features/song/data/topics";
 import { getArtists } from "@/features/artist/services/artists";
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const [trendingPage, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
-    getSongsPage({ sortBy: "source_views", limit: 4 }),
+    getSongsPage({ sortBy: "source_views", limit: 12 }),
     getFreshSongs(4),
     getArtists(12),
     getSavedSlugs(),
@@ -84,23 +85,11 @@ export default async function HomePage() {
         {trending.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Топ популярних" href="/songs?sort=popular" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {trending.map((s, i) => (
-                <SongCard
-                  key={s.slug}
-                  slug={s.slug}
-                  title={s.title}
-                  artist={s.artist}
-                  difficulty={s.difficulty}
-                  chords={s.chords}
-                  views={s.views}
-                  coverImage={s.coverImage}
-                  coverColor={s.coverColor}
-                  index={i}
-                  isSaved={savedSlugs.has(s.slug)}
-                />
-              ))}
-            </div>
+            <SongStrip
+              initial={trending}
+              savedSlugs={Array.from(savedSlugs)}
+              initialExhausted={trending.length < 12}
+            />
           </section>
         )}
 

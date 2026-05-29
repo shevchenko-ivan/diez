@@ -1,0 +1,114 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { SongCard } from "./SongCard";
+import { loadMoreTrending } from "../actions/strip";
+import { type Song } from "../types";
+
+// Home-page "Топ популярних" as a horizontal, infinitely-scrolling strip —
+// same UX as the artist strip. Loads the next page of most-viewed songs when
+// the user nears the right edge.
+
+const PAGE_SIZE = 12;
+const CARD_W = 200;
+
+interface Props {
+  initial: Song[];
+  /** All slugs the current user has saved — to pre-fill the heart state. */
+  savedSlugs: string[];
+  /** True when the initial page already returned fewer items than requested. */
+  initialExhausted?: boolean;
+}
+
+export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Props) {
+  const [songs, setSongs] = useState<Song[]>(initial);
+  const [exhausted, setExhausted] = useState(initialExhausted);
+  const [loading, setLoading] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // Pin offset against initial.length so concurrent loads can't double-fetch.
+  const offsetRef = useRef<number>(initial.length);
+  const saved = new Set(savedSlugs);
+
+  useEffect(() => {
+    if (exhausted) return;
+    const sentinel = sentinelRef.current;
+    const root = scrollerRef.current;
+    if (!sentinel || !root) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          if (loading || exhausted) return;
+          setLoading(true);
+          const offset = offsetRef.current;
+          loadMoreTrending(offset, PAGE_SIZE)
+            .then((next) => {
+              if (next.length === 0) {
+                setExhausted(true);
+              } else {
+                setSongs((prev) => [...prev, ...next]);
+                offsetRef.current = offset + next.length;
+                if (next.length < PAGE_SIZE) setExhausted(true);
+              }
+            })
+            .finally(() => setLoading(false));
+        }
+      },
+      // Trigger ~1.5 cards before the right edge of the horizontal scroller.
+      { root, rootMargin: "0px 300px 0px 0px", threshold: 0 },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, [loading, exhausted]);
+
+  return (
+    <div
+      ref={scrollerRef}
+      className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none"
+    >
+      {songs.map((s, i) => (
+        <div key={s.slug} className="flex-shrink-0" style={{ width: CARD_W }}>
+          <SongCard
+            slug={s.slug}
+            title={s.title}
+            artist={s.artist}
+            difficulty={s.difficulty}
+            chords={s.chords}
+            views={s.views}
+            coverImage={s.coverImage}
+            coverColor={s.coverColor}
+            index={i}
+            isSaved={saved.has(s.slug)}
+          />
+        </div>
+      ))}
+
+      {/* Sentinel at the trailing edge — IntersectionObserver fires as the
+          user nears the right side, fetching the next page. */}
+      {!exhausted && (
+        <div
+          ref={sentinelRef}
+          className="flex-shrink-0 flex gap-3"
+          style={{ width: loading ? CARD_W * 2 + 12 : 1 }}
+          aria-hidden
+        >
+          {loading &&
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex-shrink-0 te-card-thick"
+                style={{ width: CARD_W, borderRadius: "1.5rem", padding: 10 }}
+              >
+                <div
+                  className="te-card-well w-full aspect-square"
+                  style={{ borderRadius: "1rem", opacity: 0.4 }}
+                />
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
