@@ -56,7 +56,7 @@ export async function generateMetadata({
   const description =
     `Акорди й текст пісні «${metaSong.title}» — ${metaSong.artist}. ` +
     `Тональність ${metaSong.key}${capoNote}, ${difficultyLabel}. ` +
-    `Акорди: ${chordList}. Грай на гітарі на Diez.`;
+    `Акорди: ${chordList}. Грай на гітарі, укулеле або піаніно на Diez.`;
 
   return {
     title,
@@ -70,6 +70,12 @@ export async function generateMetadata({
       ...aliasKeywords.map((a) => `${metaSong.title} ${a}`),
       "текст пісні",
       "гітара",
+      // Multi-instrument long-tails — every song is playable on guitar,
+      // ukulele and piano via the in-page instrument toggle.
+      `${metaSong.title} акорди для укулеле`,
+      `${metaSong.title} акорди для піаніно`,
+      "акорди для укулеле",
+      "акорди для піаніно",
     ],
     alternates: { canonical: `/songs/${slug}` },
     openGraph: {
@@ -340,6 +346,22 @@ export default async function SongPage({
             </Suspense>
           }
         />
+
+        {/* Instrument caption — honest (every song is playable on all three
+            instruments via the toggle inside SongViewer) and a real on-page
+            signal for "«пісня» акорди для укулеле / піаніно" long-tails. The
+            links funnel crawl + equity to the instrument hubs. */}
+        <p className="mt-6 text-sm" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+          «{song.title}» можна грати на гітарі,{" "}
+          <Link href="/songs/instrument/ukulele" className="hover:underline" style={{ color: "var(--text-mid)" }}>
+            укулеле
+          </Link>{" "}
+          або{" "}
+          <Link href="/songs/instrument/piano" className="hover:underline" style={{ color: "var(--text-mid)" }}>
+            піаніно
+          </Link>{" "}
+          — перемкніть інструмент над акордами й транспонуйте тональність у будь-яку зручну.
+        </p>
 
 
         {/* ── Other songs by this artist (deferred — below the fold) ──── */}

@@ -2,6 +2,7 @@ import { type MetadataRoute } from "next";
 import { getAllSongCovers } from "@/features/song/services/songs";
 import { getRankedArtists } from "@/features/artist/services/artists";
 import { TOPICS } from "@/features/song/data/topics";
+import { INSTRUMENTS } from "@/features/song/data/instruments";
 import { ARTICLES } from "@/features/learn/articles";
 import { siteUrl } from "@/lib/utils";
 
@@ -79,6 +80,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // `/songs?topic=<slug>` URLs 301 → here via next.config redirects.
     ...TOPICS.map((t) => ({
       url: `${siteUrl}/songs/topic/${t.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
+    // Instrument landing hubs (`/songs/instrument/<slug>`) — target
+    // "акорди для укулеле" / "акорди для піаніно" over the same catalogue.
+    ...INSTRUMENTS.map((i) => ({
+      url: `${siteUrl}/songs/instrument/${i.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.7,

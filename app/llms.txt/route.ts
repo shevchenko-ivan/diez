@@ -1,5 +1,6 @@
 import { getRankedArtists } from "@/features/artist/services/artists";
 import { TOPICS } from "@/features/song/data/topics";
+import { INSTRUMENTS } from "@/features/song/data/instruments";
 import { ARTICLES } from "@/features/learn/articles";
 import { siteUrl } from "@/lib/utils";
 
@@ -23,9 +24,11 @@ export async function GET(): Promise<Response> {
   sections.push("# Diez");
   sections.push("");
   sections.push(
-    "> Ukrainian guitar chord platform. Search and view chords, lyrics, " +
-      "and tablature for thousands of Ukrainian and international songs. " +
-      "Built for guitarists, by guitarists. Ukrainian-language UI.",
+    "> Ukrainian chord platform. Search and view chords, lyrics, and " +
+      "tablature for thousands of Ukrainian and international songs. Every " +
+      "song can be played on guitar, ukulele or piano — a per-song toggle " +
+      "redraws each chord's fingering for the chosen instrument. " +
+      "Ukrainian-language UI.",
   );
   sections.push("");
 
@@ -41,6 +44,15 @@ export async function GET(): Promise<Response> {
   sections.push("");
   for (const t of TOPICS) {
     sections.push(`- [${t.pageHeading}](${siteUrl}/songs/topic/${t.slug}): ${t.description}`);
+  }
+  sections.push("");
+
+  // Instrument hubs — same catalogue framed per instrument, for queries like
+  // "акорди для укулеле" / "акорди для піаніно".
+  sections.push("## Instrument hubs");
+  sections.push("");
+  for (const i of INSTRUMENTS) {
+    sections.push(`- [${i.pageHeading}](${siteUrl}/songs/instrument/${i.slug}): ${i.description}`);
   }
   sections.push("");
 

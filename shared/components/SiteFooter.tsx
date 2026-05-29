@@ -13,9 +13,11 @@ const NAV_COLUMNS = [
   {
     title: "Відкрити",
     links: [
-      { label: "Популярні пісні",  href: "/songs?sort=popular" },
-      { label: "Останні додані",   href: "/songs?sort=new" },
-      { label: "Для початківців",  href: "/songs?difficulty=easy" },
+      { label: "Популярні пісні",   href: "/songs?sort=popular" },
+      { label: "Останні додані",    href: "/songs?sort=new" },
+      { label: "Для початківців",   href: "/songs?difficulty=easy" },
+      { label: "Акорди для укулеле", href: "/songs/instrument/ukulele" },
+      { label: "Акорди для піаніно", href: "/songs/instrument/piano" },
     ],
   },
   {
