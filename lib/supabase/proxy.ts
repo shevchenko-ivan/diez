@@ -72,6 +72,10 @@ export async function updateSession(request: NextRequest) {
     "/lists",
     "/tuner",
     "/chords",
+    // Beginner guitar articles — public content hub, must be crawlable by
+    // guests and search engines (otherwise the whole /learn section 307s to
+    // /auth/login and is invisible to Google).
+    "/learn",
     // Hero-search autocomplete on `/` (and 404 page) — guests must be able
     // to call it; without this the API silently 307s to /auth/login and the
     // dropdown shows "Нічого не знайдено" for every query.
