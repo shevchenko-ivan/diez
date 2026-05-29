@@ -58,7 +58,16 @@ export function SongCard({ ...props }: SongCardProps) {
           alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
           title={`${props.title} — ${props.artist}`}
           fill
-          sizes="(max-width: 768px) 50vw, 25vw"
+          // `sizes` must upper-bound the rendered width across every grid this
+          // card lives in (home/songs = 4-col, song-page related = 4-col,
+          // profile = 3-col, lists = 5-col). The widest real slot is profile's
+          // 3-col grid inside max-w-6xl ≈ 357px. Below 1024px the profile grid
+          // is still 2-col (~50vw), so 50vw holds there; above 1024px every
+          // grid caps the card at ≤360px. The old "25vw" tail both under-sized
+          // profile covers ≤1024px (blurry) and over-fetched on wide screens
+          // (25vw of 1920 = 480px → next/image pulled a ~1080w candidate for a
+          // ≤360px slot, ~85 KB of waste per song page per DevTools insight).
+          sizes="(max-width: 1024px) 50vw, 360px"
           priority={typeof props.index === "number" && props.index < 4}
           iconSize={40}
         />

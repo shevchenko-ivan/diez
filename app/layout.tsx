@@ -62,12 +62,15 @@ export default async function RootLayout({
   const h = await headers();
   const initialLite = h.get("save-data")?.toLowerCase() === "on";
 
-  // Resolve the PostHog ingest origin from env so the preconnect points at
-  // the right CDN (eu vs us). Falls back to the EU default that matches
-  // PostHogProvider's own fallback.
-  const phOrigin = new URL(
+  // PostHog ships from two origins: a separate `-assets` CDN that serves the
+  // heavy SDK bundles (array config + recorder + surveys, ~370 KB) and the
+  // ingest host for events / feature flags. Resolve both from env so the
+  // resource hints point at the right region (eu vs us); fall back to the EU
+  // default that matches PostHogProvider's own fallback.
+  const phIngest = new URL(
     process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com",
-  ).origin;
+  );
+  const phAssetsHost = phIngest.hostname.replace(/^([^.]+)\./, "$1-assets.");
 
   return (
     <html lang="uk" suppressHydrationWarning>
@@ -93,15 +96,20 @@ export default async function RootLayout({
           crossOrigin="anonymous"
         />
 
-        {/* Preconnect to third-party origins that ship JS on every page
-            (PostHog after idle, Vercel Analytics + Speed Insights at the
-            bottom of <body>). Establishes the TLS handshake early so when
-            these scripts actually fetch their requests aren't waiting on
-            DNS + handshake. Saves ~100-300ms per request on slow networks.
-            Capped at 3 preconnects — Lighthouse warns above 4. */}
-        <link rel="preconnect" href={phOrigin} crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://va.vercel-scripts.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://vitals.vercel-insights.com" crossOrigin="anonymous" />
+        {/* PostHog loads lazily (only after idle + cookie consent), so a full
+            preconnect would sit unused on the critical path — Lighthouse flags
+            it as wasted. dns-prefetch is the lighter, honest hint: it resolves
+            DNS for both PostHog origins — the `-assets` CDN that serves the
+            heavy SDK bundles and the ingest host for events — so when a
+            consented visitor's idle callback fires, only the TLS handshake
+            remains.
+            No hint for Vercel Analytics / Speed Insights: on Vercel they are
+            served first-party from this same origin (obfuscated /<hash>/script.js
+            + /_vercel/* beacons), so the connection already exists. The old
+            preconnects to va.vercel-scripts.com / vitals.vercel-insights.com
+            were 100% unused here (confirmed via prod network trace). */}
+        <link rel="dns-prefetch" href={`https://${phAssetsHost}`} />
+        <link rel="dns-prefetch" href={phIngest.origin} />
 
         {/* dns-prefetch (lighter than preconnect — only DNS, no TLS) for
             YouTube. The iframe API is only loaded when the user taps play
