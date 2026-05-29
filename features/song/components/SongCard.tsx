@@ -70,6 +70,7 @@ export function SongCard({ ...props }: SongCardProps) {
           sizes="(max-width: 1024px) 50vw, 360px"
           priority={typeof props.index === "number" && props.index < 4}
           iconSize={40}
+          fit="contain"
         />
       </div>
 
