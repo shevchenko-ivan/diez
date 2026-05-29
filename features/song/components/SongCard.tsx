@@ -34,6 +34,17 @@ export function SongCard({ ...props }: SongCardProps) {
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
   const href = props.variantId ? `${base}?v=${props.variantId}` : base;
 
+  // Reserve right padding for the save-heart ONLY when the heart is actually
+  // visible — so a resting card on a hover-capable device (heart hidden) gives
+  // the title/artist the full width instead of clipping under empty space.
+  // Mirrors the heart's own visibility rules below (saved / hover / focus /
+  // touch where it's always shown).
+  const heartPad = !props.slug
+    ? ""
+    : props.isSaved
+      ? "pr-10"
+      : "group-hover:pr-10 focus-within:pr-10 [@media(hover:none)]:pr-10";
+
   return (
     <HapticLink
       href={href}
@@ -75,10 +86,10 @@ export function SongCard({ ...props }: SongCardProps) {
 
       {/* --- META ZONE --- */}
       <div className="px-2 pt-3.5 pb-1 flex-1 relative">
-        <h3 className="font-bold text-sm tracking-tight leading-tight line-clamp-1 pr-10" style={{ color: "var(--text)" }}>
+        <h3 className={`font-bold text-sm tracking-tight leading-tight line-clamp-1 ${heartPad}`} style={{ color: "var(--text)" }}>
           {props.title}
         </h3>
-        <p className="text-[13px] tracking-tight leading-tight line-clamp-1 pr-10" style={{ color: "var(--text-muted)" }}>
+        <p className={`text-[13px] tracking-tight leading-tight line-clamp-1 ${heartPad}`} style={{ color: "var(--text-muted)" }}>
           {props.artist}
         </p>
         {props.slug && (
