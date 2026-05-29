@@ -21,6 +21,8 @@ import { slugify } from "@/lib/slugify";
 import { getArtistSeoByName } from "@/features/artist/services/artists";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { headers } from "next/headers";
+import { userAgent } from "next/server";
 import { SiteFooter } from "@/shared/components/SiteFooter";
 import { VariantSwitcher } from "@/features/song/components/VariantSwitcher";
 import { Suspense, cache } from "react";
@@ -104,6 +106,11 @@ export default async function SongPage({
 }) {
   const { slug } = await params;
   const { v: variantId } = await searchParams;
+
+  // UA-detect mobile so SongViewer can wrap lyrics to a phone-width estimate in
+  // the SSR/first paint (prevents the post-measure re-wrap CLS on phones).
+  const { device } = userAgent({ headers: await headers() });
+  const isMobile = device.type === "mobile";
 
   // Run song fetch + save-state in parallel — they only need `slug`.
   // (Previously song was awaited first, then a 2-call parallel batch ran;
@@ -326,6 +333,7 @@ export default async function SongPage({
         {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
         <SongViewer
           song={song}
+          initialMobile={isMobile}
           editSlot={
             <Suspense fallback={null}>
               <AdminEditSheetButton slug={slug} variantId={song.activeVariantId} />

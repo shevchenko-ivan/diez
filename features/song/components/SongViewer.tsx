@@ -148,11 +148,16 @@ export function SongViewer({
   song,
   editHref,
   editSlot,
+  initialMobile = false,
 }: {
   song: Song;
   editHref?: string;
   /** Server-streamed admin "Edit" button rendered at the bottom of the mobile tools sheet. */
   editSlot?: ReactNode;
+  /** UA-detected mobile (server-side). Lets the SSR/first paint already wrap
+   *  lyrics to a phone-width estimate so the post-measure re-wrap doesn't shift
+   *  layout (CLS). Final wrapping always uses the measured width. */
+  initialMobile?: boolean;
 }) {
   const [transpose, setTranspose] = useState(0);
   const [fontSize, setFontSize] = useState(16);
@@ -173,7 +178,9 @@ export function SongViewer({
   const [chWidth, setChWidth] = useState(0);
 
   // Track container width so we can word-wrap lines that don't fit.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so the first measured re-wrap commits
+  // before the browser paints the post-hydration frame — no visible jump.
+  useLayoutEffect(() => {
     const el = sectionsRef.current;
     if (!el) return;
     const update = () => {
@@ -198,13 +205,23 @@ export function SongViewer({
     if (w > 0) setChWidth(w);
   }, [fontSize, containerWidth]);
 
-  // Available columns per row. Fall back to a conservative em estimate until
-  // the probe measurement lands, so wrap starts working on the first paint
-  // rather than deferring to post-mount measurement.
+  // Available columns per row. Once the container is measured, use the exact
+  // width (this is the canonical, final wrapping — identical for everyone).
+  // Before measurement (SSR + first client render):
+  //   • mobile (UA-detected) → wrap to a phone-width estimate, so the server
+  //     HTML is already wrapped ≈ like the measured result. Without this the
+  //     server renders unwrapped and the post-measure re-wrap shifts the whole
+  //     lyric block down (~0.2 CLS on phones).
+  //   • desktop → no wrap (Infinity); lyric lines rarely exceed the wide
+  //     column, so there's nothing to shift — keeps desktop's existing 0 CLS.
   const effChWidth = chWidth || fontSize * 0.62;
+  // ~360px phone minus the page's horizontal padding (px-4 = 16px each side).
+  const SSR_MOBILE_LYRIC_WIDTH = 326;
   const charsPerRow = containerWidth
     ? Math.max(12, Math.floor(containerWidth / effChWidth) - 1)
-    : Infinity;
+    : initialMobile
+      ? Math.max(12, Math.floor(SSR_MOBILE_LYRIC_WIDTH / effChWidth) - 1)
+      : Infinity;
 
   const toggleBeginner = () => {
     trigger("light");
