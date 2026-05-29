@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SongCard } from "./SongCard";
-import { loadMoreTrending } from "../actions/strip";
 import { type Song } from "../types";
 
 // Home-page "Топ популярних" as a horizontal, infinitely-scrolling strip —
@@ -18,11 +17,13 @@ interface Props {
   initial: Song[];
   /** All slugs the current user has saved — to pre-fill the heart state. */
   savedSlugs: string[];
+  /** Server action that returns the next page of songs for this strip. */
+  loadMore: (offset: number, limit?: number) => Promise<Song[]>;
   /** True when the initial page already returned fewer items than requested. */
   initialExhausted?: boolean;
 }
 
-export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Props) {
+export function SongStrip({ initial, savedSlugs, loadMore, initialExhausted = false }: Props) {
   const [songs, setSongs] = useState<Song[]>(initial);
   const [exhausted, setExhausted] = useState(initialExhausted);
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,7 @@ export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Pro
           if (loading || exhausted) return;
           setLoading(true);
           const offset = offsetRef.current;
-          loadMoreTrending(offset, PAGE_SIZE)
+          loadMore(offset, PAGE_SIZE)
             .then((next) => {
               if (next.length === 0) {
                 setExhausted(true);
@@ -63,7 +64,7 @@ export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Pro
     );
     io.observe(sentinel);
     return () => io.disconnect();
-  }, [loading, exhausted]);
+  }, [loading, exhausted, loadMore]);
 
   return (
     <div

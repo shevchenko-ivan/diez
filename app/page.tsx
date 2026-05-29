@@ -1,8 +1,9 @@
 import { type Metadata } from "next";
 import { Navbar } from "@/shared/components/Navbar";
 import { HapticLink } from "@/shared/components/HapticLink";
-import { SongCard, HeroSearch } from "@/features/song/components/SongCard";
+import { HeroSearch } from "@/features/song/components/SongCard";
 import { SongStrip } from "@/features/song/components/SongStrip";
+import { loadMoreTrending, loadMoreFresh } from "@/features/song/actions/strip";
 import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
 import { TOPICS } from "@/features/song/data/topics";
 import { getArtists } from "@/features/artist/services/artists";
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const [trendingPage, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
     getSongsPage({ sortBy: "source_views", limit: 12 }),
-    getFreshSongs(4),
+    getFreshSongs(12),
     getArtists(12),
     getSavedSlugs(),
     getMyPlaylists(),
@@ -88,6 +89,7 @@ export default async function HomePage() {
             <SongStrip
               initial={trending}
               savedSlugs={Array.from(savedSlugs)}
+              loadMore={loadMoreTrending}
               initialExhausted={trending.length < 12}
             />
           </section>
@@ -130,23 +132,12 @@ export default async function HomePage() {
         {freshSongs.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Щойно на струнах" href="/songs?sort=new" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {freshSongs.map((s, i) => (
-                <SongCard
-                  key={s.slug}
-                  slug={s.slug}
-                  title={s.title}
-                  artist={s.artist}
-                  difficulty={s.difficulty}
-                  chords={s.chords}
-                  views={s.views}
-                  coverImage={s.coverImage}
-                  coverColor={s.coverColor}
-                  index={i}
-                  isSaved={savedSlugs.has(s.slug)}
-                />
-              ))}
-            </div>
+            <SongStrip
+              initial={freshSongs}
+              savedSlugs={Array.from(savedSlugs)}
+              loadMore={loadMoreFresh}
+              initialExhausted={freshSongs.length < 12}
+            />
           </section>
         )}
 
