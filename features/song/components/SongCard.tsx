@@ -43,7 +43,7 @@ export function SongCard({ ...props }: SongCardProps) {
     >
       {/* --- MEDIA ZONE (recessed "well") --- */}
       <div
-        className="te-card-well w-full aspect-[4/3] relative overflow-hidden"
+        className="te-card-well w-full aspect-square relative overflow-hidden"
         style={{ borderRadius: "1rem" }}
       >
         {/* Cover — alt text doubles as Google Image Search input and
@@ -70,7 +70,6 @@ export function SongCard({ ...props }: SongCardProps) {
           sizes="(max-width: 1024px) 50vw, 360px"
           priority={typeof props.index === "number" && props.index < 4}
           iconSize={40}
-          fit="contain"
         />
       </div>
 
