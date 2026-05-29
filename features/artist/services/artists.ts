@@ -35,6 +35,26 @@ export async function getAllArtists(): Promise<Artist[]> {
  * Cached for 30 min — the horizontal strip on the home page paginates through
  * this list, so we compute it once and slice client-side.
  */
+// Editorial override on top of the popularity ranking: keep the natural order,
+// but pull these artists up so they sit immediately after their anchor, in
+// this exact sequence. Names must match `artists.name` exactly; missing names
+// are skipped, and if the anchor is absent the ranking is returned untouched.
+const CURATED_AFTER = {
+  anchor: "Бумбокс",
+  names: ["O.Torvald", "YAKTAK", "Дзідзьо"],
+};
+
+function applyCuratedArtistOrder(ranked: Artist[]): Artist[] {
+  const pinnedSet = new Set(CURATED_AFTER.names);
+  const pinned = CURATED_AFTER.names
+    .map((n) => ranked.find((a) => a.name === n))
+    .filter((a): a is Artist => Boolean(a));
+  const rest = ranked.filter((a) => !pinnedSet.has(a.name));
+  const idx = rest.findIndex((a) => a.name === CURATED_AFTER.anchor);
+  if (idx === -1 || pinned.length === 0) return ranked;
+  return [...rest.slice(0, idx + 1), ...pinned, ...rest.slice(idx + 1)];
+}
+
 export const getRankedArtists = unstable_cache(
   async (): Promise<Artist[]> => {
     if (!hasEnvVars) return [];
@@ -69,7 +89,7 @@ export const getRankedArtists = unstable_cache(
       .is("archived_at", null);
     if (aErr || !artists) return [];
 
-    return (artists as Artist[])
+    const sorted = (artists as Artist[])
       .map((a) => {
         const agg = totalsByArtist.get(a.name);
         return { artist: a, total: agg?.sum ?? 0, count: agg?.count ?? 0 };
@@ -77,6 +97,7 @@ export const getRankedArtists = unstable_cache(
       .filter((x) => x.count > 0)
       .sort((a, b) => b.total - a.total)
       .map((x) => x.artist);
+    return applyCuratedArtistOrder(sorted);
   },
   ["ranked-artists"],
   { revalidate: 1800, tags: ["songs", "artists"] },

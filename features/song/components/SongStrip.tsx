@@ -66,7 +66,11 @@ export function SongStrip({ initial, savedSlugs, initialExhausted = false }: Pro
   return (
     <div
       ref={scrollerRef}
-      className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none"
+      // -my-4 py-7: overflow-x:auto forces overflow-y to clip, which would cut
+      // the cards' hover drop-shadow. The negative margin + extra padding gives
+      // the shadow 28px of room while keeping the visual spacing identical to
+      // py-3 (net 12px each side).
+      className="flex overflow-x-auto -my-4 py-7 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none"
     >
       {songs.map((s, i) => (
         <div key={s.slug} className="flex-shrink-0" style={{ width: CARD_W }}>
