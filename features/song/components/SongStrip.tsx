@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SongCard } from "./SongCard";
 import { TopSongCard } from "./TopSongCard";
+import { useHaptics } from "@/shared/hooks/useHaptics";
 import { type Song } from "../types";
 
 // Home-page "Топ популярних" as a horizontal, infinitely-scrolling strip —
@@ -46,6 +47,42 @@ export function SongStrip({
   // Pin offset against initial.length so concurrent loads can't double-fetch.
   const offsetRef = useRef<number>(initial.length);
   const saved = new Set(savedSlugs);
+  const { trigger } = useHaptics();
+  const lastTickRef = useRef(0);
+
+  // iOS-picker-style tactile feedback while the user swipes through the strip.
+  // Fires a "selection" haptic tap each time a new card crosses the leading
+  // edge — same sensation as scrubbing a UIDatePicker wheel.
+  //
+  // Notes:
+  // - Touch-only (mobile / tablet). Desktop pointer-fine devices get nothing.
+  // - iOS Safari ignores navigator.vibrate entirely (Apple has never shipped
+  //   the Web Vibration API), so this is effectively Android Chrome only.
+  //   On iOS the trigger() call is a silent no-op — no errors, just no buzz.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
+
+    // Card pitch — mobile CARD_W is 150px + gap-3 (12px) = 162px.
+    // On sm+ the strip is 200px wide, but the touch heuristic above only
+    // activates for coarse pointers (phones), so 150-class width is what
+    // we feel under the finger.
+    const tickWidth = 162;
+
+    const onScroll = () => {
+      const tick = Math.floor(el.scrollLeft / tickWidth);
+      if (tick !== lastTickRef.current) {
+        lastTickRef.current = tick;
+        // "selection" maps to a very short tick — the iOS picker tap, not a
+        // full haptic thud. Fires fast, decays fast, no overlap on flicks.
+        void trigger("selection");
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [trigger]);
 
   useEffect(() => {
     if (exhausted) return;
