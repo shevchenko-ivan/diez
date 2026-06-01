@@ -54,37 +54,37 @@ export function SongStrip({
   // Fires a "selection" haptic tap each time a new card crosses the leading
   // edge — same sensation as scrubbing a UIDatePicker wheel.
   //
-  // Notes:
-  // - Touch-only (mobile / tablet). Desktop pointer-fine devices get nothing.
-  // - Android Chrome / Firefox uses navigator.vibrate directly (real motor pulse).
-  // - iOS Safari has never shipped the Web Vibration API, but web-haptics
-  //   falls back to an AudioContext "click" buffer — a short pulse played
-  //   through the speaker that resonates through the device frame and reads
-  //   as tactile. Quieter than a real motor, audible at very low volume in
-  //   silent rooms, but enough for picker-tick perception during a swipe.
+  // Bound to `touchmove`, not `scroll`. iOS Safari only fires the Taptic
+  // Engine (via web-haptics' hidden <input type="checkbox" switch> click
+  // trick) when the .click() lands inside an active user-gesture context.
+  // Passive scroll events — including those that fire during momentum
+  // decay — are NOT a user gesture; the synthetic switch click would land
+  // outside the gesture window and iOS would silently drop the haptic.
+  //
+  // Trade-off: we only feel ticks during the active finger drag, not during
+  // the momentum coast that follows. That's the most web can do on iOS.
+  // Android navigator.vibrate doesn't need a gesture but works fine here
+  // too — touchmove fires during the drag portion that matters for feel.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     if (typeof window === "undefined") return;
     if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
 
-    // Card pitch — mobile CARD_W is 150px + gap-3 (12px) = 162px.
-    // On sm+ the strip is 200px wide, but the touch heuristic above only
-    // activates for coarse pointers (phones), so 150-class width is what
-    // we feel under the finger.
+    // Card pitch on mobile — CARD_W 150px + gap-3 (12px) = 162px.
     const tickWidth = 162;
 
-    const onScroll = () => {
+    const onTouchMove = () => {
       const tick = Math.floor(el.scrollLeft / tickWidth);
       if (tick !== lastTickRef.current) {
         lastTickRef.current = tick;
-        // "selection" maps to a very short tick — the iOS picker tap, not a
-        // full haptic thud. Fires fast, decays fast, no overlap on flicks.
+        // "selection" is web-haptics' shortest preset — 8ms / intensity 0.3.
+        // Fires fast enough to keep up with a flick swipe.
         void trigger("selection");
       }
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => el.removeEventListener("touchmove", onTouchMove);
   }, [trigger]);
 
   useEffect(() => {

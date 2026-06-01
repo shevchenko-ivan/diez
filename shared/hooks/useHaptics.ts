@@ -43,7 +43,6 @@ type SharedHapticsLike = {
 
 let sharedHaptics: SharedHapticsLike | null = null;
 let sharedInitPromise: Promise<SharedHapticsLike> | null = null;
-let audioBootstrapped = false;
 
 async function getSharedHaptics(): Promise<SharedHapticsLike> {
   if (sharedHaptics) return sharedHaptics;
@@ -54,10 +53,13 @@ async function getSharedHaptics(): Promise<SharedHapticsLike> {
       const supportsVibrate =
         typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
       sharedHaptics = new WebHaptics({
-        // web-haptics' "debug" flag is mis-named — it really means "enable the
-        // AudioContext click-buffer fallback". On iOS Safari (no Vibration API)
-        // that buffer is the only thing producing perceivable feedback.
-        debug: !supportsVibrate,
+        // No debug mode. web-haptics' "debug" flag enables an AudioContext
+        // click-buffer fallback that plays a literal click sound through the
+        // speaker — useful for testing on desktop, but on iOS the user hears
+        // a noise rather than feeling vibration. Without debug, the library
+        // relies on its hidden <input type="checkbox" switch> click trick,
+        // which fires the real Taptic Engine on iOS 17+ Safari.
+        debug: false,
       }) as unknown as SharedHapticsLike;
     } catch {
       sharedHaptics = { trigger: () => {} };
@@ -96,33 +98,6 @@ export function useHaptics() {
       h.trigger("medium");
     }
   }, []);
-
-  // Bootstrap web-haptics' AudioContext on the first user touch. The Web
-  // Audio API requires a user gesture to resume a suspended context, and
-  // scroll events with { passive: true } don't qualify. By registering a
-  // one-shot touchstart listener at the window level, the very first tap
-  // anywhere in the app primes the context — afterwards any trigger() call
-  // (including those fired from a passive scroll handler) can play audio
-  // without the autoplay policy blocking it.
-  //
-  // Bootstrapping only happens once per page load — the module-level
-  // `audioBootstrapped` flag short-circuits future hook mounts.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (audioBootstrapped) return;
-    // Touch-only devices. Desktop pointer-fine devices don't need this.
-    if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
-
-    const bootstrap = () => {
-      audioBootstrapped = true;
-      // A tiny "light" tick — barely perceptible, but it routes through
-      // web-haptics' trigger() inside a user-gesture context, which lets
-      // ensureAudio() call AudioContext.resume() successfully.
-      void trigger("light");
-    };
-    window.addEventListener("touchstart", bootstrap, { passive: true, once: true });
-    return () => window.removeEventListener("touchstart", bootstrap);
-  }, [trigger]);
 
   return { trigger, strum, toggle };
 }
