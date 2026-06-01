@@ -17,11 +17,13 @@ export interface TopSongCardProps {
 }
 
 // Total reveal duration in ms — keep in sync with `.dz-cover-reveal-overlay`
-// animation-duration in globals.css. We push the route ~140ms before the
-// animation ends so the new page paints during the final stretch of the
-// expand instead of after it (no flash of blank background).
-const REVEAL_MS = 520;
-const ROUTE_PUSH_LEAD_MS = 140;
+// animation-duration in globals.css. 480ms sits inside the 100-500ms
+// "ideal transition" range per NN/g's transition-animation research. We
+// push the route ~120ms before the animation ends so the new page paints
+// during the final stretch of the expand instead of after it (no flash
+// of blank background).
+const REVEAL_MS = 480;
+const ROUTE_PUSH_LEAD_MS = 120;
 
 /**
  * Featured "Top popular" card — square vinyl-sleeve cover. Hover scales +
@@ -155,7 +157,11 @@ export function TopSongCard({
       {/* Expanding overlay — portal into document.body so it escapes the
           strip's `overflow-x: auto` clipping. The CSS keyframe in
           globals.css drives the actual motion; we just declare the rect
-          dimensions and the four custom properties the keyframe needs. */}
+          dimensions and the custom properties the keyframe needs.
+
+          The overlay's transform-origin is `center`, so the end translate
+          must place the cover's *centre* at the viewport's centre — not
+          its top-left at (0, 0). end-x / end-y compute that offset. */}
       {expandRect && viewport && coverImage && typeof document !== "undefined" &&
         createPortal(
           <div
@@ -166,10 +172,13 @@ export function TopSongCard({
               height: `${expandRect.height}px`,
               backgroundImage: `url(${coverImage})`,
               // CSS custom properties consumed by `@keyframes dz-cover-reveal`.
-              // The keyframe interpolates `transform: translate(...)` between
-              // these and `translate(0,0) scale(end-scale-x, end-scale-y)`.
+              // The keyframe interpolates transform: translate(...) scale(...)
+              // between the start (cover at its source rect) and end (cover
+              // centred in the viewport, scaled to fill).
               ["--start-x" as string]: `${expandRect.left}px`,
               ["--start-y" as string]: `${expandRect.top}px`,
+              ["--end-x" as string]: `${(viewport.w - expandRect.width) / 2}px`,
+              ["--end-y" as string]: `${(viewport.h - expandRect.height) / 2}px`,
               ["--end-scale-x" as string]: `${viewport.w / expandRect.width}`,
               ["--end-scale-y" as string]: `${viewport.h / expandRect.height}`,
             }}

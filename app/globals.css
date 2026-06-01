@@ -1834,22 +1834,28 @@ html[data-theme="dark"] {
    viewport. Lives outside the strip's overflow:auto container so the reveal
    isn't clipped.
 
-   React passes four CSS custom properties on the overlay's inline style:
+   transform-origin is center: the cover expands radially from its own
+   centre point — natural "tap point → outward" motion that matches iOS
+   Photos and aligns with the spatial-frame principle (UX best practice:
+   maintain consistent directionality aligned with product context).
+
+   React passes six CSS custom properties on the overlay's inline style:
      --start-x, --start-y           : top-left of the source rect (px)
+     --end-x, --end-y               : final translate so the cover's centre
+                                      lands at the viewport centre (px)
      --end-scale-x, --end-scale-y   : viewport / rect (numbers)
 
-   The keyframe interpolates between the start translate and the end
-   translate+scale. transform-origin is top-left so scale grows down/right
-   from (0,0) — combined with translate(0,0) at end, fills the viewport.
-
-   animation-fill-mode: both holds the "to" state after the animation ends so
-   the overlay keeps covering the viewport until the home page unmounts. */
+   animation-fill-mode: both holds the "to" state until the home page
+   unmounts the overlay. Duration is 480ms — within the 100-500ms ideal
+   range from NN/g's transition-animation research. */
 @keyframes dz-cover-reveal {
   from {
     transform: translate(var(--start-x, 0), var(--start-y, 0)) scale(1, 1);
   }
   to {
-    transform: translate(0, 0) scale(var(--end-scale-x, 1), var(--end-scale-y, 1));
+    transform:
+      translate(var(--end-x, 0), var(--end-y, 0))
+      scale(var(--end-scale-x, 1), var(--end-scale-y, 1));
   }
 }
 
@@ -1861,10 +1867,13 @@ html[data-theme="dark"] {
   pointer-events: none;
   background-size: cover;
   background-position: center;
-  transform-origin: top left;
+  /* Centre origin → radial expand from the cover's own centre point.
+     Top-left origin made the cover grow down/right, which read as a
+     mechanical "panel slide". Centre origin reads as "lift and bloom". */
+  transform-origin: center;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
   animation-name: dz-cover-reveal;
-  animation-duration: 520ms;
+  animation-duration: 480ms;
   animation-timing-function: cubic-bezier(0.32, 0.72, 0.4, 1);
   animation-iteration-count: 1;
   animation-fill-mode: both;
