@@ -56,9 +56,12 @@ export function SongStrip({
   //
   // Notes:
   // - Touch-only (mobile / tablet). Desktop pointer-fine devices get nothing.
-  // - iOS Safari ignores navigator.vibrate entirely (Apple has never shipped
-  //   the Web Vibration API), so this is effectively Android Chrome only.
-  //   On iOS the trigger() call is a silent no-op — no errors, just no buzz.
+  // - Android Chrome / Firefox uses navigator.vibrate directly (real motor pulse).
+  // - iOS Safari has never shipped the Web Vibration API, but web-haptics
+  //   falls back to an AudioContext "click" buffer — a short pulse played
+  //   through the speaker that resonates through the device frame and reads
+  //   as tactile. Quieter than a real motor, audible at very low volume in
+  //   silent rooms, but enough for picker-tick perception during a swipe.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
