@@ -50,21 +50,14 @@ export function SongStrip({
   const { trigger } = useHaptics();
   const lastTickRef = useRef(0);
 
-  // iOS-picker-style tactile feedback while the user swipes through the strip.
-  // Fires a "selection" haptic tap each time a new card crosses the leading
+  // Picker-style tactile feedback while the user drags through the strip.
+  // Fires a short "selection" pulse each time a new card crosses the leading
   // edge — same sensation as scrubbing a UIDatePicker wheel.
   //
-  // Bound to `touchmove`, not `scroll`. iOS Safari only fires the Taptic
-  // Engine (via web-haptics' hidden <input type="checkbox" switch> click
-  // trick) when the .click() lands inside an active user-gesture context.
-  // Passive scroll events — including those that fire during momentum
-  // decay — are NOT a user gesture; the synthetic switch click would land
-  // outside the gesture window and iOS would silently drop the haptic.
-  //
-  // Trade-off: we only feel ticks during the active finger drag, not during
-  // the momentum coast that follows. That's the most web can do on iOS.
-  // Android navigator.vibrate doesn't need a gesture but works fine here
-  // too — touchmove fires during the drag portion that matters for feel.
+  // Bound to `touchmove` (active gesture) rather than `scroll` because that's
+  // the portion of the interaction we can actually drive feedback for on the
+  // web. Android Chrome receives a real motor pulse via navigator.vibrate;
+  // iOS Safari is silent (Apple has never implemented Vibration on web).
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -78,9 +71,8 @@ export function SongStrip({
       const tick = Math.floor(el.scrollLeft / tickWidth);
       if (tick !== lastTickRef.current) {
         lastTickRef.current = tick;
-        // "selection" is web-haptics' shortest preset — 8ms / intensity 0.3.
-        // Fires fast enough to keep up with a flick swipe.
-        void trigger("selection");
+        // 8ms pulse — short enough to keep up with a flick swipe.
+        trigger("selection");
       }
     };
     el.addEventListener("touchmove", onTouchMove, { passive: true });

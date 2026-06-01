@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 
 type HapticType =
   | "light"
@@ -11,92 +11,59 @@ type HapticType =
   | "warning"
   | "error";
 
-interface PulseEffect {
-  delay?: number;
-  duration: number;
-  intensity: number;
-}
-
-// Two-pulse "click" pattern for on/off toggles — a sharper primary pulse
-// followed ~140ms later by a faint echo. Matches the tactile feel of a
-// physical switch catching, then settling.
-const TOGGLE_PATTERN: PulseEffect[] = [
-  { duration: 60, intensity: 0.59 },
-  { delay: 140, duration: 50, intensity: 0.17 },
-];
-
-// ─── Module-singleton WebHaptics ────────────────────────────────────────────
-// One WebHaptics instance shared across every useHaptics() consumer. The
-// previous implementation created one per hook call which (a) wasted memory
-// and (b) prevented the AudioContext bootstrap below from being effective —
-// each instance had its own suspended context.
-//
-// `debug: !supportsVibrate` is the key: web-haptics only runs its internal
-// AudioContext "click" buffer in debug mode. On Android we have real
-// navigator.vibrate (the motor pulse), so we skip the audio decoration; on
-// iOS Safari (no Vibration API) we flip debug on so the audio fallback fires
-// and the user actually feels a tick through the speaker.
-
-type SharedHapticsLike = {
-  trigger: (input: HapticType | PulseEffect[]) => void;
+// Direct navigator.vibrate millisecond patterns. Single-number = solid pulse.
+// Array = on/off/on/off… durations. Modelled after iOS UIFeedbackGenerator
+// presets — same names so existing trigger("light") calls keep working.
+const PRESETS: Record<HapticType, number | number[]> = {
+  light: 15,
+  medium: 25,
+  heavy: 35,
+  selection: 8,
+  success: [30, 60, 40],
+  warning: [40, 100, 40],
+  error: [40, 40, 40, 40, 40],
 };
 
-let sharedHaptics: SharedHapticsLike | null = null;
-let sharedInitPromise: Promise<SharedHapticsLike> | null = null;
+// Two-pulse "click" for on/off toggles — sharper primary, soft echo ~140ms
+// later. Matches the feel of a physical switch catching, then settling.
+const TOGGLE_PATTERN: number[] = [60, 140, 50];
 
-async function getSharedHaptics(): Promise<SharedHapticsLike> {
-  if (sharedHaptics) return sharedHaptics;
-  if (sharedInitPromise) return sharedInitPromise;
-  sharedInitPromise = (async () => {
-    try {
-      const { WebHaptics } = await import("web-haptics");
-      const supportsVibrate =
-        typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
-      sharedHaptics = new WebHaptics({
-        // No debug mode. web-haptics' "debug" flag enables an AudioContext
-        // click-buffer fallback that plays a literal click sound through the
-        // speaker — useful for testing on desktop, but on iOS the user hears
-        // a noise rather than feeling vibration. Without debug, the library
-        // relies on its hidden <input type="checkbox" switch> click trick,
-        // which fires the real Taptic Engine on iOS 17+ Safari.
-        debug: false,
-      }) as unknown as SharedHapticsLike;
-    } catch {
-      sharedHaptics = { trigger: () => {} };
-    }
-    return sharedHaptics!;
-  })();
-  return sharedInitPromise;
+// Arpeggio-like pattern for a guitar strum.
+const STRUM_PATTERN: number[] = [15, 25, 15, 25, 15, 25, 20];
+
+function vibrate(pattern: number | number[]): void {
+  if (typeof navigator === "undefined") return;
+  if (typeof navigator.vibrate !== "function") return;
+  navigator.vibrate(pattern);
 }
 
 /**
- * Thin wrapper around web-haptics.
+ * Thin wrapper around the Web Vibration API.
  *
- * Works on Android (real Vibration API → motor pulse) and iOS Safari (audio
- * click fallback through speaker, only after the first user touch primes the
- * AudioContext — see the bootstrap effect below). On desktop it's a no-op.
+ * - **Android Chrome / Firefox:** real motor pulse via `navigator.vibrate()`.
+ * - **iOS Safari:** silent no-op. Apple has never implemented the Web
+ *   Vibration API and there is no reliable cross-version way to trigger the
+ *   Taptic Engine from a browser. We deliberately do NOT use the
+ *   AudioContext-click fallback that some libraries ship — it plays a
+ *   literal click *sound* through the speaker, which is noise rather than
+ *   tactile feedback. Honest silence is better than fake haptic.
+ * - **Desktop:** silent no-op.
+ *
+ * If iOS one day exposes the Vibration API (or Apple ships a Web Haptics
+ * spec), this hook automatically lights up — every call already routes
+ * through `navigator.vibrate` when present.
  */
 export function useHaptics() {
-  const trigger = useCallback(async (type: HapticType = "light") => {
-    const h = await getSharedHaptics();
-    h.trigger(type);
+  const trigger = useCallback((type: HapticType = "light") => {
+    vibrate(PRESETS[type]);
   }, []);
 
-  const toggle = useCallback(async () => {
-    const h = await getSharedHaptics();
-    h.trigger(TOGGLE_PATTERN);
+  const toggle = useCallback(() => {
+    vibrate(TOGGLE_PATTERN);
   }, []);
 
-  const strum = useCallback(async () => {
-    // Arpeggio-like vibration pattern for a guitar strum. Prefer
-    // navigator.vibrate directly when available — it accepts the raw
-    // millisecond pattern without going through web-haptics' validator.
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate([15, 25, 15, 25, 15, 25, 20]);
-    } else {
-      const h = await getSharedHaptics();
-      h.trigger("medium");
-    }
+  const strum = useCallback(() => {
+    vibrate(STRUM_PATTERN);
   }, []);
 
   return { trigger, strum, toggle };
