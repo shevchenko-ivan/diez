@@ -1828,6 +1828,59 @@ html[data-theme="dark"] {
   transform: scale(0.98);
 }
 
+/* ── Top popular song card — tap-to-open reveal overlay ──────────────────────
+   When a TopSongCard is tapped, a portal-rendered overlay copies the cover
+   into document.body and animates from the cover's captured rect to the full
+   viewport. Lives outside the strip's overflow:auto container so the reveal
+   isn't clipped.
+
+   React passes four CSS custom properties on the overlay's inline style:
+     --start-x, --start-y           : top-left of the source rect (px)
+     --end-scale-x, --end-scale-y   : viewport / rect (numbers)
+
+   The keyframe interpolates between the start translate and the end
+   translate+scale. transform-origin is top-left so scale grows down/right
+   from (0,0) — combined with translate(0,0) at end, fills the viewport.
+
+   animation-fill-mode: both holds the "to" state after the animation ends so
+   the overlay keeps covering the viewport until the home page unmounts. */
+@keyframes dz-cover-reveal {
+  from {
+    transform: translate(var(--start-x, 0), var(--start-y, 0)) scale(1, 1);
+  }
+  to {
+    transform: translate(0, 0) scale(var(--end-scale-x, 1), var(--end-scale-y, 1));
+  }
+}
+
+.dz-cover-reveal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transform-origin: top left;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  animation-name: dz-cover-reveal;
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0.4, 1);
+  animation-iteration-count: 1;
+  animation-fill-mode: both;
+  will-change: transform;
+}
+
+/* Respect OS-level "Reduce motion" — skip the reveal entirely.
+   The click handler also feature-detects this and falls back to plain
+   navigation, but the CSS rule is the safety net if the overlay still
+   gets rendered for any reason. */
+@media (prefers-reduced-motion: reduce) {
+  .dz-cover-reveal-overlay {
+    animation: none;
+  }
+}
+
 /* ── Top popular song card — hover-scale + reveal caption ────────────────────
    Used by the "Топ популярних" section on /. Cover scales up on hover, the
    caption fades in below. On touch devices (no hover) the caption is always

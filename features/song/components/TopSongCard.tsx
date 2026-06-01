@@ -16,22 +16,26 @@ export interface TopSongCardProps {
   index?: number;
 }
 
-// "Tap to open" reveal duration. Matches the iOS Photos zoom-in feel —
-// noticeably longer than a click flash, short enough to not feel slow.
+// Total reveal duration in ms — keep in sync with `.dz-cover-reveal-overlay`
+// animation-duration in globals.css. We push the route ~140ms before the
+// animation ends so the new page paints during the final stretch of the
+// expand instead of after it (no flash of blank background).
 const REVEAL_MS = 520;
+const ROUTE_PUSH_LEAD_MS = 140;
 
 /**
- * Featured "Top popular" card — square vinyl-sleeve cover, no metadata
- * visible by default. Hover scales + reveals caption (desktop); touch
- * devices show caption always.
+ * Featured "Top popular" card — square vinyl-sleeve cover. Hover scales +
+ * reveals caption (desktop); touch devices show caption always.
  *
- * On click the cover lifts off the page via a portal-rendered overlay
- * that translates + scales from its starting rect to the full viewport,
- * then navigation lands on /songs/[slug]. Using a portal means the
- * overlay isn't clipped by the strip's overflow-x:auto container — it
- * lives directly on document.body for the duration of the reveal.
+ * On click the cover lifts off the page via a portal-rendered overlay that
+ * runs a single declarative CSS keyframe animation (`dz-cover-reveal` in
+ * globals.css). The overlay's start rect and end scale are passed through
+ * CSS custom properties, so the static @keyframes block can interpolate
+ * dynamic per-card values without re-declaring keyframes per element.
  *
- * See `.top-song-card*` styles in globals.css.
+ * Pattern adapted from the `css-animations` skill — declarative @keyframes
+ * with animation-fill-mode: both, finite iteration-count, GPU-friendly
+ * transform-only motion.
  */
 export function TopSongCard({
   slug,
@@ -47,28 +51,23 @@ export function TopSongCard({
   // expandRect captures the cover's viewport position at the moment of
   // click. While non-null we render the portal overlay; null = idle.
   const [expandRect, setExpandRect] = useState<DOMRect | null>(null);
-  // viewport snapshot — used to scale the overlay to fullscreen. Captured
-  // at click time so a mid-animation orientation change can't desync the
-  // final transform target.
+  // Viewport snapshot taken at click time — locks the final scale so a
+  // mid-animation orientation change can't desync the target.
   const [viewport, setViewport] = useState<{ w: number; h: number } | null>(null);
-  // Two-phase state: first render places the overlay at rest at the cover's
-  // rect; on the next frame we flip `animated` to trigger the CSS transition.
-  // Browsers only animate between *committed* style states, hence the RAF.
-  const [animated, setAnimated] = useState(false);
   // startTransition keeps the click responsive even if the destination's
-  // data fetch lags — the reveal animation keeps running on the current
-  // frame while React works on the route change in the background.
+  // data fetch lags — the reveal animation keeps running while React works
+  // on the route change.
   const [, startTransition] = useTransition();
 
   const fallbackColor = coverColor || "#C8D5E8";
   const href = `/songs/${slug}`;
 
-  // If the user navigates back (popstate) we'd otherwise leave the cover
-  // still flagged as expanding when re-mounted. Clean up on unmount.
+  // Reset state on unmount so a back-button re-mount doesn't carry over
+  // a stale expanding state.
   useEffect(() => {
     return () => {
       setExpandRect(null);
-      setAnimated(false);
+      setViewport(null);
     };
   }, []);
 
@@ -78,38 +77,29 @@ export function TopSongCard({
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
 
     const cover = coverRef.current;
-    // No image (or lite-mode skipping it) → no overlay to morph, plain navigate.
+    // No image (or lite-mode skipping it) → plain navigate.
     if (!cover || !coverImage || lite) return;
+
+    // Skip the reveal entirely for users who prefer reduced motion.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
 
     e.preventDefault();
     const rect = cover.getBoundingClientRect();
     setExpandRect(rect);
     setViewport({ w: window.innerWidth, h: window.innerHeight });
 
-    // Double-rAF so the overlay commits its rest state (rect position)
-    // before transition-ing to the scaled-up state. A single rAF would
-    // sometimes coalesce both states and skip the animation.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setAnimated(true));
-    });
-
-    // Push slightly before the animation ends so the new page paints
-    // during the final stretch of the reveal — feels like the page
-    // emerges from behind the expanded cover rather than after it.
+    // Push slightly before the animation ends so the new page paints during
+    // the final stretch of the reveal — feels like the page emerges from
+    // behind the expanded cover rather than after it.
     window.setTimeout(() => {
       startTransition(() => router.push(href));
-    }, REVEAL_MS - 140);
+    }, REVEAL_MS - ROUTE_PUSH_LEAD_MS);
   };
-
-  // Compute the final scale factors. Take the max so the overlay covers
-  // the entire viewport even on aspect-ratio mismatches; the slight
-  // overshoot crops gracefully via object-fit on the underlying image.
-  let scaleX = 1;
-  let scaleY = 1;
-  if (expandRect && viewport) {
-    scaleX = viewport.w / expandRect.width;
-    scaleY = viewport.h / expandRect.height;
-  }
 
   return (
     <>
@@ -128,8 +118,8 @@ export function TopSongCard({
             background: `linear-gradient(145deg, ${fallbackColor}CC, ${fallbackColor}66)`,
             boxShadow:
               "0 6px 16px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.04)",
-            // Hide the original during the reveal so the overlay reads as
-            // the same artwork being lifted off the shelf, not a duplicate.
+            // Hide the original during the reveal so the overlay reads as the
+            // same artwork being lifted off the shelf, not a duplicate.
             opacity: expandRect ? 0 : 1,
             transition: expandRect ? "opacity 80ms ease-out" : undefined,
           }}
@@ -162,37 +152,26 @@ export function TopSongCard({
         </div>
       </HapticLink>
 
-      {/* Expanding overlay — rendered into document.body via a portal so it
-          escapes the strip's `overflow-x: auto` clipping. Stays mounted for
-          the duration of the reveal; once the new page renders and the home
-          page unmounts, the overlay disappears with it. */}
+      {/* Expanding overlay — portal into document.body so it escapes the
+          strip's `overflow-x: auto` clipping. The CSS keyframe in
+          globals.css drives the actual motion; we just declare the rect
+          dimensions and the four custom properties the keyframe needs. */}
       {expandRect && viewport && coverImage && typeof document !== "undefined" &&
         createPortal(
           <div
             aria-hidden="true"
+            className="dz-cover-reveal-overlay"
             style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
               width: `${expandRect.width}px`,
               height: `${expandRect.height}px`,
               backgroundImage: `url(${coverImage})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              zIndex: 9999,
-              transformOrigin: "top left",
-              transform: animated
-                ? `translate(0px, 0px) scale(${scaleX}, ${scaleY})`
-                : `translate(${expandRect.left}px, ${expandRect.top}px)`,
-              transition: animated
-                ? `transform ${REVEAL_MS}ms cubic-bezier(0.32, 0.72, 0.4, 1)`
-                : "none",
-              pointerEvents: "none",
-              willChange: "transform",
-              // Preserve the same vinyl drop-shadow look while the cover
-              // lifts off — disappears against the viewport edges as it
-              // fills the screen.
-              boxShadow: "0 12px 36px rgba(0,0,0,0.45)",
+              // CSS custom properties consumed by `@keyframes dz-cover-reveal`.
+              // The keyframe interpolates `transform: translate(...)` between
+              // these and `translate(0,0) scale(end-scale-x, end-scale-y)`.
+              ["--start-x" as string]: `${expandRect.left}px`,
+              ["--start-y" as string]: `${expandRect.top}px`,
+              ["--end-scale-x" as string]: `${viewport.w / expandRect.width}`,
+              ["--end-scale-y" as string]: `${viewport.h / expandRect.height}`,
             }}
           />,
           document.body,
