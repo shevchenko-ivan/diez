@@ -87,6 +87,7 @@ export default async function HomePage() {
           <section className="mb-16">
             <SectionHeader title="Топ популярних" href="/songs?sort=popular" />
             <SongStrip
+              variant="featured"
               initial={trending}
               savedSlugs={Array.from(savedSlugs)}
               loadMore={loadMoreTrending}

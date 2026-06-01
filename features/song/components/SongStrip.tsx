@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SongCard } from "./SongCard";
+import { TopSongCard } from "./TopSongCard";
 import { type Song } from "../types";
 
 // Home-page "Топ популярних" as a horizontal, infinitely-scrolling strip —
@@ -21,9 +22,22 @@ interface Props {
   loadMore: (offset: number, limit?: number) => Promise<Song[]>;
   /** True when the initial page already returned fewer items than requested. */
   initialExhausted?: boolean;
+  /**
+   * Card style.
+   * - "default" (the existing card with cover + title + artist + chord chips).
+   * - "featured" (square cover only; title/artist fades in on hover, always
+   *   visible on touch). Used for the "Топ популярних" shelf on /.
+   */
+  variant?: "default" | "featured";
 }
 
-export function SongStrip({ initial, savedSlugs, loadMore, initialExhausted = false }: Props) {
+export function SongStrip({
+  initial,
+  savedSlugs,
+  loadMore,
+  initialExhausted = false,
+  variant = "default",
+}: Props) {
   const [songs, setSongs] = useState<Song[]>(initial);
   const [exhausted, setExhausted] = useState(initialExhausted);
   const [loading, setLoading] = useState(false);
@@ -77,18 +91,29 @@ export function SongStrip({ initial, savedSlugs, loadMore, initialExhausted = fa
     >
       {songs.map((s, i) => (
         <div key={s.slug} className={`flex-shrink-0 ${CARD_W}`}>
-          <SongCard
-            slug={s.slug}
-            title={s.title}
-            artist={s.artist}
-            difficulty={s.difficulty}
-            chords={s.chords}
-            views={s.views}
-            coverImage={s.coverImage}
-            coverColor={s.coverColor}
-            index={i}
-            isSaved={saved.has(s.slug)}
-          />
+          {variant === "featured" ? (
+            <TopSongCard
+              slug={s.slug}
+              title={s.title}
+              artist={s.artist}
+              coverImage={s.coverImage}
+              coverColor={s.coverColor}
+              index={i}
+            />
+          ) : (
+            <SongCard
+              slug={s.slug}
+              title={s.title}
+              artist={s.artist}
+              difficulty={s.difficulty}
+              chords={s.chords}
+              views={s.views}
+              coverImage={s.coverImage}
+              coverColor={s.coverColor}
+              index={i}
+              isSaved={saved.has(s.slug)}
+            />
+          )}
         </div>
       ))}
 
