@@ -178,7 +178,11 @@ async function SongsContent({ searchParams }: SearchProps) {
         </form>
       </div>
 
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+      {/* Heading + sort. Column on mobile so the sort control keeps a fixed
+          spot on its own row regardless of the selected option's length
+          (long labels like "За датою: спочатку нові" no longer reflow it);
+          inline + space-between from sm up. */}
+      <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-semibold" style={{ fontSize: "1.125rem", letterSpacing: "-0.02em", color: "var(--text)" }}>
           {q ? `Результати для "${rawQ}"` : topic ? topic.title : sort === "new" ? "Нові підбори" : sort === "popular" ? "Топ популярних" : "Всі пісні"}
           {total > 0 && (
@@ -187,12 +191,14 @@ async function SongsContent({ searchParams }: SearchProps) {
             </span>
           )}
         </h2>
-        <div className="flex items-center gap-4 flex-wrap">
-          <SortSelect value={sort} />
-        </div>
+        <SortSelect value={sort} />
       </div>
 
       <SongsInfiniteList
+        // Remount when the query (sort / search / topic) changes so the list
+        // resets to the freshly-sorted server page instead of keeping the
+        // stale useState-seeded songs until a hard reload.
+        key={`${sort}|${q}|${topic?.slug ?? ""}`}
         initialSongs={songs}
         initialTotal={total}
         savedSlugs={savedSlugs}
