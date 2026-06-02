@@ -43,7 +43,7 @@ export default async function HomePage() {
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
       <Navbar />
 
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-6 pb-16">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-6">
 
         {/* ── 1. Hero ──────────────────────────────────────────────────────── */}
         <section className="text-center py-8 md:py-12">
