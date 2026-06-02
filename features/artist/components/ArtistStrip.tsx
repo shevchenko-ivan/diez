@@ -60,7 +60,7 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
   return (
     <div
       ref={scrollerRef}
-      className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-3 scrollbar-none"
+      className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-1 scrollbar-none"
     >
       {artists.map((artist) => {
         const initial = artist.name.charAt(0).toUpperCase();

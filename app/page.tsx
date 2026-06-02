@@ -75,7 +75,7 @@ export default async function HomePage() {
               letterSpacing: "-0.01em",
             }}
           >
-            Зручний пошук, точні тексти без зайвого сміття. Створено музикантами для музикантів.
+            Зручний пошук, точні тексти без зайвого сміття.
           </p>
           <div className="flex justify-center mb-4">
             <HeroSearch />
@@ -146,7 +146,7 @@ export default async function HomePage() {
         {myPlaylists.length > 0 && (
           <section className="mb-16">
             <SectionHeader title="Мої списки" href="/profile/lists" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 sm:gap-3">
               {myPlaylists.slice(0, 4).map((p) => (
                 <PlaylistCard key={p.id} playlist={p} />
               ))}

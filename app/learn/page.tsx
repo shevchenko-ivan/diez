@@ -47,7 +47,7 @@ export default function LearnPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(itemListLd) }}
       />
       <Navbar />
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 md:py-16">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-4xl mx-auto w-full px-6 pt-6 pb-12 md:py-16">
         <header className="mb-10">
           <h1
             className="font-bold mb-3"

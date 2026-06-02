@@ -236,12 +236,14 @@ export function Navbar() {
                   </div>
 
                   <div className="py-1">
-                    <Link href="/add" onClick={closeDropdown}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-                      style={{ color: "var(--orange-text)" }}
-                    >
-                      <Plus size={15} style={{ color: "var(--orange)" }} aria-hidden="true" /> Створити пісню
-                    </Link>
+                    {isAdmin && (
+                      <Link href="/add" onClick={closeDropdown}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                        style={{ color: "var(--orange-text)" }}
+                      >
+                        <Plus size={15} style={{ color: "var(--orange)" }} aria-hidden="true" /> Створити пісню
+                      </Link>
+                    )}
 
                     <Link href="/profile" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
@@ -331,9 +333,11 @@ export function Navbar() {
           })}
 
           <div className="flex flex-col gap-2 pt-3 mt-1 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-            <TeButton shape="pill" href="/add" className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>
-              <Plus size={14} /> Створити пісню
-            </TeButton>
+            {isAdmin && (
+              <TeButton shape="pill" href="/add" className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold" style={{ color: "var(--orange)" }} onClick={() => setMobileOpen(false)}>
+                <Plus size={14} /> Створити пісню
+              </TeButton>
+            )}
 
             <InstallAppButton onAfterAction={() => setMobileOpen(false)} />
 

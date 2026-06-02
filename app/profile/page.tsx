@@ -36,9 +36,11 @@ async function ProfileDashboard() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, avatar_url")
+    .select("username, avatar_url, is_admin")
     .eq("id", user.id)
     .single();
+
+  const isAdmin = !!profile?.is_admin;
 
   const playlists = await getMyPlaylists();
   const defaultList = playlists.find((p) => p.isDefault) ?? null;
@@ -99,16 +101,18 @@ async function ProfileDashboard() {
           </div>
         </div>
 
-        <div className="te-surface flex flex-col p-4" style={{ borderRadius: "1.5rem" }}>
-          <TeButton shape="pill" href="/profile/lists" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+        <div className="te-surface flex flex-col gap-2 p-4" style={{ borderRadius: "1.5rem" }}>
+          <TeButton shape="pill" href="/profile/lists" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl">
             <ListMusic size={16} strokeWidth={1.8} />
             Мої списки
           </TeButton>
-          <TeButton shape="pill" href="/add" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
-            <Plus size={16} strokeWidth={1.8} />
-            Додати нову пісню
-          </TeButton>
-          <TeButton shape="pill" href="/profile/edit" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl mb-1">
+          {isAdmin && (
+            <TeButton shape="pill" href="/add" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl">
+              <Plus size={16} strokeWidth={1.8} />
+              Додати нову пісню
+            </TeButton>
+          )}
+          <TeButton shape="pill" href="/profile/edit" className="flex items-center gap-3 px-4 py-3 font-medium text-sm rounded-xl">
             <Pencil size={16} strokeWidth={1.8} />
             Редагувати профіль
           </TeButton>
@@ -194,7 +198,7 @@ async function ProfileDashboard() {
             <EmptyState
               message="Ви ще не додавали пісень."
               variant="inset"
-              action={<Link href="/add" className="font-bold underline" style={{ color: "var(--orange-text)" }}>Додати зараз →</Link>}
+              action={isAdmin ? <Link href="/add" className="font-bold underline" style={{ color: "var(--orange-text)" }}>Додати зараз →</Link> : undefined}
             />
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

@@ -235,7 +235,11 @@ export function ChordDiagram({ name, def, width = 100, height = 125, openFreqs =
       height={height}
       xmlns="http://www.w3.org/2000/svg"
       className="chord-diagram-svg"
-      style={{ display: "block", overflow: "visible", cursor: "pointer" }}
+      // Pin `color` so `fill="currentColor"` resolves to the theme text colour.
+      // Inside the mobile tools sheet (a [popover]) the UA stylesheet resets
+      // `color` to CanvasText, which rendered the whole diagram near-black on
+      // the dark surface. Binding to var(--text) keeps it visible in both themes.
+      style={{ display: "block", overflow: "visible", cursor: "pointer", color: "var(--text)" }}
       onClick={(e) => {
         e.stopPropagation();
         playChordStrum(strings, openFreqs);
@@ -385,7 +389,9 @@ export function ChordDiagram({ name, def, width = 100, height = 125, openFreqs =
             textAnchor="middle"
             fontSize="5.5"
             fontWeight="bold"
-            fill="white"
+            // Barre bar is currentColor (= --text); use --bg for the label so it
+            // stays legible against the bar in both light and dark themes.
+            fill="var(--bg)"
             fontFamily="inherit"
           >
             1

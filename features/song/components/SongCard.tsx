@@ -284,7 +284,7 @@ export function HeroSearch() {
             aria-controls="hero-search-listbox"
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `hero-search-item-${activeIndex}` : undefined}
-            placeholder="Шукайте за назвою пісні, виконавцем або текстом"
+            placeholder="Пісня, виконавець або текст"
             className="flex-1 bg-transparent outline-none text-sm font-medium"
             style={{ color: "var(--text)" }}
           />

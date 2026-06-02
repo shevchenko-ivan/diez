@@ -155,14 +155,18 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header — back + centered title + right-aligned controls (desktop). */}
-      <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center mb-2">
-        <div className="md:col-start-1 md:justify-self-start">
+      {/* Header — back + title on one row (mobile too), controls below.
+          [1fr | auto | 1fr] on every breakpoint: back sits in the left 1fr,
+          the empty right 1fr balances it, so the auto title column lands at
+          true screen centre. On mobile the controls span all three columns
+          on their own row; on desktop they take the right 1fr column. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-3 mb-2">
+        <div className="justify-self-start">
           <BackButton fallback="/profile/lists" />
         </div>
 
         {/* Title + meta */}
-        <div className="text-center md:col-start-2">
+        <div className="text-center">
           {editingName && !playlist.isDefault ? (
             <input
               autoFocus
@@ -196,16 +200,11 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
           )}
           <p className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
             {songs.length} {pluralSongs(songs.length)}
-            {playlist.isDefault && (
-              <span className="ml-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--orange-text)" }}>
-                Дефолт
-              </span>
-            )}
           </p>
         </div>
 
         {/* Controls: visibility tabs + share URL + delete */}
-        <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 md:col-start-3">
+        <div className="col-span-3 md:col-span-1 md:col-start-3 flex flex-wrap items-center justify-center md:justify-end gap-2">
           <SegmentedTabs
             options={VIS_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
             value={visibility}
@@ -276,7 +275,9 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 cursor: "grab",
               }}
             >
-              <span style={{ color: "var(--text-muted)", opacity: 0.5 }}>
+              {/* Drag handle — desktop only. HTML5 DnD doesn't work on touch,
+                  so the handle is hidden on mobile to avoid implying it does. */}
+              <span className="hidden md:inline" style={{ color: "var(--text-muted)", opacity: 0.5 }}>
                 <GripVertical size={16} />
               </span>
               <div

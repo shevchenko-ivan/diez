@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const SORT_OPTIONS = [
@@ -22,10 +23,8 @@ export function SortSelect({ value, basePath = "/songs" }: { value: string; base
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-        Сорт
-      </label>
+    <div className="flex items-center">
+      <ArrowUpDown size={14} aria-hidden="true" style={{ color: "var(--text-muted)", marginRight: 8, flexShrink: 0 }} />
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
