@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
+import { SongCover } from "@/shared/components/SongCover";
 import { useLiteMode } from "@/shared/components/LiteModeProvider";
 
 export interface TopSongCardProps {
@@ -51,20 +51,21 @@ export function TopSongCard({
             "0 6px 16px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.04)",
         }}
       >
-        {coverImage && !lite && (
-          <Image
-            src={coverImage}
-            alt={`Обкладинка пісні «${title}» — ${artist}`}
-            title={`${title} — ${artist}`}
-            fill
-            sizes="(max-width: 768px) 45vw, 17vw"
-            // First 6 cards span the row on desktop and are above the fold.
-            // The hero subhead is the actual LCP element on /, but eager
-            // loading here avoids re-shuffling priorities once the hero paints.
-            priority={typeof index === "number" && index < 6}
-            className="object-cover"
-          />
-        )}
+        {/* SongCover handles the broken/missing-image fallback (icon + panel),
+            matching the catalog/search list. The wrapper's coverColor gradient
+            stays as the per-song tint shown while the image loads. */}
+        <SongCover
+          src={lite ? null : coverImage}
+          alt={`Обкладинка пісні «${title}» — ${artist}`}
+          title={`${title} — ${artist}`}
+          fill
+          sizes="(max-width: 768px) 45vw, 17vw"
+          // First 6 cards span the row on desktop and are above the fold.
+          // The hero subhead is the actual LCP element on /, but eager
+          // loading here avoids re-shuffling priorities once the hero paints.
+          priority={typeof index === "number" && index < 6}
+          iconSize={40}
+        />
       </div>
       <div className="top-song-card-caption text-center mt-2 px-1">
         <p
