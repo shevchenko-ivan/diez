@@ -346,7 +346,7 @@ export const getSongsPage = unstable_cache(
     else if (sortBy === "created_at_asc") qry = qry.order("created_at", { ascending: true });
     else if (sortBy === "source_popularity") qry = qry.order("source_popularity", { ascending: false, nullsFirst: false });
     else if (sortBy === "source_views") qry = qry.order("source_views", { ascending: false, nullsFirst: false });
-    else if (sortBy === "title_asc") qry = qry.order("title", { ascending: true });
+    else if (sortBy === "title_asc") qry = qry.order("title_sort", { ascending: true });
     else qry = qry.order("views", { ascending: false });
     const { data, count, error } = await qry.range(offset, offset + limit - 1);
     if (error || !data) return { songs: [], total: 0 };
@@ -388,7 +388,7 @@ export const getSongsByArtist = unstable_cache(
     else if (s === "created_at_asc") q = q.order("created_at", { ascending: true });
     else if (s === "source_popularity") q = q.order("source_popularity", { ascending: false, nullsFirst: false });
     else if (s === "source_views") q = q.order("source_views", { ascending: false, nullsFirst: false });
-    else if (s === "title_asc") q = q.order("title", { ascending: true });
+    else if (s === "title_asc") q = q.order("title_sort", { ascending: true });
     else q = q.order("views", { ascending: false });
     if (options?.excludeSlug) q = q.neq("slug", options.excludeSlug);
     if (options?.limit) q = q.limit(options.limit);
