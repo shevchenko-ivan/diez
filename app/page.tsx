@@ -134,6 +134,7 @@ export default async function HomePage() {
           <section className="mb-16">
             <SectionHeader title="Щойно на струнах" href="/songs?sort=new" />
             <SongStrip
+              variant="featured"
               initial={freshSongs}
               savedSlugs={Array.from(savedSlugs)}
               loadMore={loadMoreFresh}
