@@ -41,14 +41,14 @@ export function TopSongCard({
       <div
         className="top-song-card-cover relative aspect-square overflow-hidden"
         style={{
-          // Sharp square edges — vinyl-sleeve aesthetic. The subtle drop
-          // shadow + 1px highlight ring give the cover lift from the dark
-          // background, so the row reads as a shelf of records instead of
-          // floating tiles.
+          // Sharp square edges — vinyl-sleeve aesthetic. The drop shadow gives
+          // lift; the theme-aware 1px ring (var(--border)) keeps the edges
+          // visible even when the cover falls back to a panel that matches the
+          // page background (dark theme), so cards never bleed into the page.
           borderRadius: 0,
           background: `linear-gradient(145deg, ${fallbackColor}CC, ${fallbackColor}66)`,
           boxShadow:
-            "0 6px 16px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.04)",
+            "0 6px 16px rgba(0,0,0,0.35), inset 0 0 0 1px var(--border)",
         }}
       >
         {/* SongCover handles the broken/missing-image fallback (icon + panel),
