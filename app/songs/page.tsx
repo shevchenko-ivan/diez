@@ -170,7 +170,7 @@ async function SongsContent({ searchParams }: SearchProps) {
               autoComplete="off"
               defaultValue={typeof rawQ === "string" ? rawQ : ""}
               placeholder={topic ? "Шукати в підбірці…" : "Пісня або виконавець..."}
-              className="flex-1 bg-transparent outline-none text-sm font-medium"
+              className="flex-1 bg-transparent outline-none text-sm font-normal"
               style={{ color: "var(--text)" }}
             />
           </div>

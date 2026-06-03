@@ -12,7 +12,7 @@ export function SearchSubmitButton() {
       </span>
       {/* Desktop: text label */}
       <span className="hidden md:inline-flex shrink-0">
-        <TeButton shape="pill" type="submit" className="px-5 py-3 text-xs font-bold tracking-widest">
+        <TeButton shape="pill" type="submit" className="px-5 py-3 text-xs font-medium tracking-widest">
           ЗНАЙТИ
         </TeButton>
       </span>

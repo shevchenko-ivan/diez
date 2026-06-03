@@ -280,7 +280,7 @@ export function HeroSearch() {
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `hero-search-item-${activeIndex}` : undefined}
             placeholder="Пісня, виконавець або текст"
-            className="flex-1 bg-transparent outline-none text-sm font-medium"
+            className="flex-1 bg-transparent outline-none text-sm font-normal"
             style={{ color: "var(--text)" }}
           />
         </div>
@@ -301,7 +301,7 @@ export function HeroSearch() {
             shape="pill"
             type="submit"
             aria-label="Знайти"
-            className="px-5 py-3 text-xs font-bold tracking-widest"
+            className="px-5 py-3 text-xs font-medium tracking-widest"
           >
             ЗНАЙТИ
           </TeButton>

@@ -185,7 +185,7 @@ export function Navbar() {
               <TeButton shape="pill" href="/auth/login" className="px-4 py-2 text-sm" style={{ color: "var(--text-mid)", fontWeight: 400 }}>
                 Увійти
               </TeButton>
-              <TeButton shape="pill" href="/auth/sign-up" className="px-5 py-2 text-sm font-bold">
+              <TeButton shape="pill" href="/auth/sign-up" className="px-5 py-2 text-sm font-medium">
                 Реєстрація
               </TeButton>
             </>
@@ -361,7 +361,7 @@ export function Navbar() {
             ) : (
               <div className="flex gap-2 pt-1">
                 <TeButton shape="pill" href="/auth/login" className="flex-1 text-center py-2.5 text-sm font-medium" style={{ color: "var(--text-mid)" }} onClick={() => setMobileOpen(false)}>Увійти</TeButton>
-                <TeButton shape="pill" href="/auth/sign-up" className="flex-1 text-center py-2.5 text-sm font-bold" onClick={() => setMobileOpen(false)}>Реєстрація</TeButton>
+                <TeButton shape="pill" href="/auth/sign-up" className="flex-1 text-center py-2.5 text-sm font-medium" onClick={() => setMobileOpen(false)}>Реєстрація</TeButton>
               </div>
             )}
           </div>

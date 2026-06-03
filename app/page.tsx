@@ -68,7 +68,7 @@ export default async function HomePage() {
             Грай більше, шукай менше.
           </h1>
           <p
-            className="font-medium mb-6 mx-auto"
+            className="font-normal mb-6 mx-auto"
             style={{
               fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
               color: "var(--text-muted)",
@@ -176,7 +176,7 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
       {href && (
         <HapticLink
           href={href}
-          className="text-xs font-bold uppercase tracking-widest hover:underline"
+          className="text-xs font-medium uppercase tracking-widest hover:underline"
           style={{ color: "var(--text-muted)" }}
         >
           Дивитись всі <span style={{ opacity: 0.5 }}>→</span>
