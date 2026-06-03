@@ -1,5 +1,4 @@
 import { ImageResponse } from "next/og";
-import { getSongsPage } from "@/features/song/services/songs";
 import { getArtists } from "@/features/artist/services/artists";
 
 // Site-wide share card — used for /, /songs, /artists, /chords, /tuner, /about
@@ -20,24 +19,26 @@ const ORANGE = "#FF8C3C";
 const DARK = "#2A2522";
 const MUTED = "#5C564E";
 
+// Fixed, recognisable covers for the fan (left → front): Океан Ельзи · Модель,
+// Скрябін · Танго, Бумбокс · Люди. Hardcoded so the poster always reads the
+// same instead of shuffling with the live "top" ordering.
+const COVERS = [
+  { img: "https://cdn-images.dzcdn.net/images/cover/8e09fdfde50b010534dbf569a51ffe50/1000x1000-000000-80-0-0.jpg", color: "#173A8A" },
+  { img: "https://cdn-images.dzcdn.net/images/cover/dcd8e2cf3617eddc93ca2ec2dce84b39/1000x1000-000000-80-0-0.jpg", color: "#262321" },
+  { img: "https://cdn-images.dzcdn.net/images/cover/94b7247e604f80884461a79b4c36e469/1000x1000-000000-80-0-0.jpg", color: "#1A1A1A" },
+];
+
 export default async function OG() {
-  let covers: { img: string; color: string }[] = [];
+  const covers = COVERS;
   let avatars: string[] = [];
   try {
-    const [page, artists] = await Promise.all([
-      getSongsPage({ sortBy: "source_views", limit: 20 }),
-      getArtists(14),
-    ]);
-    covers = page.songs
-      .filter((s) => s.coverImage)
-      .slice(0, 3)
-      .map((s) => ({ img: s.coverImage as string, color: s.coverColor ?? "#1A1A1A" }));
+    const artists = await getArtists(14);
     avatars = artists
       .filter((a) => a.photo_url)
       .slice(0, 5)
       .map((a) => a.photo_url as string);
   } catch {
-    // fall through to the text-only layout below
+    // avatars are optional — the rest of the card still renders
   }
 
   // Fan of album covers + a peeking chord sheet (right half).
@@ -123,9 +124,8 @@ export default async function OG() {
                     height: 84,
                     borderRadius: 999,
                     overflow: "hidden",
-                    marginLeft: i === 0 ? 0 : -18,
-                    border: "4px solid #EDE8DE",
-                    boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+                    marginLeft: i === 0 ? 0 : -16,
+                    border: "4px solid #E4DFD5",
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -160,34 +160,6 @@ export default async function OG() {
               <img src={c.img} width={252} height={252} style={{ width: 252, height: 252, objectFit: "cover" }} alt="" />
             </div>
           ))}
-
-          {/* Chord sheet — front-right of the fan, like the reference poster. */}
-          <div
-            style={{
-              position: "absolute",
-              left: 386,
-              top: 198,
-              width: 172,
-              height: 236,
-              display: "flex",
-              flexDirection: "column",
-              padding: "22px 20px",
-              background: "#FBF8F2",
-              borderRadius: 12,
-              transform: "rotate(12deg)",
-              boxShadow: "0 22px 50px rgba(0,0,0,0.28)",
-              color: "#3A332B",
-              fontSize: 18,
-              lineHeight: 1.5,
-            }}
-          >
-            <div style={{ display: "flex", color: ORANGE, fontWeight: 700 }}>Dm        G</div>
-            <div style={{ display: "flex" }}>Спи собі…</div>
-            <div style={{ display: "flex", color: ORANGE, fontWeight: 700, marginTop: 8 }}>Am        C</div>
-            <div style={{ display: "flex" }}>Тримай мене…</div>
-            <div style={{ display: "flex", color: ORANGE, fontWeight: 700, marginTop: 8 }}>Em        D</div>
-            <div style={{ display: "flex" }}>Вона…</div>
-          </div>
         </div>
       </div>
     ),
