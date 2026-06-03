@@ -79,22 +79,21 @@ export default async function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <head>
-        {/* Preload the two Stolzl weights actually used above the fold
-            (Regular 400 for body/UI text, Bold 700 for h1 + nav). Without
-            these the browser only discovers them after parsing the CSS, by
-            which time it has already rendered fallback text — then a swap
-            shifts everything below it. Was a primary contributor to CLS
-            0.45 on the home page (per Speed Insights). */}
+        {/* Preload the two e-Ukraine weights used above the fold (Regular 400
+            for body/UI text, Bold 700 for h1 + nav). Without these the browser
+            only discovers them after parsing the CSS, by which time it has
+            already rendered fallback text — then a swap shifts everything below
+            it. Was a primary contributor to CLS 0.45 on the home page. */}
         <link
           rel="preload"
-          href="/fonts/Stolzl-Regular.woff2"
+          href="/fonts/e-Ukraine-Regular.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/fonts/Stolzl-Bold.woff2"
+          href="/fonts/e-Ukraine-Bold.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
