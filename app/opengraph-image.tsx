@@ -1,17 +1,18 @@
 import { ImageResponse } from "next/og";
 
-// Site-wide fallback OG card — used for /, /songs, /artists, /chords, /tuner,
-// /about and anywhere a more specific opengraph-image.tsx isn't co-located.
-// The old static PNG here was the unmodified Next.js Starter Kit screenshot
-// shipped by Vercel's template; replacing with this generator keeps the
-// brand consistent everywhere.
+// Site-wide share card — used for /, /songs, /artists, /chords, /tuner, /about
+// and anywhere a more specific opengraph-image.tsx isn't co-located. Designed
+// to read like the homepage hero: warm brand background, the #DIEZ wordmark,
+// the "Грай більше, шукай менше" tagline, a chord-pill row and the URL — so a
+// shared diez.net.ua link previews as a polished product card.
 
 export const runtime = "edge";
-export const alt = "Diez — Акорди для гітари";
+export const alt = "Diez — українські пісні, тексти й акорди";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OG() {
+  const chords = ["Am", "C", "G", "Dm", "Em", "F"];
   return new ImageResponse(
     (
       <div
@@ -19,50 +20,114 @@ export default async function OG() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          background: "linear-gradient(135deg, #E8DDD0, #C8B59A 60%, #8A6F4A)",
-          padding: 64,
+          position: "relative",
+          overflow: "hidden",
+          background: "linear-gradient(135deg, #EDE8DE 0%, #E4DFD5 55%, #D9D1C3 100%)",
           fontFamily: "system-ui",
-          color: "#1A1A1A",
         }}
       >
+        {/* Oversized faint "#" watermark — the diez/sharp glyph doubling as a
+            brand motif, bled off the bottom-right corner for depth. */}
         <div
           style={{
-            fontSize: 240,
+            position: "absolute",
+            right: -70,
+            bottom: -180,
+            fontSize: 580,
             fontWeight: 900,
-            letterSpacing: "-0.06em",
             color: "#FF8C3C",
-            lineHeight: 0.85,
-            // Tight letter spacing + huge "#" — the brand glyph reads as the
-            // chord notation "#" (diez/sharp) and doubles as the logo.
+            opacity: 0.08,
+            letterSpacing: "-0.06em",
+            display: "flex",
           }}
         >
-          #DIEZ
+          #
         </div>
+
+        {/* Content column */}
         <div
           style={{
-            fontSize: 44,
-            fontWeight: 700,
-            marginTop: 24,
-            letterSpacing: "-0.02em",
-            color: "#2A1F12",
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            width: "100%",
+            height: "100%",
+            padding: 72,
           }}
         >
-          Акорди для гітари
-        </div>
-        <div
-          style={{
-            fontSize: 26,
-            fontWeight: 500,
-            marginTop: 16,
-            opacity: 0.7,
-            letterSpacing: "-0.01em",
-            color: "#2A1F12",
-          }}
-        >
-          Тисячі пісень. Текст, акорди, тональність.
+          {/* Header — wordmark + URL chip */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", fontSize: 46, fontWeight: 900, letterSpacing: "-0.04em" }}>
+              <span style={{ color: "#FF8C3C" }}>#</span>
+              <span style={{ color: "#2A2522" }}>DIEZ</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 24,
+                fontWeight: 600,
+                color: "#5C564E",
+                padding: "12px 26px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.55)",
+                border: "1px solid rgba(0,0,0,0.06)",
+              }}
+            >
+              diez.net.ua
+            </div>
+          </div>
+
+          {/* Hero — tagline + subline */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                fontSize: 100,
+                fontWeight: 900,
+                letterSpacing: "-0.045em",
+                lineHeight: 1.0,
+                color: "#2A2522",
+              }}
+            >
+              <div style={{ display: "flex" }}>Грай більше,</div>
+              <div style={{ display: "flex" }}>шукай менше.</div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 31,
+                fontWeight: 500,
+                marginTop: 26,
+                color: "#5C564E",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Українські пісні, тексти й акорди — гітара, укулеле, піаніно.
+            </div>
+          </div>
+
+          {/* Chord-pill row — instantly reads as "this is for guitarists". */}
+          <div style={{ display: "flex", gap: 14 }}>
+            {chords.map((c) => (
+              <div
+                key={c}
+                style={{
+                  display: "flex",
+                  fontSize: 30,
+                  fontWeight: 700,
+                  padding: "12px 28px",
+                  borderRadius: 999,
+                  background: "rgba(255,140,60,0.16)",
+                  color: "#C2641A",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {c}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     ),
