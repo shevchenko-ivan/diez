@@ -78,53 +78,59 @@ export default async function OG() {
           #
         </div>
 
-        {/* LEFT — copy + wordmark + avatar cluster */}
+        {/* LEFT — copy + wordmark + avatar cluster. Instruments line sits above
+            the logo (where the tagline used to be); the features line is pinned
+            to the bottom. */}
         <div
           style={{
             position: "relative",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
+            justifyContent: "space-between",
             width: 600,
             height: "100%",
-            padding: "0 0 0 70px",
+            padding: "58px 0 56px 70px",
           }}
         >
-          <div style={{ display: "flex", fontSize: 128, fontWeight: 900, letterSpacing: "-0.05em" }}>
-            <span style={{ color: ORANGE }}>#</span>
-            <span style={{ color: DARK }}>DIEZ</span>
+          {/* Top — instruments line + wordmark + avatars */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", maxWidth: 480, fontSize: 28, fontWeight: 600, lineHeight: 1.3, color: DARK }}>
+              Українські пісні з акордами для гітари, укулеле й піаніно.
+            </div>
+
+            <div style={{ display: "flex", marginTop: 14, fontSize: 128, fontWeight: 900, letterSpacing: "-0.05em" }}>
+              <span style={{ color: ORANGE }}>#</span>
+              <span style={{ color: DARK }}>DIEZ</span>
+            </div>
+
+            {/* Artist avatar cluster */}
+            {avatars.length > 0 && (
+              <div style={{ display: "flex", marginTop: 26 }}>
+                {avatars.map((src, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      width: 84,
+                      height: 84,
+                      borderRadius: 999,
+                      overflow: "hidden",
+                      marginLeft: i === 0 ? 0 : -16,
+                      border: "4px solid #E4DFD5",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} width={84} height={84} style={{ width: 84, height: 84, objectFit: "cover" }} alt="" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div style={{ display: "flex", marginTop: 18, maxWidth: 480, fontSize: 29, fontWeight: 600, lineHeight: 1.32, color: DARK }}>
-            Українські пісні з акордами для гітари, укулеле й піаніно.
-          </div>
-
-          <div style={{ display: "flex", marginTop: 12, maxWidth: 480, fontSize: 23, fontWeight: 500, lineHeight: 1.3, color: MUTED }}>
+          {/* Bottom — feature line */}
+          <div style={{ display: "flex", maxWidth: 500, fontSize: 23, fontWeight: 500, lineHeight: 1.3, color: MUTED }}>
             Тюнер, транспонування, акорди без баре, навчання.
           </div>
-
-          {/* Artist avatar cluster */}
-          {avatars.length > 0 && (
-            <div style={{ display: "flex", marginTop: 34 }}>
-              {avatars.map((src, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    width: 84,
-                    height: 84,
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    marginLeft: i === 0 ? 0 : -16,
-                    border: "4px solid #E4DFD5",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} width={84} height={84} style={{ width: 84, height: 84, objectFit: "cover" }} alt="" />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* RIGHT — fanned album covers + a chord sheet as the front element */}
