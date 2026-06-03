@@ -181,7 +181,15 @@ export function SongPlayer({ youtubeId, title, artist, compact = false }: SongPl
 
   // YouTube-like shortcuts: K play/pause, J back 10s, L forward 10s.
   // Ignored when typing in input/textarea/select/contenteditable.
+  //
+  // Only the full (desktop) instance binds the global shortcut. Two SongPlayers
+  // mount per song (mobile `compact` sheet + desktop full); if both listened, a
+  // single K press toggled BOTH hidden players — activating the dormant one and
+  // leaving a second copy playing in the background that the visible UI/mouse
+  // couldn't stop (only a reload killed it). Keyboard is a desktop input, so the
+  // compact instance opts out.
   useEffect(() => {
+    if (compact) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const code = e.code;
