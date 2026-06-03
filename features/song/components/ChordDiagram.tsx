@@ -582,7 +582,8 @@ interface ChordHoverProps {
 
 export function ChordHover({ chord, voicingState, children, customVoicings }: ChordHoverProps) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; bottom: number; left: number } | null>(null);
+  const [below, setBelow] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -606,7 +607,8 @@ export function ChordHover({ chord, voicingState, children, customVoicings }: Ch
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      setPos({ top: rect.top, left: rect.left + rect.width / 2 });
+      setPos({ top: rect.top, bottom: rect.bottom, left: rect.left + rect.width / 2 });
+      setBelow(false); // default above; the layout effect flips down if it clips
     }
     setOpen(true);
   };
@@ -614,18 +616,27 @@ export function ChordHover({ chord, voicingState, children, customVoicings }: Ch
     timeoutRef.current = setTimeout(() => setOpen(false), 150);
   };
 
-  // Clamp popup horizontally into the viewport after it renders.
+  // Clamp the popup into the viewport after it renders: horizontally always,
+  // and vertically by flipping below the chord when the default above-placement
+  // would clip past the top edge (chords near the top of the viewport — the
+  // popup used to render off-screen and never appear).
   useLayoutEffect(() => {
     if (!open || !pos || !popupRef.current) return;
     const rect = popupRef.current.getBoundingClientRect();
     const margin = 8;
     const vw = window.innerWidth;
+    const vh = window.innerHeight;
     const half = rect.width / 2;
     let next = pos.left;
     if (next - half < margin) next = half + margin;
     if (next + half > vw - margin) next = vw - margin - half;
     if (Math.abs(next - pos.left) > 0.5) setPos((p) => (p ? { ...p, left: next } : p));
-  }, [open, pos]);
+
+    const fitsAbove = pos.top - 8 - rect.height >= margin;
+    const fitsBelow = pos.bottom + 8 + rect.height <= vh - margin;
+    const nextBelow = !fitsAbove && fitsBelow;
+    if (nextBelow !== below) setBelow(nextBelow);
+  }, [open, pos, below]);
 
   return (
     <span
@@ -642,9 +653,9 @@ export function ChordHover({ chord, voicingState, children, customVoicings }: Ch
           onMouseLeave={hide}
           style={{
             position: "fixed",
-            top: pos.top - 8,
+            top: below ? pos.bottom + 8 : pos.top - 8,
             left: pos.left,
-            transform: "translate(-50%, -100%)",
+            transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
             zIndex: 50,
             color: "var(--text)",
             background: "var(--surface)",
