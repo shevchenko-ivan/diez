@@ -55,7 +55,9 @@ export default async function HomePage() {
               color: "var(--text)",
               lineHeight: 1.1,
               maxWidth: 640,
-              margin: "0 auto",
+              // bottom value is what actually spaces the subtitle — the inline
+              // `margin` overrides the `mb-4` class, which is why it read as 0.
+              margin: "0 auto 1.5rem",
               fontWeight: 800,
               // text-wrap: balance — браузер сам ділить два рядки рівно
               // замість hardcoded <br />. Baseline since 2025-09; старі
