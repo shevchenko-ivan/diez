@@ -475,7 +475,7 @@ async function RelatedSongs({
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {otherSongs.map(({ key: _k, ...s }) => (
-          <SongCard key={s.slug} {...s} />
+          <SongCard key={s.slug} {...s} hideSave />
         ))}
       </div>
     </div>
@@ -512,7 +512,7 @@ async function SongsWithSameChords({
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {songs.map(({ key: _k, ...s }) => (
-          <SongCard key={s.slug} {...s} />
+          <SongCard key={s.slug} {...s} hideSave />
         ))}
       </div>
     </div>

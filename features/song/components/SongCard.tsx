@@ -25,6 +25,8 @@ export interface SongCardProps {
   coverImage?: string;
   index?: number;
   variantId?: string | null;
+  /** Hide the save-heart overlay (e.g. song-page recommendation grids). */
+  hideSave?: boolean;
 }
 
 export function SongCard({ ...props }: SongCardProps) {
@@ -72,7 +74,7 @@ export function SongCard({ ...props }: SongCardProps) {
       {/* Save-heart overlay — sibling of the cover (not inside it) so it doesn't
           scale with the cover on hover. Shown when saved / hover / focus /
           touch, mirroring the previous behaviour. */}
-      {props.slug && (
+      {props.slug && !props.hideSave && (
         <div
           className={
             "absolute top-1.5 right-1.5 z-10 transition-opacity duration-150 focus-within:opacity-100 [@media(hover:none)]:opacity-100 " +
