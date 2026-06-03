@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   type ChordDef,
   CHORD_DB,
@@ -646,42 +647,49 @@ export function ChordHover({ chord, voicingState, children, customVoicings }: Ch
       style={{ cursor: "pointer" }}
     >
       {children}
-      {open && pos && (
-        <div
-          ref={popupRef}
-          onMouseEnter={show}
-          onMouseLeave={hide}
-          style={{
-            position: "fixed",
-            top: below ? pos.bottom + 8 : pos.top - 8,
-            left: pos.left,
-            transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
-            zIndex: 50,
-            color: "var(--text)",
-            background: "var(--surface)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 12,
-            padding: "8px 10px 6px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            pointerEvents: "auto",
-          }}
-        >
-          {pianoDef ? (
-            <PianoDiagram name={chord} def={pianoDef} width={140} height={70} />
-          ) : (
-            <ChordDiagram name={chord} def={def!} width={90} height={112} openFreqs={openFreqs} />
-          )}
-          <VoicingSwitcher
-            chordName={chord}
-            total={total}
-            idx={idx}
-            setVoicingIdx={voicingState.setVoicingIdx}
-          />
-        </div>
-      )}
+      {/* Portal to <body>: song sections at index ≥ 2 use
+          `content-visibility: auto`, whose paint containment makes the section
+          the containing block for `position: fixed` — which dragged the popup
+          off to the wrong place (the "popup doesn't show on verse 2+" bug).
+          Rendering in a body portal keeps `fixed` truly viewport-relative. */}
+      {open && pos && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={popupRef}
+            onMouseEnter={show}
+            onMouseLeave={hide}
+            style={{
+              position: "fixed",
+              top: below ? pos.bottom + 8 : pos.top - 8,
+              left: pos.left,
+              transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+              zIndex: 50,
+              color: "var(--text)",
+              background: "var(--surface)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "8px 10px 6px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+              pointerEvents: "auto",
+            }}
+          >
+            {pianoDef ? (
+              <PianoDiagram name={chord} def={pianoDef} width={140} height={70} />
+            ) : (
+              <ChordDiagram name={chord} def={def!} width={90} height={112} openFreqs={openFreqs} />
+            )}
+            <VoicingSwitcher
+              chordName={chord}
+              total={total}
+              idx={idx}
+              setVoicingIdx={voicingState.setVoicingIdx}
+            />
+          </div>,
+          document.body,
+        )}
     </span>
   );
 }
