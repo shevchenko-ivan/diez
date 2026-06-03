@@ -90,26 +90,17 @@ export default async function OG() {
             padding: "0 0 0 70px",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              fontSize: 36,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "-0.01em",
-              color: DARK,
-            }}
-          >
-            Твоя музика. Твої тексти.
-          </div>
-
-          <div style={{ display: "flex", marginTop: 8, fontSize: 124, fontWeight: 900, letterSpacing: "-0.05em" }}>
+          <div style={{ display: "flex", fontSize: 128, fontWeight: 900, letterSpacing: "-0.05em" }}>
             <span style={{ color: ORANGE }}>#</span>
             <span style={{ color: DARK }}>DIEZ</span>
           </div>
 
-          <div style={{ display: "flex", marginTop: 6, fontSize: 27, fontWeight: 500, color: MUTED }}>
-            Тисячі українських пісень з акордами
+          <div style={{ display: "flex", marginTop: 18, maxWidth: 480, fontSize: 29, fontWeight: 600, lineHeight: 1.32, color: DARK }}>
+            Українські пісні з акордами для гітари, укулеле й піаніно.
+          </div>
+
+          <div style={{ display: "flex", marginTop: 12, maxWidth: 480, fontSize: 23, fontWeight: 500, lineHeight: 1.3, color: MUTED }}>
+            Тюнер, транспонування, акорди без баре, навчання.
           </div>
 
           {/* Artist avatar cluster */}
