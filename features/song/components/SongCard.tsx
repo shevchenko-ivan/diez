@@ -34,75 +34,68 @@ export function SongCard({ ...props }: SongCardProps) {
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
   const href = props.variantId ? `${base}?v=${props.variantId}` : base;
 
-  // Reserve right padding for the save-heart ONLY when the heart is actually
-  // visible — so a resting card on a hover-capable device (heart hidden) gives
-  // the title/artist the full width instead of clipping under empty space.
-  // Mirrors the heart's own visibility rules below (saved / hover / focus /
-  // touch where it's always shown).
-  const heartPad = !props.slug
-    ? ""
-    : props.isSaved
-      ? "pr-10"
-      : "group-hover:pr-10 focus-within:pr-10 [@media(hover:none)]:pr-10";
+  const fallbackColor = props.coverColor || "#C8D5E8";
 
+  // Vinyl-sleeve style, identical to the homepage "Топ популярних" cards
+  // (TopSongCard / .top-song-card* in globals.css): square sharp-edged cover
+  // with a drop shadow + theme-aware edge ring, caption below that's muted by
+  // default and brightens on hover while the cover scales up. The save-heart is
+  // kept as a cover overlay so grids (profile / lists) don't lose the action.
   return (
     <HapticLink
       href={href}
       hapticType="strum"
-      className="te-card-thick te-pressable flex flex-col group relative"
-      style={{ borderRadius: "1.5rem", padding: "10px" }}
+      className="top-song-card group block focus-visible:outline-none relative"
     >
-      {/* --- MEDIA ZONE (recessed "well") --- */}
       <div
-        className="te-card-well w-full aspect-square relative overflow-hidden"
-        style={{ borderRadius: "1rem" }}
+        className="top-song-card-cover relative aspect-square overflow-hidden"
+        style={{
+          borderRadius: 0,
+          background: `linear-gradient(145deg, ${fallbackColor}CC, ${fallbackColor}66)`,
+          boxShadow: "0 6px 16px rgba(0,0,0,0.35), inset 0 0 0 1px var(--border)",
+        }}
       >
-        {/* Cover — alt text doubles as Google Image Search input and
-            screen-reader label. "Cover-link-to-text" patterns sometimes
-            advise alt="" so the link text isn't repeated, but here the title
-            and artist are visually beside the image; for SEO + a11y the
-            descriptive alt wins. `priority` on the first few above-the-fold
-            cards (home "Топ популярних") skips lazy loading — drops LCP by
-            3-5s on slow connections per PageSpeed Insights audit. */}
+        {/* Cover — descriptive alt doubles as Google Image Search input +
+            screen-reader label. `priority` skips lazy loading for the first few
+            above-the-fold cards. */}
         <SongCover
           src={lite ? null : props.coverImage}
           alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
           title={`${props.title} — ${props.artist}`}
           fill
-          // `sizes` must upper-bound the rendered width across every grid this
-          // card lives in (home/songs = 4-col, song-page related = 4-col,
-          // profile = 3-col, lists = 5-col). The widest real slot is profile's
-          // 3-col grid inside max-w-6xl ≈ 357px. Below 1024px the profile grid
-          // is still 2-col (~50vw), so 50vw holds there; above 1024px every
-          // grid caps the card at ≤360px. The old "25vw" tail both under-sized
-          // profile covers ≤1024px (blurry) and over-fetched on wide screens
-          // (25vw of 1920 = 480px → next/image pulled a ~1080w candidate for a
-          // ≤360px slot, ~85 KB of waste per song page per DevTools insight).
           sizes="(max-width: 1024px) 50vw, 360px"
           priority={typeof props.index === "number" && props.index < 4}
           iconSize={40}
         />
       </div>
 
-      {/* --- META ZONE --- */}
-      <div className="px-2 pt-3.5 pb-1 flex-1 relative">
-        <h3 className={`font-bold text-sm tracking-tight leading-tight line-clamp-1 ${heartPad}`} style={{ color: "var(--text)" }}>
-          {props.title}
-        </h3>
-        <p className={`text-[13px] tracking-tight leading-tight line-clamp-1 ${heartPad}`} style={{ color: "var(--text-muted)" }}>
-          {props.artist}
-        </p>
-        {props.slug && (
-          <div
-            className={
-              "absolute top-2 right-1 transition-opacity duration-150 focus-within:opacity-100 [@media(hover:none)]:opacity-100 " +
-              (props.isSaved ? "opacity-100" : "opacity-0 group-hover:opacity-100")
-            }
-            onClick={(e) => e.stopPropagation()}
+      {/* Save-heart overlay — sibling of the cover (not inside it) so it doesn't
+          scale with the cover on hover. Shown when saved / hover / focus /
+          touch, mirroring the previous behaviour. */}
+      {props.slug && (
+        <div
+          className={
+            "absolute top-1.5 right-1.5 z-10 transition-opacity duration-150 focus-within:opacity-100 [@media(hover:none)]:opacity-100 " +
+            (props.isSaved ? "opacity-100" : "opacity-0 group-hover:opacity-100")
+          }
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span
+            className="inline-flex items-center justify-center rounded-full"
+            style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", padding: 4 }}
           >
             <SaveHeartButton slug={props.slug} initialSaved={props.isSaved} variant="bare" size={16} />
-          </div>
-        )}
+          </span>
+        </div>
+      )}
+
+      <div className="top-song-card-caption text-center mt-2 px-1">
+        <p className="font-bold text-sm truncate" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
+          {props.title}
+        </p>
+        <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
+          {props.artist}
+        </p>
       </div>
     </HapticLink>
   );
