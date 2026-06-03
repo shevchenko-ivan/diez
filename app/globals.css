@@ -158,7 +158,9 @@
     background: var(--bg);
     color: var(--text);
     font-family: 'e-Ukraine', -apple-system, sans-serif;
-    font-weight: 450;
+    /* e-Ukraine only ships 400/500 cuts, so the old 450 rounded UP to Medium
+       and made all default-weight text look heavier. Pin to Regular (400). */
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     cursor: default;
     /* Normalize fallback x-height to Inter's so the layout doesn't shift
