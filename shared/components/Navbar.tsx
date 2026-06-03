@@ -7,6 +7,7 @@ import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, L
 import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
 import { TeButton } from "@/shared/components/TeButton";
+import { DiezLogo } from "@/shared/components/DiezLogo";
 import { InstallAppButton } from "@/shared/components/InstallAppButton";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 
@@ -131,8 +132,7 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" aria-label="Diez — на головну" className="flex items-center flex-shrink-0">
-          <span aria-hidden="true" style={{ color: "var(--orange)", fontWeight: 500, fontSize: "1.35rem", letterSpacing: "-0.04em" }}>#</span>
-          <span aria-hidden="true" style={{ color: "var(--text)", fontWeight: 500, fontSize: "1.35rem", letterSpacing: "-0.04em" }}>DIEZ</span>
+          <DiezLogo height={28} />
         </Link>
 
         {/* Desktop nav links */}

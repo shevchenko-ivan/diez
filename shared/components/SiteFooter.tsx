@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getRankedArtists } from "@/features/artist/services/artists";
+import { DiezLogo } from "@/shared/components/DiezLogo";
 
 const NAV_COLUMNS = [
   {
@@ -51,13 +52,8 @@ export async function SiteFooter() {
 
           {/* Brand block */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="inline-flex items-center mb-3">
-              <span style={{ color: "var(--orange)", fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.04em" }}>
-                #
-              </span>
-              <span style={{ color: "var(--text)", fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.04em" }}>
-                DIEZ
-              </span>
+            <Link href="/" aria-label="Diez — на головну" className="inline-flex items-center mb-3">
+              <DiezLogo height={24} />
             </Link>
             <p
               style={{
