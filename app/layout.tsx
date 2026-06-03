@@ -98,6 +98,14 @@ export default async function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        {/* Heading display cut — hero h1 is the largest above-the-fold text. */}
+        <link
+          rel="preload"
+          href="/fonts/e-UkraineHead-Bold.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
 
         {/* PostHog loads lazily (only after idle + cookie consent), so a full
             preconnect would sit unused on the critical path — Lighthouse flags

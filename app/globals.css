@@ -31,6 +31,29 @@
   font-display: swap;
 }
 
+/* ── e-Ukraine Head — display cut for headings (h1/h2) ──────────────────────── */
+@font-face {
+  font-family: 'e-Ukraine Head';
+  src: url('/fonts/e-UkraineHead-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'e-Ukraine Head';
+  src: url('/fonts/e-UkraineHead-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'e-Ukraine Head';
+  src: url('/fonts/e-UkraineHead-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -142,6 +165,11 @@
        when Inter (web) swaps in over -apple-system. Baseline since 2024-07
        (Chrome/Edge 127, Safari 17, Firefox 118); older browsers ignore. */
     font-size-adjust: from-font;
+  }
+
+  /* Headings use the e-Ukraine Head display cut; body/UI stays e-Ukraine. */
+  h1, h2 {
+    font-family: 'e-Ukraine Head', 'e-Ukraine', -apple-system, sans-serif;
   }
 
   input, textarea, select {
