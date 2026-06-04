@@ -70,10 +70,12 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
 
       {open && (
         <div
-          className="te-surface absolute right-0 z-30 mt-2 overflow-hidden"
+          className="te-surface absolute z-40 mt-2 overflow-y-auto left-1/2 -translate-x-1/2 top-full sm:left-auto sm:right-0 sm:translate-x-0"
           style={{
             borderRadius: "1rem",
             minWidth: 280,
+            maxWidth: "calc(100vw - 2rem)",
+            maxHeight: "70vh",
             boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
           }}
         >

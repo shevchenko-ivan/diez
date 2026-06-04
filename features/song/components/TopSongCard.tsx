@@ -69,7 +69,7 @@ export function TopSongCard({
       </div>
       <div className="top-song-card-caption text-center mt-2 px-1">
         <p
-          className="font-bold text-sm truncate"
+          className="font-medium text-sm truncate"
           style={{ color: "var(--text)", letterSpacing: "-0.01em" }}
         >
           {title}

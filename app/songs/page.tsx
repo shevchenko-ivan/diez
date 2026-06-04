@@ -170,7 +170,7 @@ async function SongsContent({ searchParams }: SearchProps) {
               autoComplete="off"
               defaultValue={typeof rawQ === "string" ? rawQ : ""}
               placeholder={topic ? "Шукати в підбірці…" : "Пісня або виконавець..."}
-              className="flex-1 bg-transparent outline-none text-sm font-normal"
+              className="flex-1 bg-transparent outline-none text-[13px] font-normal"
               style={{ color: "var(--text)" }}
             />
           </div>
@@ -183,7 +183,7 @@ async function SongsContent({ searchParams }: SearchProps) {
           (long labels like "За датою: спочатку нові" no longer reflow it);
           inline + space-between from sm up. */}
       <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-semibold" style={{ fontSize: "1.125rem", letterSpacing: "-0.02em", color: "var(--text)" }}>
+        <h2 className="font-semibold" style={{ fontSize: "1.0625rem", letterSpacing: "-0.02em", color: "var(--text)" }}>
           {q ? `Результати для "${rawQ}"` : topic ? topic.title : sort === "new" ? "Нові підбори" : sort === "popular" ? "Топ популярних" : "Всі пісні"}
           {total > 0 && (
             <span className="ml-2 text-sm font-normal" style={{ color: "var(--text-muted)" }}>

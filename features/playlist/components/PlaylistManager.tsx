@@ -296,7 +296,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 href={song.variantId ? `/songs/${song.slug}?v=${song.variantId}` : `/songs/${song.slug}`}
                 className="flex-1 min-w-0"
               >
-                <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
+                <div className="font-medium text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
                 <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
               </Link>
               <TeButton

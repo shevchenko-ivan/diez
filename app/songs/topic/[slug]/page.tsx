@@ -215,7 +215,7 @@ async function TopicContent({ params, searchParams }: RouteProps) {
               <span style={{ fontSize: "1.3rem" }}>{t.emoji}</span>
               <div>
                 <p
-                  className="font-bold text-sm"
+                  className="font-medium text-sm"
                   style={{ color: "var(--text)", letterSpacing: "-0.01em" }}
                 >
                   {t.title}

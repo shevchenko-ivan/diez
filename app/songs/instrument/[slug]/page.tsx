@@ -204,7 +204,7 @@ async function InstrumentContent({ params, searchParams }: RouteProps) {
           >
             <span style={{ fontSize: "1.3rem" }}>🎸</span>
             <div>
-              <p className="font-bold text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
+              <p className="font-medium text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
                 Акорди для гітари
               </p>
               <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
@@ -221,7 +221,7 @@ async function InstrumentContent({ params, searchParams }: RouteProps) {
             >
               <span style={{ fontSize: "1.3rem" }}>{i.emoji}</span>
               <div>
-                <p className="font-bold text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
+                <p className="font-medium text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
                   {i.title}
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>

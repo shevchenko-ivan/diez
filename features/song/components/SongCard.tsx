@@ -92,7 +92,7 @@ export function SongCard({ ...props }: SongCardProps) {
       )}
 
       <div className="top-song-card-caption text-center mt-2 px-1">
-        <p className="font-bold text-sm truncate" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
+        <p className="font-medium text-sm truncate" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
           {props.title}
         </p>
         <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
@@ -280,7 +280,7 @@ export function HeroSearch() {
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `hero-search-item-${activeIndex}` : undefined}
             placeholder="Пісня, виконавець або текст"
-            className="flex-1 bg-transparent outline-none text-sm font-normal"
+            className="flex-1 bg-transparent outline-none text-[13px] font-normal"
             style={{ color: "var(--text)" }}
           />
         </div>

@@ -51,7 +51,7 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
           />
         ) : (
           <div
-            className="absolute inset-0 flex items-center justify-center"
+            className="artist-fallback absolute inset-0 flex items-center justify-center"
             style={{
               background: `radial-gradient(circle at 40% 35%, ${color}55, ${color}22)`,
               fontSize: "3.5rem",
@@ -72,7 +72,7 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
       >
         <HapticLink href={href} className="block w-full">
           <p
-            className="font-bold text-xs tracking-wide leading-tight uppercase text-center"
+            className="font-medium text-xs tracking-wide leading-tight uppercase text-center"
             style={{
               color: "var(--text)",
               letterSpacing: "0.04em",
@@ -100,8 +100,16 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
       </div>
 
       <style>{`
+        /* Zoom the photo INSIDE the circle on hover, not the circle itself.
+           The wrapper's overflow:hidden keeps the zoom masked to the circle,
+           so it never overflows the card box. Scaling the wrapper instead
+           would push past the parent's content-visibility paint containment
+           and clip the circle's left/right edges. */
+        .artist-avatar img,
+        .artist-avatar .artist-fallback { transition: transform 200ms ease; }
+        .artist-avatar:hover img,
+        .artist-avatar:hover .artist-fallback { transform: scale(1.08); }
         .artist-avatar { transition: transform 160ms ease; }
-        .artist-avatar:hover { transform: scale(1.05); }
         .artist-avatar:active { transform: scale(0.98); }
         /* Hide heart by default on hover-capable devices; reveal on row hover.
            Keep it visible whenever the artist is already saved so the user

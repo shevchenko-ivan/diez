@@ -46,7 +46,7 @@ export default async function HomePage() {
       <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-6">
 
         {/* ── 1. Hero ──────────────────────────────────────────────────────── */}
-        <section className="text-center py-8 md:py-12">
+        <section className="text-center py-6 md:py-10">
           <h1
             className="font-bold mb-4"
             style={{
@@ -86,7 +86,7 @@ export default async function HomePage() {
 
         {/* ── 2. Популярні пісні ───────────────────────────────────────────── */}
         {trending.length > 0 && (
-          <section className="mb-16">
+          <section className="mb-10">
             <SectionHeader title="Топ популярних" href="/songs?sort=popular" />
             <SongStrip
               variant="featured"
@@ -100,14 +100,14 @@ export default async function HomePage() {
 
         {/* ── 3. Виконавці (infinite-scroll horizontal strip) ─────────────── */}
         {artists.length > 0 && (
-          <section className="mb-16">
+          <section className="mb-10">
             <SectionHeader title="Виконавці" href="/artists" />
             <ArtistStrip initial={artists} initialExhausted={artists.length < 12} />
           </section>
         )}
 
         {/* ── 4. Тематики ────────────────────────────────────────────────── */}
-        <section className="mb-16">
+        <section className="mb-10">
           <SectionHeader title="Підбірки за тематикою" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {TOPICS.map((t) => (
@@ -119,7 +119,7 @@ export default async function HomePage() {
               >
                 <span style={{ fontSize: "1.5rem" }}>{t.emoji}</span>
                 <div>
-                  <p className="font-bold text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
+                  <p className="font-medium text-sm" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
                     {t.title}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
@@ -133,7 +133,7 @@ export default async function HomePage() {
 
         {/* ── 5. Останні додані ────────────────────────────────────────────── */}
         {freshSongs.length > 0 && (
-          <section className="mb-16">
+          <section className="mb-10">
             <SectionHeader title="Щойно на струнах" href="/songs?sort=new" />
             <SongStrip
               variant="featured"
@@ -147,7 +147,7 @@ export default async function HomePage() {
 
         {/* ── 6. Мої списки ────────────────────────────────────────────────── */}
         {myPlaylists.length > 0 && (
-          <section className="mb-16">
+          <section className="mb-10">
             <SectionHeader title="Мої списки" href="/profile/lists" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 sm:gap-3">
               {myPlaylists.slice(0, 4).map((p) => (
@@ -169,14 +169,14 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
     <div className="flex items-center justify-between mb-5">
       <h2
         className="font-bold"
-        style={{ fontSize: "1.25rem", letterSpacing: "-0.02em", color: "var(--text)" }}
+        style={{ fontSize: "1.0625rem", letterSpacing: "-0.02em", color: "var(--text)" }}
       >
         {title}
       </h2>
       {href && (
         <HapticLink
           href={href}
-          className="text-xs font-medium uppercase tracking-widest hover:underline"
+          className="text-[11px] font-medium uppercase tracking-wide hover:underline shrink-0"
           style={{ color: "var(--text-muted)" }}
         >
           Дивитись всі <span style={{ opacity: 0.5 }}>→</span>

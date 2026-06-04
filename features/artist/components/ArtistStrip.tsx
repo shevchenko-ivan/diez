@@ -116,7 +116,7 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
               )}
             </div>
             <p
-              className="truncate uppercase font-bold mt-2 text-center w-full"
+              className="truncate uppercase font-medium mt-2 text-center w-full"
               style={{ fontSize: "0.72rem", letterSpacing: "0.04em", color: "var(--text)" }}
             >
               {artist.name}
