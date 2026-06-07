@@ -11,6 +11,7 @@ import { SongPlayer } from "./SongPlayer";
 import { ControlBlock } from "@/shared/components/ControlBlock";
 import { useFocusMode } from "@/shared/hooks/useFocusMode";
 import { useShowTabs } from "@/shared/hooks/useShowTabs";
+import { TabView } from "./TabView";
 
 // Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
 const StrumPatternList = dynamic(
@@ -864,19 +865,14 @@ export function SongViewer({
                       Hidden by default; renders above the chord/lyric rows when on. */}
                   {section.tab && showTabs && (
                     <div
-                      className="mb-2 te-inset rounded-xl overflow-x-auto scrollbar-none"
-                      style={{ WebkitOverflowScrolling: "touch" }}
+                      className="mb-3 te-inset rounded-xl overflow-x-auto scrollbar-none"
+                      style={{ padding: "10px 12px", WebkitOverflowScrolling: "touch" }}
                     >
-                      <pre
-                        className="px-3 py-2.5 font-mono leading-[1.15] whitespace-pre"
-                        style={{
-                          fontSize: `${Math.max(11, fontSize * 0.7)}px`,
-                          color: "var(--text)",
-                          opacity: 0.85,
-                        }}
-                      >
-                        {section.tab}
-                      </pre>
+                      <TabView
+                        tab={section.tab}
+                        fontSize={Math.max(11, fontSize * 0.7)}
+                        bg="var(--surface)"
+                      />
                     </div>
                   )}
                   {(() => {

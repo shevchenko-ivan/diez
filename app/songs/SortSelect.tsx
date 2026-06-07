@@ -4,10 +4,8 @@ import { ArrowUpDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const SORT_OPTIONS = [
-  { value: "",    label: "За популярністю" },
-  { value: "new", label: "За датою: спочатку нові" },
-  { value: "old", label: "За датою: спочатку старі" },
-  { value: "az",  label: "За алфавітом" },
+  { value: "",   label: "За популярністю" },
+  { value: "az", label: "За алфавітом" },
 ];
 
 export function SortSelect({ value, basePath = "/songs" }: { value: string; basePath?: string }) {

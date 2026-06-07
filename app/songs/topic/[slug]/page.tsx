@@ -131,21 +131,6 @@ async function TopicContent({ params, searchParams }: RouteProps) {
           {subheading}
         </p>
 
-        {/* Long-form intro paragraph — hidden once the user starts searching
-            inside the topic, to keep the search view clean. */}
-        {!q && (
-          <p
-            className="mb-6 max-w-3xl"
-            style={{
-              fontSize: "0.9rem",
-              lineHeight: 1.65,
-              color: "var(--text-mid)",
-            }}
-          >
-            {topic.seoIntro}
-          </p>
-        )}
-
         <form
           method="GET"
           action={`/songs/topic/${topic.slug}`}
@@ -189,6 +174,16 @@ async function TopicContent({ params, searchParams }: RouteProps) {
         savedSlugs={savedSlugs}
         query={queryArgs}
       />
+
+      {/* SEO body text — after the list, visually unobtrusive */}
+      {!q && (
+        <p
+          className="mt-10 max-w-3xl"
+          style={{ fontSize: "0.75rem", lineHeight: 1.6, color: "var(--text-muted)" }}
+        >
+          {topic.seoIntro}
+        </p>
+      )}
 
       {/* ── Related topics — internal linking ──────────────────────────
           Concentrates link-equity between the 8 topic pages so Google
