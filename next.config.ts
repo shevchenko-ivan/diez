@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.supabase.co" },
       { protocol: "https", hostname: "**.mzstatic.com" },
       { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "yt3.googleusercontent.com" },
       { protocol: "https", hostname: "i.scdn.co" },
       { protocol: "https", hostname: "**.dzcdn.net" },
       { protocol: "https", hostname: "**.musify.club" },
