@@ -291,17 +291,19 @@ export default async function SongPage({
           <BackButton fallback="/songs" />
 
           {/* Center: Title + meta — stacks on mobile, inline on md+ */}
-          <div className="flex flex-col md:flex-row items-center justify-center md:gap-2 px-2 md:px-4 min-w-0">
+          {/* items-baseline on md+: artist (e-Ukraine) and title (e-Ukraine Head)
+              have different vertical metrics, so items-center misaligns them. */}
+          <div className="flex flex-col md:flex-row items-center md:items-baseline justify-center md:gap-2 px-2 md:px-4 min-w-0">
             <Link
               href={`/artists/${artistSlug}`}
               className="hover:underline truncate max-w-full"
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.2 }}
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.45 }}
             >
               {song.artist}
             </Link>
             <h1
               className="truncate"
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.45 }}
             >
               {song.title}
             </h1>

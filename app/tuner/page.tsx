@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/tuner" },
   openGraph: {
     title: "Тюнер — Diez",
-    description: "Налаштуйте гітару через мікрофон за стандартним строєм EADGBE.",
+    description: "Настройте гітару через мікрофон за стандартним строєм EADGBE.",
     type: "website",
     url: "/tuner",
   },
@@ -22,9 +22,9 @@ export const metadata: Metadata = {
 const howToLd = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: "Як налаштувати гітару онлайн через мікрофон",
+  name: "Як настроїти (налаштувати) гітару онлайн через мікрофон",
   description:
-    "Налаштуйте гітару за стандартним строєм EADGBE прямо в браузері — без додатків і без обладнання, лише через мікрофон ноутбука чи телефона.",
+    "Настройте гітару за стандартним строєм EADGBE прямо в браузері — без додатків і без обладнання, лише через мікрофон ноутбука чи телефона.",
   totalTime: "PT3M",
   tool: [
     { "@type": "HowToTool", name: "Гітара" },
