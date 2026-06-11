@@ -108,10 +108,10 @@ export default async function SongPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string }>;
+  searchParams: Promise<{ v?: string; t?: string }>;
 }) {
   const { slug } = await params;
-  const { v: variantId } = await searchParams;
+  const { v: variantId, t: transposeParam } = await searchParams;
 
   // UA-detect mobile so SongViewer can wrap lyrics to a phone-width estimate in
   // the SSR/first paint (prevents the post-measure re-wrap CLS on phones).
@@ -135,6 +135,14 @@ export default async function SongPage({
   // ?v= takes priority; then the variant the user previously saved; then primary.
   const effectiveVariantId = variantId ?? saveState.variantId ?? undefined;
   const song = applyVariant(baseSong, effectiveVariantId);
+
+  // Saved key: ?t= URL param (playlist links, sharing) wins over the value
+  // stored with the user's own playlist save. Clamped to ±11 semitones.
+  const parsedT = transposeParam !== undefined ? parseInt(transposeParam, 10) : NaN;
+  const initialTranspose = Math.max(
+    -11,
+    Math.min(11, Number.isFinite(parsedT) ? parsedT : saveState.transpose),
+  );
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -342,6 +350,7 @@ export default async function SongPage({
         <SongViewer
           song={song}
           initialMobile={isMobile}
+          initialTranspose={initialTranspose}
           editSlot={
             <Suspense fallback={null}>
               <AdminEditSheetButton slug={slug} variantId={song.activeVariantId} />

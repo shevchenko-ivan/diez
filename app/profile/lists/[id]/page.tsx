@@ -41,6 +41,7 @@ async function ManageContent({ id }: { id: string }) {
         coverImage: s.coverImage,
         coverColor: s.coverColor,
         variantId: s.variantId,
+        transpose: s.transpose,
       }))}
     />
   );

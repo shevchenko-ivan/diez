@@ -16,6 +16,7 @@ interface PlaylistWithSongs extends Playlist {
     coverColor?: string;
     position: number;
     variantId: string | null;
+    transpose: number;
   }>;
   owner: { email: string | null; username: string | null };
 }
@@ -31,7 +32,7 @@ export async function getMyPlaylistById(id: string): Promise<PlaylistWithSongs |
     .select(`
       id, slug, name, description, visibility, is_default, owner_id, created_at, updated_at,
       profiles:owner_id(email, username),
-      playlist_songs(position, variant_id, songs(id, slug, title, artist, difficulty, chords, views, cover_image, cover_color))
+      playlist_songs(position, variant_id, transpose, songs(id, slug, title, artist, difficulty, chords, views, cover_image, cover_color))
     `)
     .eq("id", id)
     .eq("owner_id", user.id)
@@ -50,7 +51,7 @@ export async function getPublicPlaylistBySlug(slug: string): Promise<PlaylistWit
     .select(`
       id, slug, name, description, visibility, is_default, owner_id, created_at, updated_at,
       profiles:owner_id(email, username),
-      playlist_songs(position, variant_id, songs(id, slug, title, artist, difficulty, chords, views, cover_image, cover_color))
+      playlist_songs(position, variant_id, transpose, songs(id, slug, title, artist, difficulty, chords, views, cover_image, cover_color))
     `)
     .eq("slug", slug)
     .maybeSingle();
@@ -63,6 +64,7 @@ function mapPlaylist(row: Record<string, unknown>): PlaylistWithSongs {
   const items = (row.playlist_songs ?? []) as Array<{
     position: number;
     variant_id: string | null;
+    transpose: number | null;
     songs: {
       id: string;
       slug: string;
@@ -89,6 +91,7 @@ function mapPlaylist(row: Record<string, unknown>): PlaylistWithSongs {
       coverColor: it.songs!.cover_color ?? undefined,
       position: it.position,
       variantId: it.variant_id ?? null,
+      transpose: it.transpose ?? 0,
     }))
     .sort((a, b) => a.position - b.position);
 

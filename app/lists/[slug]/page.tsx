@@ -100,6 +100,7 @@ export default async function PublicListPage({
               coverColor={song.coverColor}
               isSaved={savedSlugs.has(song.slug)}
               variantId={song.variantId}
+              transpose={song.transpose}
             />
           ))}
         </div>

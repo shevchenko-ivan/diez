@@ -25,6 +25,8 @@ export interface SongCardProps {
   coverImage?: string;
   index?: number;
   variantId?: string | null;
+  /** Saved transpose — appended as ?t= so the song opens in the saved key. */
+  transpose?: number;
   /** Hide the save-heart overlay (e.g. song-page recommendation grids). */
   hideSave?: boolean;
 }
@@ -34,7 +36,10 @@ export function SongCard({ ...props }: SongCardProps) {
   const base = props.slug
     ? `/songs/${props.slug}`
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
-  const href = props.variantId ? `${base}?v=${props.variantId}` : base;
+  const qp = new URLSearchParams();
+  if (props.variantId) qp.set("v", props.variantId);
+  if (props.transpose) qp.set("t", String(props.transpose));
+  const href = qp.size > 0 ? `${base}?${qp}` : base;
 
   const fallbackColor = props.coverColor || "#C8D5E8";
 

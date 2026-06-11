@@ -11,6 +11,7 @@ import { SongPlayer } from "./SongPlayer";
 import { ControlBlock } from "@/shared/components/ControlBlock";
 import { useFocusMode } from "@/shared/hooks/useFocusMode";
 import { useShowTabs } from "@/shared/hooks/useShowTabs";
+import { usePublishTranspose } from "@/shared/hooks/useCurrentTranspose";
 import { TabView } from "./TabView";
 
 // Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
@@ -150,6 +151,7 @@ export function SongViewer({
   editHref,
   editSlot,
   initialMobile = false,
+  initialTranspose = 0,
 }: {
   song: Song;
   editHref?: string;
@@ -159,8 +161,13 @@ export function SongViewer({
    *  lyrics to a phone-width estimate so the post-measure re-wrap doesn't shift
    *  layout (CLS). Final wrapping always uses the measured width. */
   initialMobile?: boolean;
+  /** Saved transpose from the user's playlist (or ?t= URL param) — the song
+   *  opens already shifted to the key it was saved in. */
+  initialTranspose?: number;
 }) {
-  const [transpose, setTranspose] = useState(0);
+  const [transpose, setTranspose] = useState(initialTranspose);
+  // Header save button stores this value into playlist_songs.transpose.
+  usePublishTranspose(transpose);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
   // Hide the auto-scroll control when the page already fits the viewport.

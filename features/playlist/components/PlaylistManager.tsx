@@ -38,6 +38,7 @@ interface Song {
   coverImage?: string;
   coverColor?: string;
   variantId?: string | null;
+  transpose?: number;
 }
 
 interface Props {
@@ -293,7 +294,13 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 )}
               </div>
               <Link
-                href={song.variantId ? `/songs/${song.slug}?v=${song.variantId}` : `/songs/${song.slug}`}
+                href={(() => {
+                  const p = new URLSearchParams();
+                  if (song.variantId) p.set("v", song.variantId);
+                  if (song.transpose) p.set("t", String(song.transpose));
+                  const qs = p.toString();
+                  return qs ? `/songs/${song.slug}?${qs}` : `/songs/${song.slug}`;
+                })()}
                 className="flex-1 min-w-0"
               >
                 <div className="font-medium text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
