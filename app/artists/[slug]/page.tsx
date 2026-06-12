@@ -12,7 +12,7 @@ import Image from "next/image";
 import { ArtistSongsList } from "./ArtistSongsList";
 import { TeButton } from "@/shared/components/TeButton";
 import { BackButton } from "@/shared/components/BackButton";
-import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
+import { siteUrl, hasEnvVars, jsonLdScript, coverThumb } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 export async function generateMetadata({
@@ -162,13 +162,14 @@ export default async function ArtistPage({
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden te-inset flex-shrink-0 flex items-center justify-center">
               {artist?.photo_url ? (
                 <Image
-                  src={artist.photo_url}
+                  src={coverThumb(artist.photo_url, 240) as string}
                   alt={artistName}
                   width={96}
                   height={96}
                   // Артист hero photo — LCP-кандидат на цій сторінці.
                   // Без `priority` Next lazy-loads → 200-400ms LCP delay.
                   priority
+                  unoptimized
                   className="object-cover w-full h-full"
                 />
               ) : (

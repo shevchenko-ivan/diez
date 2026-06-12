@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { coverThumb } from "@/lib/utils";
 import {
   Check,
   Copy,
@@ -290,7 +291,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 }}
               >
                 {song.coverImage && (
-                  <Image src={song.coverImage} alt={song.title} width={64} height={64} className="w-full h-full object-cover" />
+                  <Image src={coverThumb(song.coverImage, 240) as string} alt={song.title} width={64} height={64} unoptimized className="w-full h-full object-cover" />
                 )}
               </div>
               <Link

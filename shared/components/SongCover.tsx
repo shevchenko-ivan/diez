@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Guitar } from "lucide-react";
+import { coverThumb } from "@/lib/utils";
 
 // ── Song cover with graceful fallback ─────────────────────────────────────────
 // Renders the cover image; when there's no src OR the URL fails to load
@@ -41,6 +42,9 @@ export function SongCover({
 }: SongCoverProps) {
   const [errored, setErrored] = useState(false);
   const showImage = !!src && !errored;
+  // Serve directly from the source CDN (bypass Vercel's Image Optimization
+  // quota), downscaled via the URL so the payload stays light.
+  const thumb = coverThumb(src);
 
   return (
     <div
@@ -54,23 +58,25 @@ export function SongCover({
       {showImage ? (
         fill ? (
           <Image
-            src={src as string}
+            src={thumb as string}
             alt={alt}
             title={title}
             fill
             sizes={sizes}
             priority={priority}
+            unoptimized
             className="object-cover"
             onError={() => setErrored(true)}
           />
         ) : (
           <Image
-            src={src as string}
+            src={thumb as string}
             alt={alt}
             title={title}
             width={width}
             height={height}
             priority={priority}
+            unoptimized
             className="w-full h-full object-cover"
             onError={() => setErrored(true)}
           />

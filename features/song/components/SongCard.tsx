@@ -9,6 +9,7 @@ import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
 import { useLiteMode } from "@/shared/components/LiteModeProvider";
 import { SongCover } from "@/shared/components/SongCover";
+import { coverThumb } from "@/lib/utils";
 import { SaveHeartButton } from "./SaveHeartButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
@@ -359,7 +360,7 @@ export function HeroSearch() {
                       }}
                     >
                       {a.photo_url && !lite ? (
-                        <Image src={a.photo_url} alt={a.name} width={36} height={36} className="w-full h-full object-cover" />
+                        <Image src={coverThumb(a.photo_url, 120) as string} alt={a.name} width={36} height={36} unoptimized className="w-full h-full object-cover" />
                       ) : (
                         a.name.charAt(0).toUpperCase()
                       )}
@@ -445,7 +446,7 @@ function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, on
               }}
             >
               {s.cover_image && !lite ? (
-                <Image src={s.cover_image} alt={s.title} width={36} height={36} className="w-full h-full object-cover" />
+                <Image src={coverThumb(s.cover_image, 120) as string} alt={s.title} width={36} height={36} unoptimized className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xs font-bold" style={{ color: `${fallback}` }}>{s.artist.charAt(0).toUpperCase()}</span>
               )}
