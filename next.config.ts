@@ -87,6 +87,13 @@ const nextConfig: NextConfig = {
         destination: "https://diez.net.ua/:path*",
         permanent: true,
       },
+      // «Народні» merged into «Українська класика» (June 2026) — keep the
+      // old topic URL alive for inbound links and Google's index.
+      {
+        source: "/songs/topic/folk",
+        destination: "/songs/topic/ukrainian",
+        permanent: true,
+      },
       // Old query-string topic URLs → path-based canonical. Path URLs
       // rank better than query strings (Google docs + every SEO audit).
       // The `has` matcher captures the `topic` query param via the named

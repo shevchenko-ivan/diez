@@ -21,7 +21,7 @@ import type { ChordLine, SongSection } from "../types";
 // positives on English words that happen to start with A–H (e.g. "Add", "Beg",
 // "Face") appearing inside lyrics.
 const CHORD_QUALITIES = [
-  "maj7#11", "13sus4", "mMaj7", "7sus4", "9sus4",
+  "maj7#11", "13sus4", "mMaj7", "7sus4", "7sus2", "9sus4",
   "maj13", "maj9", "maj7", "m7b5", "add9", "add11",
   "aug7", "dim7", "dim9", "sus2", "sus4",
   "7b5", "7#5", "7b9", "7#9", "7#11",
