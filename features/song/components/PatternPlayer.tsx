@@ -7,6 +7,8 @@ import { playStroke, playMetronomeClick, strokesPerBeat as strokesPerBeatFn, int
 
 interface Props {
   pattern: StrumPattern;
+  /** Hide the inline name (when it's lifted into the parent block header). */
+  hideName?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * Accents only adjust volume — timbre/frequency unchanged (per project memory
  * feedback_audio_accent.md).
  */
-export function PatternPlayer({ pattern }: Props) {
+export function PatternPlayer({ pattern, hideName = false }: Props) {
   const [playing, setPlaying] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   // Quiet metronome click on every beat — toggleable so the user can A/B
@@ -97,9 +99,11 @@ export function PatternPlayer({ pattern }: Props) {
             <Play size={10} fill="currentColor" style={{ marginLeft: 1 }} />
           )}
         </button>
-        <span className="font-bold tracking-tight truncate" style={{ color: "var(--text)" }}>
-          {name}
-        </span>
+        {!hideName && (
+          <span className="font-bold tracking-tight truncate" style={{ color: "var(--text)" }}>
+            {name}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setMetronome((m) => !m)}

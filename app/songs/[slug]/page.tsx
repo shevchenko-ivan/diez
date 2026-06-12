@@ -15,6 +15,7 @@ import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Pencil } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
+import { Navbar } from "@/shared/components/Navbar";
 import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
@@ -265,6 +266,7 @@ export default async function SongPage({
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
+      <Navbar />
       <Suspense><SavedToast /></Suspense>
       {/* JSON-LD is rendered inline (not via next/script afterInteractive)
           so it lands in the initial SSR HTML — Googlebot's render budget is
@@ -291,7 +293,7 @@ export default async function SongPage({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }}
       />
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-1 pb-20">
 
         {/* ── Header (single row, centered title, no surface) ─────────── */}
         <div className="mb-4 grid items-center" style={{ padding: "0.4rem 0", gridTemplateColumns: "1fr auto 1fr" }}>
