@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withPostHogConfig } from "@posthog/nextjs-config";
 
 // Content-Security-Policy in *Report-Only* mode — logs violations to the
 // browser console / report endpoint but does NOT block anything. Lets us
@@ -117,4 +118,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sourcemap upload to PostHog Error Tracking. On production builds the
+// plugin turns on `productionBrowserSourceMaps`, injects chunk ids into the
+// emitted JS, uploads the .map files to PostHog via the bundled posthog-cli,
+// then strips them from the deploy output (`deleteAfterUpload`) so maps are
+// never publicly served. Requires POSTHOG_API_KEY — a *personal* API key
+// (phx_…) with the "Error tracking: write" scope, NOT the public phc_…
+// project key — set in Vercel env vars and .env.local. When the key is
+// absent (e.g. a plain local build) sourcemap upload is disabled and the
+// build behaves exactly as before.
+export default withPostHogConfig(nextConfig, {
+  personalApiKey: process.env.POSTHOG_API_KEY ?? "",
+  projectId: process.env.POSTHOG_ENV_ID ?? "167492",
+  host: "https://eu.posthog.com",
+  sourcemaps: {
+    enabled: !!process.env.POSTHOG_API_KEY,
+    deleteAfterUpload: true,
+  },
+});
