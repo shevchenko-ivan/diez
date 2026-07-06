@@ -99,6 +99,19 @@ function StringRow({
 interface ParsedLine {
   name: string;
   content: string;
+  /** Repeat count parsed from a trailing "x2" / "х2" / "×2" on the line. */
+  repeat?: number;
+}
+
+// Split a trailing repeat marker (" x2", " х2" cyrillic, " ×2") off the tab
+// content. Sources write it after the last measure of every string line; kept
+// inline it visually binds to the LAST wrapped slice on narrow screens, as if
+// only that part repeats — so it's stripped here and re-rendered once above
+// the whole system instead.
+function stripRepeat(content: string): { content: string; repeat?: number } {
+  const m = content.match(/^(.*?)[ \t]+[x×хХX](\d{1,2})[ \t]*$/);
+  if (!m) return { content };
+  return { content: m[1], repeat: Number(m[2]) };
 }
 
 function parseTabBlock(block: string): { label: string | null; chords: string[] | null; lines: ParsedLine[] } {
@@ -115,11 +128,11 @@ function parseTabBlock(block: string): { label: string | null; chords: string[] 
     }
     const m = row.match(/^([A-Ha-h][#b]?|[1-6])\|(.*)/);
     if (m) {
-      lines.push({ name: m[1], content: m[2] });
+      lines.push({ name: m[1], ...stripRepeat(m[2]) });
     } else if (/^(?=.*-{5})(?=.*\d)[-0-9hpbrsx()~^.\\/ |]{10,}$/.test(row.trim())) {
       // Label-less fingerpicking line — the whole row is content, no string
       // name and no nut bar.
-      lines.push({ name: "", content: row.trim() });
+      lines.push({ name: "", ...stripRepeat(row.trim()) });
     } else if (lines.length === 0 && row.trim()) {
       label = row.trim();
     }
@@ -311,16 +324,23 @@ function TabBlock({
   // widths into one block, and ranges derived from the widest system would
   // slice past the end of a narrower one — rendering rows of bare string
   // labels with no content (empty "ghost" systems on narrow screens).
-  const subSystems: { sysIndex: number; range: [number, number]; sysLines: ParsedLine[] }[] = [];
-  systems.forEach((sysLines, si) => {
+  const renderSystems: {
+    sysIndex: number;
+    sysLines: ParsedLine[];
+    ranges: [number, number][];
+    repeat?: number;
+  }[] = systems.map((sysLines, si) => {
     const sysL = Math.max(...sysLines.map((l) => l.content.length));
-    const ranges: [number, number][] = maxCols === null ? [[0, sysL]] : wrapRanges(sysLines, maxCols);
-    for (const range of ranges) {
-      // Defensive: skip a slice with no glyphs on any string (empty system).
-      if (sysLines.every((l) => l.content.slice(range[0], range[1]).trim() === "")) continue;
-      subSystems.push({ sysIndex: si, range, sysLines });
-    }
-  });
+    const ranges = (maxCols === null ? [[0, sysL] as [number, number]] : wrapRanges(sysLines, maxCols))
+      // Defensive: drop slices with no glyphs on any string (empty system).
+      .filter(([s, e]) => !sysLines.every((l) => l.content.slice(s, e).trim() === ""));
+    // A repeat marker applies to the SYSTEM: sources write it on every string
+    // line (or just one) — surfaced once above the system so a wrapped system
+    // on mobile reads as "the whole excerpt × N".
+    const reps = sysLines.map((l) => l.repeat).filter((n): n is number => n !== undefined);
+    const repeat = reps.length > 0 && reps.every((v) => v === reps[0]) ? reps[0] : undefined;
+    return { sysIndex: si, sysLines, ranges, repeat };
+  }).filter((s) => s.ranges.length > 0);
 
   return (
     <div>
@@ -330,23 +350,49 @@ function TabBlock({
         </div>
       )}
       <div ref={ref}>
-        {subSystems.map(({ sysIndex, range, sysLines }, idx) => {
-          const [start, end] = range;
-          const chordRow =
-            sysIndex === 0 && positions ? buildChordRowSlice(positions, start, end, padCols) : "";
-          return (
-            <div key={idx} style={{ marginTop: idx === 0 ? 0 : Math.round(rowH * 0.8) }}>
-              {sysIndex === 0 && positions && (
-                <div style={{ whiteSpace: "pre", lineHeight: `${rowH}px`, color: "var(--orange)", fontWeight: 700 }}>
-                  {chordRow || " "}
+        {renderSystems.map(({ sysIndex, sysLines, ranges, repeat }, si) => (
+          <div
+            key={si}
+            style={{
+              marginTop: si === 0 ? 0 : Math.round(rowH * 0.8),
+              // A repeating system gets a bracket along its LEFT edge spanning
+              // every wrapped slice, so on mobile the "×N" clearly covers the
+              // whole excerpt, not just the last (or first) wrapped line. The
+              // negative margin compensates border+padding, keeping the tab
+              // grid aligned with non-repeated systems.
+              ...(repeat !== undefined
+                ? {
+                    borderLeft: "2px solid color-mix(in srgb, var(--orange) 55%, transparent)",
+                    paddingLeft: 8,
+                    marginLeft: -10,
+                  }
+                : {}),
+            }}
+          >
+            {repeat !== undefined && (
+              <div style={{ lineHeight: `${rowH}px`, whiteSpace: "pre" }}>
+                <span style={{ color: "var(--orange)", fontWeight: 700 }}>×{repeat}</span>
+                <span style={{ color: "var(--text-muted)" }}> · весь уривок</span>
+              </div>
+            )}
+            {ranges.map(([start, end], ri) => {
+              const chordRow =
+                sysIndex === 0 && positions ? buildChordRowSlice(positions, start, end, padCols) : "";
+              return (
+                <div key={ri} style={{ marginTop: ri === 0 ? 0 : Math.round(rowH * 0.8) }}>
+                  {sysIndex === 0 && positions && (
+                    <div style={{ whiteSpace: "pre", lineHeight: `${rowH}px`, color: "var(--orange)", fontWeight: 700 }}>
+                      {chordRow || " "}
+                    </div>
+                  )}
+                  {sysLines.map((line, li) => (
+                    <StringRow key={li} name={line.name} content={line.content.slice(start, end)} rowH={rowH} />
+                  ))}
                 </div>
-              )}
-              {sysLines.map((line, li) => (
-                <StringRow key={li} name={line.name} content={line.content.slice(start, end)} rowH={rowH} />
-              ))}
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
