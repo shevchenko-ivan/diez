@@ -693,8 +693,10 @@ export function SongViewer({
 
               {/* Chords */}
               <div>
-                {/* Rhythm — rendered only when the song has strumming patterns. */}
-                {song.strumPatterns && song.strumPatterns.length > 0 && (
+                {/* Rhythm — rendered only when the song has strumming patterns
+                    AND the active variant has chords: strums accompany chord
+                    playing, so a fingerstyle/tab-only variant hides them. */}
+                {song.strumPatterns && song.strumPatterns.length > 0 && song.chords.length > 0 && (
                   <div className="mb-3">
                     <StrumPatternList patterns={song.strumPatterns} />
                   </div>
@@ -1194,8 +1196,9 @@ export function SongViewer({
             </ControlBlock>
             )}
 
-            {/* Rhythm — only rendered when the song has strumming patterns. */}
-            {song.strumPatterns && song.strumPatterns.length > 0 && (
+            {/* Rhythm — only when the song has strumming patterns AND the
+                active variant has chords (hidden on tab-only arrangements). */}
+            {song.strumPatterns && song.strumPatterns.length > 0 && song.chords.length > 0 && (
               <StrumPatternList patterns={song.strumPatterns} />
             )}
 

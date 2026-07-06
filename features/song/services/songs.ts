@@ -526,9 +526,8 @@ export function mapPatternRow(row: Record<string, unknown>): StrumPattern {
 }
 
 // Apply an active variant on top of the base song fields — swaps sections,
-// chords, key, capo. Falls back to song-level values when the variant is
-// missing or primary. (Tempo/strumming live in song_strumming_patterns now,
-// which are per-song so they don't need variant overrides.)
+// chords, key, capo. (Tempo/strumming live in song_strumming_patterns, which
+// are per-song; the viewer hides them for chord-less variants.)
 export function applyVariant(song: Song, variantId: string | undefined): Song {
   if (!song.variants || song.variants.length === 0) return song;
   const target =
@@ -539,7 +538,10 @@ export function applyVariant(song: Song, variantId: string | undefined): Song {
   return {
     ...song,
     sections: target.sections,
-    chords: target.chords.length > 0 ? target.chords : song.chords,
+    // The variant's own chords, even when empty — a fingerstyle/tab variant
+    // has none, and borrowing the strummed variant's list would render a
+    // misleading chord sidebar next to a tab-only arrangement.
+    chords: target.chords,
     key: target.key,
     capo: target.capo ?? song.capo,
     activeVariantId: target.id,
