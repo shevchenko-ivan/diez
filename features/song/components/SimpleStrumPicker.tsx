@@ -97,6 +97,13 @@ export function SimpleStrumPicker({ initial = [] }: { initial?: StrumPattern[] }
 
   useEffect(() => () => { ctxRef.current?.close().catch(() => {}); ctxRef.current = null; }, []);
 
+  // Collapsing the section or switching to the advanced editor hides the
+  // play/stop button — stop the preview loop so it can't keep sounding with
+  // no visible control to silence it.
+  useEffect(() => {
+    if (!expanded || advanced) setPlaying(false);
+  }, [expanded, advanced]);
+
   function togglePlay() {
     try {
       if (!ctxRef.current) {
@@ -280,13 +287,18 @@ export function SimpleStrumPicker({ initial = [] }: { initial?: StrumPattern[] }
       </>
       )}
 
-      {/* The simple block emits the form payload itself. [] when skipped.
+      {/* The simple block emits the form payload itself. Falls back to the
+          song's existing patterns (edit mode) when no preset is picked —
+          otherwise returning from the advanced editor via «← Готові бої»
+          would silently wipe the saved strums on the next submit.
           Last child (and display:none) so it never adds a visible gap. */}
       <input
         type="hidden"
         name="strumming_patterns"
         value={JSON.stringify(
-          preset ? [{ name: "Бій", tempo, noteLength: preset.noteLength, strokes: preset.strokes }] : [],
+          preset
+            ? [{ name: "Бій", tempo, noteLength: preset.noteLength, strokes: preset.strokes }]
+            : initial.map(({ name, tempo: t, noteLength, strokes }) => ({ name, tempo: t, noteLength, strokes })),
         )}
       />
     </div>

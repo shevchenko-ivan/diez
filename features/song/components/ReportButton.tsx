@@ -17,6 +17,16 @@ export function ReportButton({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [result, formAction, pending] = useActionState(reportSong, null);
+  // useActionState keeps the last result forever — without acknowledging it,
+  // reopening the modal would show the stale "Дякуємо" screen and make a
+  // second report impossible. Closing after success acknowledges; a new
+  // submit clears the acknowledgement so its own thank-you can show.
+  const [acked, setAcked] = useState(false);
+
+  const close = () => {
+    if (result?.ok) setAcked(true);
+    setOpen(false);
+  };
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -39,7 +49,7 @@ export function ReportButton({ slug }: { slug: string }) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.45)" }}
-          onClick={() => setOpen(false)}
+          onClick={close}
         >
           <div
             className="te-surface w-full max-w-md p-6 relative"
@@ -48,7 +58,7 @@ export function ReportButton({ slug }: { slug: string }) {
           >
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={close}
               aria-label="Закрити"
               className="te-icon-btn"
               // Inline position beats the .te-icon-btn class (which sets
@@ -58,19 +68,19 @@ export function ReportButton({ slug }: { slug: string }) {
               <X size={16} />
             </button>
 
-            {result?.ok ? (
+            {result?.ok && !acked ? (
               <div className="text-center py-6 space-y-3">
                 <CheckCircle2 size={36} style={{ color: "var(--orange)", margin: "0 auto" }} />
                 <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Дякуємо за скаргу</h3>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                   Ми розглянемо її якнайшвидше.
                 </p>
-                <button type="button" onClick={() => setOpen(false)} className="te-pill-btn px-5 py-2.5 text-sm font-bold">
+                <button type="button" onClick={close} className="te-pill-btn px-5 py-2.5 text-sm font-bold">
                   Закрити
                 </button>
               </div>
             ) : (
-              <form action={formAction} className="space-y-4">
+              <form action={formAction} onSubmit={() => setAcked(false)} className="space-y-4">
                 <h3 className="text-base font-bold pr-8" style={{ color: "var(--text)" }}>Поскаржитись на пісню</h3>
                 <input type="hidden" name="slug" value={slug} />
 
@@ -90,6 +100,7 @@ export function ReportButton({ slug }: { slug: string }) {
                   <textarea
                     name="details"
                     rows={3}
+                    maxLength={1000}
                     placeholder="Деталі (необовʼязково)"
                     className="w-full bg-transparent outline-none text-sm resize-y"
                     style={{ color: "var(--text)" }}
@@ -101,7 +112,7 @@ export function ReportButton({ slug }: { slug: string }) {
                 )}
 
                 <div className="flex justify-end gap-2 pt-1">
-                  <button type="button" onClick={() => setOpen(false)} className="px-4 py-2.5 text-sm font-bold" style={{ color: "var(--text-muted)" }}>
+                  <button type="button" onClick={close} className="px-4 py-2.5 text-sm font-bold" style={{ color: "var(--text-muted)" }}>
                     Скасувати
                   </button>
                   <button type="submit" disabled={pending} className="te-pill-btn px-5 py-2.5 text-sm font-bold disabled:opacity-50">

@@ -45,6 +45,14 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // Artist photo uploads go through a server action as multipart form
+      // data; the action-level validator allows up to 5 MB, so the transport
+      // limit must sit above that (default is 1 MB → uploads >1 MB would 500).
+      bodySizeLimit: "6mb",
+    },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "upload.wikimedia.org" },

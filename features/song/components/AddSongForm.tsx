@@ -51,6 +51,12 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   const [createOpen, setCreateOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Controlled — React 19 resets uncontrolled fields after a form action
+  // returns, which would wipe the whole song text on a validation error.
+  const [lyrics, setLyrics] = useState(initial?.lyricsRaw ?? "");
+  // In edit mode the RU dialog is dismissable back to the form (the user fixes
+  // the text in place); reset on each new submit so a repeat offence re-opens it.
+  const [ruDismissed, setRuDismissed] = useState(false);
   // Live language check — soft = a few Russian words (nudge), hard = blocked.
   const [lyricsLevel, setLyricsLevel] = useState(() => russianLevel(initial?.lyricsRaw ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,10 +95,14 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
     setTimeout(() => setShowSuggestions(false), 150);
   }
 
-  async function handleDeleteDraft() {
-    if (!initial) return;
+  // Deletes the given draft (or the song being edited). The explicit id matters
+  // in create mode: `initial` is undefined there, but the RU flow has already
+  // auto-saved a draft whose id comes back in the action result.
+  async function handleDeleteDraft(songId?: string) {
+    const target = songId ?? initial?.songId;
+    if (!target) return;
     setDeleting(true);
-    const res = await deleteMySubmission(initial.songId);
+    const res = await deleteMySubmission(target);
     if (res.ok) router.push("/profile");
     else { setDeleting(false); alert(res.message ?? "Не вдалося видалити."); }
   }
@@ -101,7 +111,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
 
   // ── Russian-text result: the song was auto-saved as a draft. Show a clear
   //    dialog explaining it won't be published, with ways out. ──────────────────
-  if (result?.ok && result.ru) {
+  if (result?.ok && result.ru && !ruDismissed) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}>
         <div className="te-surface w-full max-w-md p-7 space-y-4" style={{ borderRadius: "1.5rem" }}>
@@ -117,15 +127,28 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             видаліть чернетку.
           </p>
           <div className="flex flex-col gap-2 pt-1">
-            <Link
-              href={`/profile/songs/${result.songId}/edit`}
-              className="te-pill-btn w-full text-center px-5 py-3 text-sm font-bold"
-            >
-              Виправити текст
-            </Link>
+            {isEdit ? (
+              /* Already on the edit page — a link to the same URL would be a
+                 no-op. Dismiss the dialog back to the form instead (the typed
+                 text survives — the fields are controlled). */
+              <button
+                type="button"
+                onClick={() => setRuDismissed(true)}
+                className="te-pill-btn w-full text-center px-5 py-3 text-sm font-bold"
+              >
+                Виправити текст
+              </button>
+            ) : (
+              <Link
+                href={`/profile/songs/${result.songId}/edit`}
+                className="te-pill-btn w-full text-center px-5 py-3 text-sm font-bold"
+              >
+                Виправити текст
+              </Link>
+            )}
             <button
               type="button"
-              onClick={handleDeleteDraft}
+              onClick={() => handleDeleteDraft(result.songId)}
               disabled={deleting}
               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold rounded-full text-red-500 hover:bg-red-500/10 disabled:opacity-60"
             >
@@ -188,7 +211,10 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   }
 
   return (
-    <form action={formAction} className="space-y-8">
+    <form action={formAction} onSubmit={() => setRuDismissed(false)} className="space-y-8">
+      {/* Default button for implicit (Enter-key) submission — first submit
+          button in tree order wins, so Enter means «Надіслати», not draft. */}
+      <button type="submit" name="intent" value="submit" className="hidden" tabIndex={-1} aria-hidden="true" />
       <input type="hidden" name="artist" value={finalArtist} />
       {/* Preserve metadata not exposed in the form so an edit doesn't reset it. */}
       {isEdit && initial && (
@@ -334,8 +360,8 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             aria-required="true"
             aria-invalid={lyricsLevel === "hard"}
             rows={12}
-            defaultValue={initial?.lyricsRaw ?? ""}
-            onChange={(e) => setLyricsLevel(russianLevel(e.target.value))}
+            value={lyrics}
+            onChange={(e) => { setLyrics(e.target.value); setLyricsLevel(russianLevel(e.target.value)); }}
             placeholder={`Куплет 1:\n[Am]Вставай, мила [C]моя, вставай\n[G]Більшого вимагай\n\nПриспів:\n[F]Ти моя, [C]моя земля\n[G]Ти моє тепле [Am]вогнище`}
             className="w-full bg-transparent outline-none text-sm font-medium min-h-[200px] resize-y font-mono leading-relaxed"
             style={{ color: "var(--text)" }}
@@ -391,7 +417,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             confirmDelete ? (
               <span className="flex items-center gap-2 sm:mr-auto text-xs" style={{ color: "var(--text-muted)" }}>
                 Видалити пісню?
-                <button type="button" onClick={handleDeleteDraft} disabled={deleting} className="font-bold text-red-500 disabled:opacity-60">
+                <button type="button" onClick={() => handleDeleteDraft()} disabled={deleting} className="font-bold text-red-500 disabled:opacity-60">
                   {deleting ? "Видаляємо…" : "Так"}
                 </button>
                 <button type="button" onClick={() => setConfirmDelete(false)} disabled={deleting} className="font-bold" style={{ color: "var(--text-mid)" }}>Ні</button>
@@ -403,11 +429,13 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             )
           )}
 
-          {/* Save as draft */}
+          {/* Save as draft — formNoValidate: the server accepts a title-only
+              draft, so native required-field validation must not block it. */}
           <button
             type="submit"
             name="intent"
             value="draft"
+            formNoValidate
             disabled={pending || !title.trim()}
             className="te-pressable inline-flex items-center justify-center gap-2 px-6 py-4 text-sm font-bold rounded-full disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ border: "1px solid var(--border, rgba(0,0,0,0.15))", color: "var(--text-mid)" }}

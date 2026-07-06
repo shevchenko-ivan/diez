@@ -19,12 +19,27 @@ export async function reportSong(_prev: ReportResult | null, formData: FormData)
 
   const slug = (formData.get("slug") as string)?.trim();
   const reason = (formData.get("reason") as string)?.trim();
-  const details = (formData.get("details") as string)?.trim() || null;
+  // Cap server-side too — the client textarea maxLength is advisory only.
+  const details = (formData.get("details") as string)?.trim().slice(0, 1000) || null;
   if (!slug || !reason) return { ok: false, reason: "validation", message: "Оберіть причину скарги." };
 
   // Resolve the song id from its public slug (songs are publicly readable).
   const { data: song } = await supabase.from("songs").select("id").eq("slug", slug).maybeSingle();
   if (!song) return { ok: false, reason: "validation", message: "Пісню не знайдено." };
+
+  // One OPEN report per user per song — a repeat submit is answered with the
+  // same thank-you instead of stacking duplicates in the admin queue. Checked
+  // via the service role: reporters intentionally have no SELECT on the table.
+  const admin = createAdminClient();
+  const { data: dup } = await admin
+    .from("song_reports")
+    .select("id")
+    .eq("song_id", song.id)
+    .eq("reporter_id", user.id)
+    .eq("status", "open")
+    .limit(1)
+    .maybeSingle();
+  if (dup) return { ok: true };
 
   const { error } = await supabase
     .from("song_reports")

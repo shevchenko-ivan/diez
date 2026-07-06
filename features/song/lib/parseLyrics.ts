@@ -495,6 +495,9 @@ export function parseLyricsWithChords(raw: string): {
     let tabAccum: string[] = [];
     let labelForTab: string | null = null;
     let chordsForTab: string | null = null;
+    // Original chord line as typed — restored verbatim (column positions
+    // intact) when the run turns out not to be a tab after all.
+    let chordsLineRaw: string | null = null;
 
     function looksLikeTabLabel(line: string): boolean {
       const t = line.trim();
@@ -534,7 +537,7 @@ export function parseLyricsWithChords(raw: string): {
           const chords = chordTokens(prev);
           if (chords) {
             chordsForTab = chords.join(" ");
-            nonTabLines.pop();
+            chordsLineRaw = nonTabLines.pop()!;
           } else if (looksLikeTabLabel(prev)) {
             // Compress wide label spacing too — the source uses 20+ spaces
             // between adjacent labels in Tahoma; in monospace 2 is enough.
@@ -549,20 +552,21 @@ export function parseLyricsWithChords(raw: string): {
           tabBlocks.push(buildBlock());
         } else {
           // Not a tab block after all — restore the absorbed lines and accum.
-          if (chordsForTab) nonTabLines.push(chordsForTab);
+          if (chordsLineRaw) nonTabLines.push(chordsLineRaw);
           if (labelForTab) nonTabLines.push(labelForTab);
           nonTabLines.push(...tabAccum);
         }
         tabAccum = [];
         labelForTab = null;
         chordsForTab = null;
+        chordsLineRaw = null;
         nonTabLines.push(line);
       }
     }
     if (qualifiesAsTab(tabAccum)) {
       tabBlocks.push(buildBlock());
     } else {
-      if (chordsForTab) nonTabLines.push(chordsForTab);
+      if (chordsLineRaw) nonTabLines.push(chordsLineRaw);
       if (labelForTab) nonTabLines.push(labelForTab);
       nonTabLines.push(...tabAccum);
     }

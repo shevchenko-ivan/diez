@@ -27,6 +27,18 @@ export async function submitArtist(formData: FormData): Promise<SubmitArtistResu
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, reason: "auth", message: "Увійдіть, щоб додати виконавця." };
 
+  // Blocked submitters can't create artists either (mirrors the song-submit
+  // gate). Tolerant of the column being absent pre-migration-026: an error or
+  // missing row simply reads as "not blocked".
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("is_blocked")
+    .eq("id", user.id)
+    .maybeSingle();
+  if ((prof as { is_blocked?: boolean } | null)?.is_blocked) {
+    return { ok: false, reason: "auth", message: "Ваш акаунт обмежено. Звʼяжіться з нами, якщо вважаєте це помилкою." };
+  }
+
   const name = (formData.get("name") as string)?.trim();
   const bioRaw = (formData.get("bio") as string | null)?.trim() ?? "";
   const bio = bioRaw.length > 0 ? bioRaw.slice(0, 1000) : null;

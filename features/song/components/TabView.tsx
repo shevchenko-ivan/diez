@@ -149,10 +149,22 @@ function chordPositions(chords: string[], lines: ParsedLine[]): { chord: string;
       col: firstNoteIn(Math.round((i * L) / n), Math.round(((i + 1) * L) / n)),
     }));
   }
+  // Measures are the non-empty segments BETWEEN bar lines — including the one
+  // before the first bar when the content doesn't open with "|" (after
+  // parseTabBlock strips the "e|" nut, "--0--|--3--|" starts mid-measure).
+  // Indexing chords by bar position directly would shift every chord one
+  // measure right in that case and drop the last one.
+  const cuts = [-1, ...barCols, L];
+  const measures: [number, number][] = [];
+  for (let k = 0; k + 1 < cuts.length; k++) {
+    const s = cuts[k] + 1;
+    const e = cuts[k + 1];
+    if (e > s) measures.push([s, e]); // skip empty segments ("||", trailing bar)
+  }
+  const last: [number, number] = measures[measures.length - 1] ?? [0, L];
   return chords.map((ch, i) => {
-    const measStart = (barCols[i] ?? -1) + 1;
-    const measEnd = barCols[i + 1] ?? L;
-    return { chord: ch, col: firstNoteIn(measStart, measEnd) };
+    const [ms, me] = measures[i] ?? last;
+    return { chord: ch, col: firstNoteIn(ms, me) };
   });
 }
 
