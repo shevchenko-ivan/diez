@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { TeButton } from "@/shared/components/TeButton";
 import { GoogleAuthButton } from "@/shared/components/GoogleAuthButton";
@@ -13,6 +13,10 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  // Return to ?next= after login (only same-origin relative paths) — used by
+  // the "Додати пісню" flow. Falls back to /profile.
+  const nextParam = useSearchParams().get("next");
+  const dest = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/profile";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +27,7 @@ export function LoginForm() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push("/profile");
+      router.push(dest);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Помилка входу");
     } finally {

@@ -112,6 +112,38 @@ export async function updateArtist(formData: FormData) {
   redirect("/admin/artists");
 }
 
+export async function approveArtist(formData: FormData) {
+  await requireAdmin();
+
+  const artistId = assertUuid(formData.get("artistId") as string, "ID артиста");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ status: "approved" })
+    .eq("id", artistId);
+  if (error) throw new Error(`Помилка схвалення: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
+export async function rejectArtist(formData: FormData) {
+  await requireAdmin();
+
+  const artistId = assertUuid(formData.get("artistId") as string, "ID артиста");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ status: "rejected" })
+    .eq("id", artistId);
+  if (error) throw new Error(`Помилка відхилення: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
 export async function archiveArtist(formData: FormData) {
   await requireAdmin();
 
@@ -156,6 +188,23 @@ export async function deleteArtist(formData: FormData) {
 
   const { error } = await admin.from("artists").delete().eq("id", artistId);
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
+
+  revalidatePath("/artists");
+  revalidatePath("/admin/artists");
+}
+
+export async function bulkApproveArtists(formData: FormData) {
+  await requireAdmin();
+
+  const ids = (formData.get("ids") as string)?.split(",").filter(id => UUID_RE.test(id));
+  if (!ids?.length) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artists")
+    .update({ status: "approved" })
+    .in("id", ids);
+  if (error) throw new Error(`Помилка: ${error.message}`);
 
   revalidatePath("/artists");
   revalidatePath("/admin/artists");

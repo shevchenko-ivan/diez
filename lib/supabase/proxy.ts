@@ -80,6 +80,8 @@ export async function updateSession(request: NextRequest) {
     // to call it; without this the API silently 307s to /auth/login and the
     // dropdown shows "Нічого не знайдено" for every query.
     "/api/search",
+    // TEMP: СКАЙ scrape preview (no DB) — remove with app/skay-preview.
+    "/skay-preview",
   ];
 
   // SEO endpoints — Google / Bing must be able to crawl these without auth.
@@ -95,9 +97,12 @@ export async function updateSession(request: NextRequest) {
     publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (!isPublic && !user) {
-    // Protected route — redirect to login
+    // Protected route — redirect to login, remembering where to return.
     const url = request.nextUrl.clone();
+    const original = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = "/auth/login";
+    url.search = "";
+    url.searchParams.set("next", original);
     return NextResponse.redirect(url);
   }
 

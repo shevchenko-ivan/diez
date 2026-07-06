@@ -38,7 +38,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Тюнер",
         short_name: "Тюнер",
-        description: "Налаштувати гітару",
+        description: "Настроїти гітару",
         url: "/tuner",
       },
       {

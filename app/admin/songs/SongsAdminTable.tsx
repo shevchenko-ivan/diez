@@ -53,7 +53,7 @@ interface Props {
   tab: "active" | "archived";
   sort: string;
   dir: "asc" | "desc";
-  tabParam: "published" | "draft" | "archived";
+  tabParam: "published" | "pending" | "draft" | "archived";
 }
 
 function SortLink({

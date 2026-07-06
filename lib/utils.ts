@@ -33,3 +33,26 @@ export const siteUrl =
 export function jsonLdScript(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
+
+/**
+ * Downscale a source-CDN cover/photo URL to a sensible thumbnail size.
+ *
+ * We serve covers with `unoptimized` (Vercel Image Optimization quota is
+ * finite and we hotlink thousands of remote covers), so the browser downloads
+ * the source bytes directly. Stored URLs are full-size (1000×1000 Deezer,
+ * 600×600 iTunes, s900 YouTube) — rewriting the size token in the URL keeps
+ * the payload light without going through the optimizer.
+ *
+ *   • Deezer  (dzcdn.net):        /1000x1000-…  → /{px}x{px}-…
+ *   • iTunes  (mzstatic.com):     /600x600bb.jpg → /{px}x{px}bb.jpg
+ *   • YouTube (googleusercontent): =s900-…       → =s{px}-…
+ *
+ * Unknown hosts are returned unchanged.
+ */
+export function coverThumb(url: string | null | undefined, px = 500): string | null {
+  if (!url) return null;
+  return url
+    .replace(/\/\d+x\d+(-\d)/, `/${px}x${px}$1`) // Deezer: 1000x1000-000000-…
+    .replace(/\/\d+x\d+bb\.(jpg|png)/i, `/${px}x${px}bb.$1`) // iTunes
+    .replace(/=s\d+(-|$)/, `=s${px}$1`); // YouTube avatar
+}

@@ -9,6 +9,7 @@ import { HapticLink } from "@/shared/components/HapticLink";
 import { TeButton } from "@/shared/components/TeButton";
 import { useLiteMode } from "@/shared/components/LiteModeProvider";
 import { SongCover } from "@/shared/components/SongCover";
+import { coverThumb } from "@/lib/utils";
 import { SaveHeartButton } from "./SaveHeartButton";
 
 // ── Song card (grid) ─────────────────────────────────────────────────────────
@@ -25,6 +26,8 @@ export interface SongCardProps {
   coverImage?: string;
   index?: number;
   variantId?: string | null;
+  /** Saved transpose — appended as ?t= so the song opens in the saved key. */
+  transpose?: number;
   /** Hide the save-heart overlay (e.g. song-page recommendation grids). */
   hideSave?: boolean;
 }
@@ -34,7 +37,10 @@ export function SongCard({ ...props }: SongCardProps) {
   const base = props.slug
     ? `/songs/${props.slug}`
     : `/songs/${encodeURIComponent(props.title.toLowerCase().replace(/\s+/g, "-"))}`;
-  const href = props.variantId ? `${base}?v=${props.variantId}` : base;
+  const qp = new URLSearchParams();
+  if (props.variantId) qp.set("v", props.variantId);
+  if (props.transpose) qp.set("t", String(props.transpose));
+  const href = qp.size > 0 ? `${base}?${qp}` : base;
 
   const fallbackColor = props.coverColor || "#C8D5E8";
 
@@ -354,7 +360,7 @@ export function HeroSearch() {
                       }}
                     >
                       {a.photo_url && !lite ? (
-                        <Image src={a.photo_url} alt={a.name} width={36} height={36} className="w-full h-full object-cover" />
+                        <Image src={coverThumb(a.photo_url, 120) as string} alt={a.name} width={36} height={36} unoptimized className="w-full h-full object-cover" />
                       ) : (
                         a.name.charAt(0).toUpperCase()
                       )}
@@ -440,7 +446,7 @@ function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, on
               }}
             >
               {s.cover_image && !lite ? (
-                <Image src={s.cover_image} alt={s.title} width={36} height={36} className="w-full h-full object-cover" />
+                <Image src={coverThumb(s.cover_image, 120) as string} alt={s.title} width={36} height={36} unoptimized className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xs font-bold" style={{ color: `${fallback}` }}>{s.artist.charAt(0).toUpperCase()}</span>
               )}

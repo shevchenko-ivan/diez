@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
+import { coverThumb } from "@/lib/utils";
 import { loadMoreArtists } from "../actions/strip";
 import type { Artist } from "../services/artists";
 
@@ -84,18 +85,17 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
               }}
             >
               {artist.photo_url ? (
-                // Use next/image — these photos come from external CDNs
-                // (wikimedia, scdn, etc.) and a raw <img> ships the original
-                // multi-MB source unmodified. With <Image> Next emits an
-                // optimized 120×120 webp/avif via /_next/image proxy,
-                // shrinking ~11 MB Wikipedia portraits down to ~10 KB.
+                // Served unoptimized (Vercel Image Optimization quota is
+                // finite) and downscaled via the source-CDN URL so the payload
+                // stays small without going through /_next/image.
                 <Image
-                  src={artist.photo_url}
+                  src={coverThumb(artist.photo_url, 240) as string}
                   alt={`${artist.name} — фото виконавця`}
                   title={artist.name}
                   width={120}
                   height={120}
                   sizes="120px"
+                  unoptimized
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (

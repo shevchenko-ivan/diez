@@ -57,12 +57,19 @@ export default async function AdminSongsPage({
   const q = (qParam ?? "").trim();
   const PAGE_SIZE = 200;
   const pageNum = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
-  const tab: "published" | "draft" | "archived" =
+  const tab: "published" | "pending" | "draft" | "archived" =
     tabParam === "archived" ? "archived" :
+    tabParam === "pending" ? "pending" :
     tabParam === "draft" ? "draft" : "published";
 
   const sortKey = sortParam && SORT_COLUMNS[sortParam] ? sortParam : "created_at";
   const sortDir: "asc" | "desc" = dirParam === "asc" ? "asc" : "desc";
+
+  // Pending count for the moderation tab badge (separate lightweight query).
+  const { count: pendingCount } = await admin
+    .from("songs")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
 
   let query = admin
     .from("songs")
@@ -113,6 +120,23 @@ export default async function AdminSongsPage({
           }`}
         >
           ОПУБЛІКОВАНІ
+        </TeButton>
+        <TeButton
+          shape="pill"
+          href="/admin/songs?tab=pending"
+          className={`px-4 py-2 text-xs font-bold tracking-widest rounded-xl transition-colors flex items-center gap-1.5 ${
+            tab === "pending" ? "" : "opacity-60 hover:opacity-100"
+          }`}
+        >
+          НА МОДЕРАЦІЇ
+          {!!pendingCount && pendingCount > 0 && (
+            <span
+              className="inline-flex items-center justify-center text-[10px] font-bold rounded-full px-1.5"
+              style={{ minWidth: 18, height: 18, background: "var(--orange)", color: "#fff" }}
+            >
+              {pendingCount}
+            </span>
+          )}
         </TeButton>
         <TeButton
           shape="pill"

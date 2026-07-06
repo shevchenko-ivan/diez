@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { hasEnvVars } from "@/lib/utils";
+import { isMissingStatusColumn } from "@/features/artist/lib/status";
 
 function getClient() {
   return createClient(
@@ -22,10 +23,14 @@ export interface Artist {
 
 export async function getAllArtists(): Promise<Artist[]> {
   if (!hasEnvVars) return [];
-  const { data, error } = await getClient()
-    .from("artists")
-    .select("id, slug, name, photo_url, bio, genre")
-    .order("name");
+  const client = getClient();
+  const cols = "id, slug, name, photo_url, bio, genre";
+  let { data, error } = await client
+    .from("artists").select(cols).eq("status", "approved").order("name");
+  // Pre-027 fallback: no status column yet → return all (old behaviour).
+  if (error && isMissingStatusColumn(error)) {
+    ({ data, error } = await client.from("artists").select(cols).order("name"));
+  }
   if (error || !data) return [];
   return data as Artist[];
 }
@@ -110,11 +115,14 @@ export async function getArtists(limit = 12, offset = 0): Promise<Artist[]> {
 
 export async function getArtistBySlug(slug: string): Promise<Artist | undefined> {
   if (!hasEnvVars) return undefined;
-  const { data, error } = await getClient()
-    .from("artists")
-    .select("id, slug, name, photo_url, bio, genre, aliases")
-    .eq("slug", slug)
-    .single();
+  const client = getClient();
+  const cols = "id, slug, name, photo_url, bio, genre, aliases";
+  let { data, error } = await client
+    .from("artists").select(cols).eq("slug", slug).eq("status", "approved").single();
+  // Pre-027 fallback: no status column yet → resolve by slug only.
+  if (error && isMissingStatusColumn(error)) {
+    ({ data, error } = await client.from("artists").select(cols).eq("slug", slug).single());
+  }
   if (error || !data) return undefined;
   return data as Artist;
 }

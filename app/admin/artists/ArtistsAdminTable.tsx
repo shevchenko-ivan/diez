@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, Archive, Trash2, RotateCcw, User } from "lucide-react";
+import { Pencil, Archive, Trash2, RotateCcw, User, Check, X } from "lucide-react";
 import { AdminTable, AdminTh, AdminTr } from "@/shared/components/AdminTable";
 import { TeButton } from "@/shared/components/TeButton";
 import {
@@ -10,9 +10,12 @@ import {
   restoreArtist,
   deleteArtist,
   updateArtistPhoto,
+  approveArtist,
+  rejectArtist,
   bulkArchiveArtists,
   bulkRestoreArtists,
   bulkDeleteArtists,
+  bulkApproveArtists,
 } from "@/features/artist/actions/admin";
 
 interface AdminArtist {
@@ -21,12 +24,14 @@ interface AdminArtist {
   name: string;
   photo_url: string | null;
   genre: string | null;
+  bio?: string | null;
   archived_at: string | null;
+  status?: string | null;
 }
 
 interface Props {
   artists: AdminArtist[];
-  tab: "active" | "archived";
+  tab: "active" | "archived" | "pending";
 }
 
 export function ArtistsAdminTable({ artists, tab }: Props) {
@@ -68,7 +73,19 @@ export function ArtistsAdminTable({ artists, tab }: Props) {
             Вибрано: {selected.size}
           </span>
           <div className="flex items-center gap-2 ml-auto">
-            {tab === "active" ? (
+            {tab === "pending" ? (
+              <TeButton
+                shape="pill"
+                icon={Check}
+                iconSize={13}
+                onClick={() => bulkAction(bulkApproveArtists)}
+                disabled={isPending}
+                className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
+                style={{ borderRadius: "0.75rem", color: "var(--orange)" }}
+              >
+                Схвалити вибрані
+              </TeButton>
+            ) : tab === "active" ? (
               <TeButton
                 shape="pill"
                 icon={Archive}
@@ -116,7 +133,13 @@ export function ArtistsAdminTable({ artists, tab }: Props) {
 
       <AdminTable
         isEmpty={artists.length === 0}
-        emptyMessage={tab === "archived" ? "Архів порожній" : "Виконавців ще немає. Додайте першого!"}
+        emptyMessage={
+          tab === "archived"
+            ? "Архів порожній"
+            : tab === "pending"
+              ? "Немає виконавців на модерації"
+              : "Виконавців ще немає. Додайте першого!"
+        }
         headers={<>
           <AdminTh className="w-8">
             <input
@@ -191,7 +214,35 @@ export function ArtistsAdminTable({ artists, tab }: Props) {
                   className="p-2 rounded-lg opacity-50 hover:opacity-100"
                 />
 
-                {tab === "active" ? (
+                {tab === "pending" ? (
+                  <>
+                    <form action={approveArtist}>
+                      <input type="hidden" name="artistId" value={artist.id} />
+                      <TeButton
+                        shape="pill"
+                        type="submit"
+                        icon={Check}
+                        iconSize={14}
+                        title="Схвалити"
+                        className="p-2 rounded-lg opacity-60 hover:opacity-100"
+                        style={{ color: "var(--orange)" }}
+                      />
+                    </form>
+                    <form action={rejectArtist} onSubmit={(e) => {
+                      if (!confirm("Відхилити цього виконавця?")) e.preventDefault();
+                    }}>
+                      <input type="hidden" name="artistId" value={artist.id} />
+                      <TeButton
+                        shape="pill"
+                        type="submit"
+                        icon={X}
+                        iconSize={14}
+                        title="Відхилити"
+                        className="p-2 rounded-lg opacity-50 hover:opacity-100 hover:text-red-500"
+                      />
+                    </form>
+                  </>
+                ) : tab === "active" ? (
                   <form action={archiveArtist}>
                     <input type="hidden" name="artistId" value={artist.id} />
                     <TeButton

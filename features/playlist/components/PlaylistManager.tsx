@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { coverThumb } from "@/lib/utils";
 import {
   Check,
   Copy,
@@ -38,6 +39,7 @@ interface Song {
   coverImage?: string;
   coverColor?: string;
   variantId?: string | null;
+  transpose?: number;
 }
 
 interface Props {
@@ -289,11 +291,17 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                 }}
               >
                 {song.coverImage && (
-                  <Image src={song.coverImage} alt={song.title} width={64} height={64} className="w-full h-full object-cover" />
+                  <Image src={coverThumb(song.coverImage, 240) as string} alt={song.title} width={64} height={64} unoptimized className="w-full h-full object-cover" />
                 )}
               </div>
               <Link
-                href={song.variantId ? `/songs/${song.slug}?v=${song.variantId}` : `/songs/${song.slug}`}
+                href={(() => {
+                  const p = new URLSearchParams();
+                  if (song.variantId) p.set("v", song.variantId);
+                  if (song.transpose) p.set("t", String(song.transpose));
+                  const qs = p.toString();
+                  return qs ? `/songs/${song.slug}?${qs}` : `/songs/${song.slug}`;
+                })()}
                 className="flex-1 min-w-0"
               >
                 <div className="font-medium text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>

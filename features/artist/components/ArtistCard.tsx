@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { slugify } from "@/lib/slugify";
+import { coverThumb } from "@/lib/utils";
 import { SaveArtistButton } from "./SaveArtistButton";
 
 interface ArtistCardProps {
@@ -42,11 +43,12 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
           // this, a raw <img> ships the original multi-MB Wikipedia portrait
           // straight to the browser and tanks LCP on /artists.
           <Image
-            src={image}
+            src={coverThumb(image) as string}
             alt={`${name} — фото виконавця`}
             title={name}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
+            unoptimized
             className="object-cover"
           />
         ) : (

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { hasEnvVars } from "@/lib/utils";
 import { normalizeForSearch } from "@/features/song/lib/translit";
+import { isMissingStatusColumn } from "@/features/artist/lib/status";
 
 export const runtime = "edge";
 
@@ -164,10 +165,18 @@ export async function GET(req: Request) {
   let resolvedNames: string[] = [];
   if (isFirstPage && nq.length >= 2) {
     const needle = q.toLowerCase();
-    const { data: allArtists } = await sb
+    let { data: allArtists, error: artistsErr } = await sb
       .from("artists")
       .select("slug, name, photo_url, aliases")
+      .eq("status", "approved")
       .order("name");
+    // Pre-027 fallback: no status column yet → list all.
+    if (artistsErr && isMissingStatusColumn(artistsErr)) {
+      ({ data: allArtists } = await sb
+        .from("artists")
+        .select("slug, name, photo_url, aliases")
+        .order("name"));
+    }
     const matched = ((allArtists ?? []) as { slug: string; name: string; photo_url: string | null; aliases: string[] | null }[])
       .filter((a) => {
         if (normalizeForSearch(a.name).includes(nq)) return true;

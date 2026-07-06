@@ -10,7 +10,9 @@ import { getArtists } from "@/features/artist/services/artists";
 import { ArtistStrip } from "@/features/artist/components/ArtistStrip";
 import { getSavedSlugs, getMyPlaylists } from "@/features/playlist/actions/playlists";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
+import { MySongCard } from "@/features/song/components/MySongCard";
 import { SiteFooter } from "@/shared/components/SiteFooter";
+import { createClient } from "@/lib/supabase/server";
 
 export const revalidate = 3600;
 
@@ -38,6 +40,22 @@ export default async function HomePage() {
   ]);
 
   const trending = trendingPage.songs;
+
+  // Songs the signed-in user submitted — shown with their publication status so
+  // authors can track them right from the home page. Empty (and the section
+  // hidden) for guests or users who haven't added anything.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  let mySongs: Record<string, unknown>[] = [];
+  if (user) {
+    const { data } = await supabase
+      .from("songs")
+      .select("id, slug, title, artist, status, cover_image, cover_color")
+      .eq("submitted_by", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    mySongs = (data ?? []) as Record<string, unknown>[];
+  }
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
@@ -103,6 +121,27 @@ export default async function HomePage() {
           <section className="mb-10">
             <SectionHeader title="Виконавці" href="/artists" />
             <ArtistStrip initial={artists} initialExhausted={artists.length < 12} />
+          </section>
+        )}
+
+        {/* ── 3.5 Додані пісні (author's submissions + status) ────────────── */}
+        {mySongs.length > 0 && (
+          <section className="mb-10">
+            <SectionHeader title="Додані пісні" href="/profile" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 sm:gap-3">
+              {mySongs.slice(0, 4).map((song) => (
+                <MySongCard
+                  key={song.id as string}
+                  id={song.id as string}
+                  slug={song.slug as string}
+                  title={song.title as string}
+                  artist={song.artist as string}
+                  status={song.status as string}
+                  coverImage={(song.cover_image as string) ?? undefined}
+                  coverColor={(song.cover_color as string) ?? undefined}
+                />
+              ))}
+            </div>
           </section>
         )}
 

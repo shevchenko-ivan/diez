@@ -4,13 +4,16 @@ import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "re
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
-import { Gauge, Minus, Plus, ChevronDown, AArrowDown, AArrowUp, Sparkles, Pause, Pencil, X } from "lucide-react";
+import { Gauge, Minus, Plus, ChevronDown, AArrowDown, AArrowUp, Sparkles, Pause, Pencil, X, Maximize2 } from "lucide-react";
 import { transposeChord, ChordPanel, ChordHover, useVoicings } from "./ChordDiagram";
 import { useScrollFade, buildFadeMask } from "@/shared/hooks/useScrollFade";
 import { SongPlayer } from "./SongPlayer";
 import { ControlBlock } from "@/shared/components/ControlBlock";
 import { useFocusMode } from "@/shared/hooks/useFocusMode";
 import { useShowTabs } from "@/shared/hooks/useShowTabs";
+import { usePublishTranspose } from "@/shared/hooks/useCurrentTranspose";
+import { TabView } from "./TabView";
+import { TabFullscreenView } from "./TabFullscreenView";
 
 // Heavy widgets (Web Audio, mic access) — lazy-loaded, client-only.
 const StrumPatternList = dynamic(
@@ -149,6 +152,7 @@ export function SongViewer({
   editHref,
   editSlot,
   initialMobile = false,
+  initialTranspose = 0,
 }: {
   song: Song;
   editHref?: string;
@@ -158,8 +162,13 @@ export function SongViewer({
    *  lyrics to a phone-width estimate so the post-measure re-wrap doesn't shift
    *  layout (CLS). Final wrapping always uses the measured width. */
   initialMobile?: boolean;
+  /** Saved transpose from the user's playlist (or ?t= URL param) — the song
+   *  opens already shifted to the key it was saved in. */
+  initialTranspose?: number;
 }) {
-  const [transpose, setTranspose] = useState(0);
+  const [transpose, setTranspose] = useState(initialTranspose);
+  // Header save button stores this value into playlist_songs.transpose.
+  usePublishTranspose(transpose);
   const [fontSize, setFontSize] = useState(16);
   const [scrollSpeed, setScrollSpeed] = useState(0);
   // Hide the auto-scroll control when the page already fits the viewport.
@@ -172,6 +181,7 @@ export function SongViewer({
   const [beginnerMode, setBeginnerMode] = useState(false);
   const [focusMode, , toggleFocusMode] = useFocusMode();
   const [showTabs] = useShowTabs();
+  const [tabsFsOpen, setTabsFsOpen] = useState(false);
   const sectionsRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLSpanElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -863,20 +873,35 @@ export function SongViewer({
                   {/* Tab block — global toggle (header button) gates visibility.
                       Hidden by default; renders above the chord/lyric rows when on. */}
                   {section.tab && showTabs && (
-                    <div
-                      className="mb-2 te-inset rounded-xl overflow-x-auto scrollbar-none"
-                      style={{ WebkitOverflowScrolling: "touch" }}
-                    >
-                      <pre
-                        className="px-3 py-2.5 font-mono leading-[1.15] whitespace-pre"
+                    <div className="relative mb-3">
+                      {/* Expand to the dedicated fullscreen tab viewer (all song
+                          tabs, zoomable). Sits outside the scroll area so it
+                          doesn't drift with horizontal scroll. */}
+                      <button
+                        type="button"
+                        onClick={() => setTabsFsOpen(true)}
+                        aria-label="Таби на весь екран"
+                        className="absolute top-1.5 right-1.5 z-10 inline-flex items-center justify-center rounded-lg te-pressable"
                         style={{
-                          fontSize: `${Math.max(11, fontSize * 0.7)}px`,
-                          color: "var(--text)",
-                          opacity: 0.85,
+                          width: 28,
+                          height: 28,
+                          background: "var(--surface)",
+                          border: "1px solid var(--border, rgba(0,0,0,0.1))",
+                          color: "var(--text-muted)",
                         }}
                       >
-                        {section.tab}
-                      </pre>
+                        <Maximize2 size={14} />
+                      </button>
+                      <div
+                        className="te-inset rounded-xl overflow-x-auto scrollbar-none"
+                        style={{ padding: "10px 12px", WebkitOverflowScrolling: "touch" }}
+                      >
+                        <TabView
+                          tab={section.tab}
+                          fontSize={Math.max(11, fontSize * 0.7)}
+                          bg="var(--surface)"
+                        />
+                      </div>
                     </div>
                   )}
                   {(() => {
@@ -955,7 +980,7 @@ export function SongViewer({
                                 <div style={{ position: "relative", height: `${fontSize * 1.3}px`, whiteSpace: "pre" }}>
                                   {(() => {
                                     // Tahoma→monospace translation happens at SCRAPE time (see
-                                    // scripts/scrape-mychords.ts renderChordLine). So the stored
+                                    // the import script's renderChordLine). So the stored
                                     // chord col is already the lyric char index where the chord
                                     // should sit, and render is straight absolute positioning.
                                     // Single-pass cluster-overlap fix only — push subsequent chords
@@ -1195,6 +1220,14 @@ export function SongViewer({
         />
       )}
 
+      {tabsFsOpen && (
+        <TabFullscreenView
+          tabs={song.sections
+            .filter((s) => s.tab)
+            .map((s) => ({ label: s.label, tab: s.tab as string }))}
+          onClose={() => setTabsFsOpen(false)}
+        />
+      )}
     </div>
   );
 }

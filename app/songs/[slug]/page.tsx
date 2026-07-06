@@ -15,6 +15,8 @@ import { SongViewer } from "@/features/song/components/SongViewer";
 import { SongCard } from "@/features/song/components/SongCard";
 import { Pencil } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
+import { Navbar } from "@/shared/components/Navbar";
+import { ReportButton } from "@/features/song/components/ReportButton";
 import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
@@ -108,10 +110,10 @@ export default async function SongPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string }>;
+  searchParams: Promise<{ v?: string; t?: string }>;
 }) {
   const { slug } = await params;
-  const { v: variantId } = await searchParams;
+  const { v: variantId, t: transposeParam } = await searchParams;
 
   // UA-detect mobile so SongViewer can wrap lyrics to a phone-width estimate in
   // the SSR/first paint (prevents the post-measure re-wrap CLS on phones).
@@ -135,6 +137,14 @@ export default async function SongPage({
   // ?v= takes priority; then the variant the user previously saved; then primary.
   const effectiveVariantId = variantId ?? saveState.variantId ?? undefined;
   const song = applyVariant(baseSong, effectiveVariantId);
+
+  // Saved key: ?t= URL param (playlist links, sharing) wins over the value
+  // stored with the user's own playlist save. Clamped to ±11 semitones.
+  const parsedT = transposeParam !== undefined ? parseInt(transposeParam, 10) : NaN;
+  const initialTranspose = Math.max(
+    -11,
+    Math.min(11, Number.isFinite(parsedT) ? parsedT : saveState.transpose),
+  );
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -257,6 +267,7 @@ export default async function SongPage({
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
+      <Navbar />
       <Suspense><SavedToast /></Suspense>
       {/* JSON-LD is rendered inline (not via next/script afterInteractive)
           so it lands in the initial SSR HTML — Googlebot's render budget is
@@ -283,7 +294,7 @@ export default async function SongPage({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }}
       />
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-4 pb-20">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-1 pb-20">
 
         {/* ── Header (single row, centered title, no surface) ─────────── */}
         <div className="mb-4 grid items-center" style={{ padding: "0.4rem 0", gridTemplateColumns: "1fr auto 1fr" }}>
@@ -291,17 +302,19 @@ export default async function SongPage({
           <BackButton fallback="/songs" />
 
           {/* Center: Title + meta — stacks on mobile, inline on md+ */}
-          <div className="flex flex-col md:flex-row items-center justify-center md:gap-2 px-2 md:px-4 min-w-0">
+          {/* items-baseline on md+: artist (e-Ukraine) and title (e-Ukraine Head)
+              have different vertical metrics, so items-center misaligns them. */}
+          <div className="flex flex-col md:flex-row items-center md:items-baseline justify-center md:gap-2 px-2 md:px-4 min-w-0">
             <Link
               href={`/artists/${artistSlug}`}
               className="hover:underline truncate max-w-full"
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.2 }}
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.45 }}
             >
               {song.artist}
             </Link>
             <h1
               className="truncate"
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}
+              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.45 }}
             >
               {song.title}
             </h1>
@@ -340,6 +353,7 @@ export default async function SongPage({
         <SongViewer
           song={song}
           initialMobile={isMobile}
+          initialTranspose={initialTranspose}
           editSlot={
             <Suspense fallback={null}>
               <AdminEditSheetButton slug={slug} variantId={song.activeVariantId} />
@@ -362,6 +376,11 @@ export default async function SongPage({
           </Link>{" "}
           — перемкніть інструмент над акордами й транспонуйте тональність у будь-яку зручну.
         </p>
+
+        {/* Report mechanism (Apple App Review 1.2 — UGC) */}
+        <div className="mt-3">
+          <ReportButton slug={slug} />
+        </div>
 
 
         {/* ── Other songs by this artist (deferred — below the fold) ──── */}

@@ -53,6 +53,14 @@ export const STRUM_PRESETS: StrumPreset[] = [
     strokes: [DA, REST, D, U, REST, U, D, U],
   },
   {
+    id: "six-mute",
+    // D · x U · U x U — the classic "шістка" with palm-muted chucks on the
+    // off-beat downs (the basic muted six taught to beginners).
+    label: "Шістка з приглушенням",
+    noteLength: "1/8",
+    strokes: [DA, REST, M, U, REST, U, M, U],
+  },
+  {
     id: "folk",
     // D D U · U D U — folk variation with rest on the and-of-2.
     label: "Folk",

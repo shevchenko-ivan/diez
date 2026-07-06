@@ -11,6 +11,7 @@ import {
 import type { PlaylistSummary } from "../types";
 import { ToggleKnob } from "@/shared/components/ToggleKnob";
 import { TeButton } from "@/shared/components/TeButton";
+import { readCurrentTranspose } from "@/shared/hooks/useCurrentTranspose";
 
 interface Props {
   slug: string;
@@ -84,7 +85,7 @@ export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists
       onClose();
       return;
     }
-    setSongPlaylists(slug, [...current], variantId).then((res) => {
+    setSongPlaylists(slug, [...current], variantId, readCurrentTranspose()).then((res) => {
       if (res.ok) onSavedChange(res.data.saved);
     });
     onClose();

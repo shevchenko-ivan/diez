@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.supabase.co" },
       { protocol: "https", hostname: "**.mzstatic.com" },
       { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "yt3.googleusercontent.com" },
       { protocol: "https", hostname: "i.scdn.co" },
       { protocol: "https", hostname: "**.dzcdn.net" },
       { protocol: "https", hostname: "**.musify.club" },
@@ -84,6 +85,13 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         has: [{ type: "host", value: "(.*).shevchenko-ivans-projects.vercel.app" }],
         destination: "https://diez.net.ua/:path*",
+        permanent: true,
+      },
+      // «Народні» merged into «Українська класика» (June 2026) — keep the
+      // old topic URL alive for inbound links and Google's index.
+      {
+        source: "/songs/topic/folk",
+        destination: "/songs/topic/ukrainian",
         permanent: true,
       },
       // Old query-string topic URLs → path-based canonical. Path URLs

@@ -15,8 +15,16 @@ import { loadUserPresets, saveUserPreset, deleteUserPreset } from "@/features/so
 import { ToggleKnob } from "@/shared/components/ToggleKnob";
 
 interface Props {
-  songId: string;
+  /** Existing song → patterns persist immediately. Omit on the "add song"
+   *  form (draft mode): patterns are collected locally and serialized into a
+   *  hidden `strumming_patterns` input the parent form submits. */
+  songId?: string;
   initial: StrumPattern[];
+  /** Personal "save as template" (localStorage presets). Off for regular users
+   *  building a one-off strum for a single song. Defaults to true (admin). */
+  allowTemplates?: boolean;
+  /** Open the pattern form straight away (regular user's "Створити свій бій"). */
+  autoOpenForm?: boolean;
 }
 
 const NOTE_LENGTHS: { value: NoteLength; label: string }[] = [
@@ -37,13 +45,14 @@ const NOTE_LENGTHS: { value: NoteLength; label: string }[] = [
  * song has no rhythm. The toggle is purely UI — patterns persist either way
  * (the viewer just hides the block when there are no patterns).
  */
-export function StrumPatternsEditor({ songId, initial }: Props) {
+export function StrumPatternsEditor({ songId, initial, allowTemplates = true, autoOpenForm = false }: Props) {
+  const draft = !songId;
   const [patterns, setPatterns] = useState<StrumPattern[]>(initial);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(autoOpenForm && initial.length > 0 ? initial[0].id : null);
+  const [adding, setAdding] = useState(autoOpenForm && initial.length === 0);
   // Default expanded only if the song already has patterns. Admin can toggle
   // to add the first pattern.
-  const [expanded, setExpanded] = useState(initial.length > 0);
+  const [expanded, setExpanded] = useState(initial.length > 0 || autoOpenForm);
 
   function handleSaved(updated: StrumPattern) {
     setPatterns((prev) => {
@@ -62,6 +71,16 @@ export function StrumPatternsEditor({ songId, initial }: Props) {
 
   return (
     <div>
+      {/* Draft mode: ship the collected patterns to the parent <form>. */}
+      {draft && (
+        <input
+          type="hidden"
+          name="strumming_patterns"
+          value={JSON.stringify(
+            patterns.map((p) => ({ name: p.name, tempo: p.tempo, noteLength: p.noteLength, strokes: p.strokes })),
+          )}
+        />
+      )}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-bold uppercase tracking-tighter" style={{ color: "var(--text)" }}>
@@ -97,6 +116,8 @@ export function StrumPatternsEditor({ songId, initial }: Props) {
           <PatternForm
             key={p.id}
             songId={songId}
+            draft={draft}
+            allowTemplates={allowTemplates}
             initial={p}
             onSaved={handleSaved}
             onCancel={() => setEditingId(null)}
@@ -114,6 +135,8 @@ export function StrumPatternsEditor({ songId, initial }: Props) {
       {adding ? (
         <PatternForm
           songId={songId}
+          draft={draft}
+          allowTemplates={allowTemplates}
           onSaved={handleSaved}
           onCancel={() => setAdding(false)}
         />
@@ -188,14 +211,18 @@ function StrokesPreview({ strokes }: { strokes: Stroke[] }) {
 // ─── Single-pattern form ─────────────────────────────────────────────────────
 
 interface FormProps {
-  songId: string;
+  songId?: string;
+  /** Draft mode (add-song form): collect locally, no server persistence. */
+  draft?: boolean;
+  /** Allow saving the pattern as a personal localStorage template. */
+  allowTemplates?: boolean;
   initial?: StrumPattern;
   onSaved: (p: StrumPattern) => void;
   onCancel: () => void;
   onDeleted?: (id: string) => void;
 }
 
-function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProps) {
+function PatternForm({ songId, draft, allowTemplates = true, initial, onSaved, onCancel, onDeleted }: FormProps) {
   const [name, setName] = useState(initial?.name ?? "Main Pattern");
   const [tempo, setTempo] = useState(initial?.tempo ?? 100);
   const [noteLength, setNoteLength] = useState<NoteLength>(initial?.noteLength ?? "1/8");
@@ -212,7 +239,7 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   const [savedFlash, setSavedFlash] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  useEffect(() => { setUserPresets(loadUserPresets()); }, []);
+  useEffect(() => { if (allowTemplates) setUserPresets(loadUserPresets()); }, [allowTemplates]);
 
   function applyPreset(preset: StrumPreset) {
     setStrokes(preset.strokes.map((s) => ({ ...s })));
@@ -303,8 +330,19 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
     setError(null);
     const isCreating = !initial;
 
+    // Draft mode: no song exists yet — collect locally, parent form submits.
+    if (draft) {
+      if (strokes.length === 0) { setError("Патерн порожній — додайте хоча б один удар"); return; }
+      onSaved({
+        id: initial?.id ?? (crypto.randomUUID?.() ?? `tmp-${Date.now()}`),
+        position: initial?.position ?? 0,
+        name, tempo, noteLength, strokes,
+      });
+      return;
+    }
+
     const fd = new FormData();
-    if (isCreating) fd.set("songId", songId);
+    if (isCreating) fd.set("songId", songId as string);
     else fd.set("id", initial!.id);
     fd.set("name", name);
     fd.set("tempo", String(tempo));
@@ -341,6 +379,8 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
   function handleDelete() {
     if (!initial) return;
     if (!window.confirm(`Видалити патерн «${name}»?`)) return;
+    // Draft mode: nothing persisted yet — just drop it locally.
+    if (draft) { onDeleted?.(initial.id); return; }
     const fd = new FormData();
     fd.set("id", initial.id);
     startTransition(async () => {
@@ -458,22 +498,25 @@ function PatternForm({ songId, initial, onSaved, onCancel, onDeleted }: FormProp
         </button>
 
         {/* Save current pattern as a personal template (localStorage). Shows
-            up under "Мої шаблони" in the presets gallery for reuse. */}
-        <button
-          type="button"
-          onClick={handleSaveAsTemplate}
-          title="Зберегти цей патерн як ваш шаблон (для повторного використання)"
-          className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors"
-          style={{
-            borderRadius: "0.75rem",
-            border: "1px solid",
-            borderColor: savedFlash ? "rgba(255,140,60,0.45)" : "var(--border, rgba(0,0,0,0.1))",
-            background: savedFlash ? "rgba(255,140,60,0.12)" : "transparent",
-            color: savedFlash ? "var(--orange)" : "var(--text-muted)",
-          }}
-        >
-          {savedFlash ? "Збережено ✓" : "Зберегти як шаблон"}
-        </button>
+            up under "Мої шаблони" in the presets gallery for reuse. Admin-only —
+            regular users build a one-off strum for the song. */}
+        {allowTemplates && (
+          <button
+            type="button"
+            onClick={handleSaveAsTemplate}
+            title="Зберегти цей патерн як ваш шаблон (для повторного використання)"
+            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors"
+            style={{
+              borderRadius: "0.75rem",
+              border: "1px solid",
+              borderColor: savedFlash ? "rgba(255,140,60,0.45)" : "var(--border, rgba(0,0,0,0.1))",
+              background: savedFlash ? "rgba(255,140,60,0.12)" : "transparent",
+              color: savedFlash ? "var(--orange)" : "var(--text-muted)",
+            }}
+          >
+            {savedFlash ? "Збережено ✓" : "Зберегти як шаблон"}
+          </button>
+        )}
 
       </div>
 

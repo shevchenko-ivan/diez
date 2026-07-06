@@ -20,7 +20,7 @@ export const FLAT_TO_SHARP: Record<string, string> = {
 
 // Rare cross-name enharmonics — these aren't flat/sharp pairs but real
 // alternate spellings used in some songbooks (B# = C, E# = F, Cb = B,
-// Fb = E). mychords occasionally renders chord rows with "B#m" instead
+// Fb = E). The source occasionally renders chord rows with "B#m" instead
 // of "Cm" — without this map the voicing lookup returns null and the
 // diagram panel shows an empty box.
 export const RARE_ENHARMONICS: Record<string, string> = {
@@ -282,6 +282,7 @@ const TEMPLATES: Record<string, number[][]> = {
 
 // Voicings that can't be derived from C-root templates (open string shapes)
 const OVERRIDES: Record<string, number[][]> = {
+  "A7sus2": [[-1,0,2,0,0,3]], // x02003 — дзвінкий відкритий voicing (A E G B G)
   "A#": [[-1,1,3,-1,3,-1]],
   "A#6": [[-1,1,0,0,3,3]],
   "B": [[-1,2,4,-1,4,-1]],

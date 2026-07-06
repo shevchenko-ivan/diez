@@ -6,16 +6,18 @@ const STORAGE_KEY = "diez:showTabs";
 const EVENT = "diez:showtabs-change";
 
 function read(): boolean {
-  if (typeof window === "undefined") return false;
+  // Tabs are ON by default — only an explicit "0" (user toggled them off)
+  // hides them. Any other value (including absence) shows tabs.
+  if (typeof window === "undefined") return true;
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === "1";
+    return window.localStorage.getItem(STORAGE_KEY) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
 export function useShowTabs(): [boolean, (next: boolean) => void, () => void] {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
     setEnabled(read());

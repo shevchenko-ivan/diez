@@ -21,7 +21,7 @@ import type { ChordLine, SongSection } from "../types";
 // positives on English words that happen to start with A–H (e.g. "Add", "Beg",
 // "Face") appearing inside lyrics.
 const CHORD_QUALITIES = [
-  "maj7#11", "13sus4", "mMaj7", "7sus4", "9sus4",
+  "maj7#11", "13sus4", "mMaj7", "7sus4", "7sus2", "9sus4",
   "maj13", "maj9", "maj7", "m7b5", "add9", "add11",
   "aug7", "dim7", "dim9", "sus2", "sus4",
   "7b5", "7#5", "7b9", "7#9", "7#11",
@@ -101,11 +101,38 @@ function tryInlineHeader(line: string): { label: string; rest: string } | null {
 }
 const HEADER_PIPE_RE = /^\|([^|]+)\|\s*(?:[xх]\s*\d+\s*)?:?\s*$/;
 const HEADER_BRACKETS_RE = /^\[([^\]]+)\]\s*(?:[xх]\s*\d+\s*)?:?\s*$/;
-// Tab line: any note letter (A-G + optional #/b) followed by "|" and tab
-// content. Standard guitar tuning uses E B G D A E, but mychords transposes
-// the string labels along with chord transposition (so e.g. a +1 transpose
-// renders strings as F C G# etc.), so we accept any chromatic note letter.
-const TAB_LINE_RE = /^[A-Ga-g][#b]?\|[-0-9h p/\\~x().^sbt\s|]+$/;
+// Tab line: a string label followed by "|" and tab content. The label is either
+// a note letter (A-G, plus H = German/Ukrainian B, with optional #/b — the source
+// transposes string labels with chord transpose, so +1 renders F C G# …) OR a
+// string NUMBER 1-6 (1 = thin e … 6 = thick E), the notation some songbooks use
+// instead of letters. The content is permissive (dashes, digits and any
+// technique letters like h/p/s/g in "2(3hg)"), but must contain at least one
+// dash so lyric lines never match. Trailing repeat markers like "} 8" or "] 4"
+// (the source writes "play this measure ×N" after the closing bar) are allowed so
+// riff lines carrying them still register as tab lines.
+const TAB_LABEL = String.raw`(?:[A-Ha-h][#b]?|[1-6])`;
+const TAB_LINE_RE = new RegExp(
+  `^${TAB_LABEL}\\|(?=[^\\n]*-)[-0-9A-Za-z()~^.\\\\/\\s|{}[\\]]+$`,
+);
+
+// Decide whether a run of consecutive tab-shaped lines is really a tab block.
+// ≥4 string lines is unambiguous (a full 6-string system, or two stacked
+// 3-string systems). Exactly 3 lines — common for bass riffs written on D/A/E
+// or G/D/A — is accepted only when the content is clearly a tab: fret digits
+// amid dashes and NO chord-name letter clusters ("Am", "Dm", "Bm"). That last
+// check rejects 3-line chord grids that merely share the "X|…-…" shape, e.g.
+// "A|Bm G| - 2 рази", which otherwise slip through TAB_LINE_RE via the dash.
+function qualifiesAsTab(lines: string[]): boolean {
+  if (lines.length >= 4) return true;
+  if (lines.length < 3) return false;
+  let hasDigit = false;
+  for (const line of lines) {
+    const content = line.replace(new RegExp(`^${TAB_LABEL}\\|`), "");
+    if (/[A-Za-z]{2,}/.test(content)) return false; // chord tokens → not a tab
+    if (/\d/.test(content)) hasDigit = true;
+  }
+  return hasDigit;
+}
 
 // Cyrillic→Latin homoglyph map — songbooks frequently mix layouts and
 // "Аm" (Cyrillic А) vs "Am" (Latin A) are visually identical. Without this
@@ -206,9 +233,9 @@ function parseInlineBracketsLine(line: string): ChordLine {
 //
 // When the chord-line is wider than the lyric-line, or any chord sits past the
 // end of the lyric, the chord positions are very likely misaligned (this is a
-// known side-effect of the mychords scraper, which can drop a few spaces when
+// known side-effect of the import scraper, which can drop a few spaces when
 // walking nested chord-row markup). In that case we snap each chord to the
-// start of the word it falls within in the lyric — that's what mychords does
+// start of the word it falls within in the lyric — that's what the source does
 // visually anyway. Lines that look OK (chord row fits inside the lyric line
 // and every chord position lands on a non-space character) are left alone, so
 // hand-authored songs with intentional mid-word chord placement aren't
@@ -223,8 +250,8 @@ function mergeChordOverLyric(chordLine: string, lyricLine: string): ChordLine {
   // Chords are split into two buckets:
   //   in-lyric  — col is inside the lyric range. May get snapped to fix
   //               legacy mis-alignment when the chord row is much wider than
-  //               the lyric (the classic mychords-import bug).
-  //   past-end  — col is at or past the lyric end. mychords intentionally
+  //               the lyric (the classic import bug).
+  //   past-end  — col is at or past the lyric end. the source intentionally
   //               renders trailing turn-around chords past the last word
   //               (e.g. row 1 of Latexfauna's «Сьогодні в мене …морщин» has
   //               A floating ~10 chars past "морщин"). Snapping them back
@@ -281,7 +308,7 @@ function snapChordsToWordStarts(
   // during that one syllable. Snapping all of them to the single word
   // collapses meaningful timing information. Leave chord positions
   // untouched — chord-row's own spacing is the source of truth here, the
-  // way mychords renders it too.
+  // way the source renders it too.
   if (wordStarts.length === 1) return chords;
 
   // Process chords in source-col order so the "bump to next word" logic can
@@ -295,7 +322,7 @@ function snapChordsToWordStarts(
 
   for (const { chord, col, srcIdx } of ordered) {
     // If the chord sits BEFORE the first word (i.e. in the lyric's leading
-    // whitespace), preserve its position — that's how mychords renders an
+    // whitespace), preserve its position — that's how the source renders an
     // intro chord that's read just before the line starts ("C#m / ⏎ Я скінчу
     // страждання"). Snapping it forward onto the first word loses that
     // pre-lyric anchor and visually merges chord+word.
@@ -309,10 +336,10 @@ function snapChordsToWordStarts(
 
     // Candidate: NEAREST wordStart to `col`. Snapping to the previous word
     // start is wrong when the source position is in the gap between two words
-    // — e.g. mychords renders C#m on the space after "він" (col 14) inside
+    // — e.g. the source renders C#m on the space after "він" (col 14) inside
     // "Без упину, він летів, летів". Previous-only snap pulls C#m back onto
     // "він" (col 11), losing the "after він" anchor; nearest-snap correctly
-    // moves it forward to "летів" (col 15), matching mychords' visual.
+    // moves it forward to "летів" (col 15), matching the source visual.
     let snapIdx = 0;
     let bestDist = Infinity;
     for (let k = 0; k < wordStarts.length; k++) {
@@ -461,12 +488,13 @@ export function parseLyricsWithChords(raw: string): {
     // Extract tab blocks (≥4 consecutive standard-tuning string lines).
     // Also absorb a preceding short non-chord label line (e.g. "Ex.1",
     // "Ex.2     Ex.3", "Riff 1") and compress runs of 4+ spaces inside
-    // tab content to 2 spaces (mychords uses wide spacer gaps in Tahoma
+    // tab content to 2 spaces (the source uses wide spacer gaps in Tahoma
     // that look excessive in our monospace).
     const tabBlocks: string[] = [];
     const nonTabLines: string[] = [];
     let tabAccum: string[] = [];
     let labelForTab: string | null = null;
+    let chordsForTab: string | null = null;
 
     function looksLikeTabLabel(line: string): boolean {
       const t = line.trim();
@@ -478,40 +506,63 @@ export function parseLyricsWithChords(raw: string): {
       if (tokens.length > 4) return false;
       return tokens.every((tok) => /^[A-Za-zА-Яа-яІіЇїЄєҐґ]{1,8}\.?\d*$/.test(tok));
     }
+    // A chord-only line above a tab (e.g. "[C] [F] [C] [D]" or "C  F  C  D") —
+    // captured so it can be redrawn positioned above the tab measures.
+    const CHORD_TOK = /^[A-H][#b]?(?:m|maj|min|dim|aug|sus|add|\d)*(?:\/[A-H][#b]?)?$/;
+    function chordTokens(line: string): string[] | null {
+      const t = line.trim();
+      if (!t || t.includes("|")) return null;
+      const tokens = t.replace(/[[\]]/g, " ").split(/\s+/).filter(Boolean);
+      if (tokens.length === 0 || tokens.length > 16) return null;
+      return tokens.every((tk) => CHORD_TOK.test(tk)) ? tokens : null;
+    }
     function compressTabSpaces(line: string): string {
       return line.replace(/ {4,}/g, "  ");
+    }
+    // -prefixed line = positioned chord header for TabView.
+    function buildBlock(): string {
+      const header = chordsForTab ? "" + chordsForTab + "\n" : "";
+      const lbl = labelForTab ? labelForTab + "\n" : "";
+      return header + lbl + tabAccum.join("\n");
     }
 
     for (const line of group.dataLines) {
       if (TAB_LINE_RE.test(line.trim())) {
-        // Starting a new tab block — try to absorb the preceding label line.
-        if (tabAccum.length === 0 && nonTabLines.length > 0 && labelForTab === null) {
+        // Starting a new tab block — absorb a preceding chord line or label.
+        if (tabAccum.length === 0 && nonTabLines.length > 0 && labelForTab === null && chordsForTab === null) {
           const prev = nonTabLines[nonTabLines.length - 1];
-          if (looksLikeTabLabel(prev)) {
-            // Compress wide label spacing too — mychords uses 20+ spaces
+          const chords = chordTokens(prev);
+          if (chords) {
+            chordsForTab = chords.join(" ");
+            nonTabLines.pop();
+          } else if (looksLikeTabLabel(prev)) {
+            // Compress wide label spacing too — the source uses 20+ spaces
             // between adjacent labels in Tahoma; in monospace 2 is enough.
             labelForTab = compressTabSpaces(nonTabLines.pop()!.replace(/\s+$/, ""));
           }
         }
-        tabAccum.push(compressTabSpaces(line.trimEnd()));
+        // trim() (not trimEnd) so uniform block indentation like " G|--" doesn't
+        // survive — the renderer anchors string rows to the start of the line.
+        tabAccum.push(compressTabSpaces(line.trim()));
       } else {
-        if (tabAccum.length >= 4) {
-          const block = (labelForTab ? labelForTab + "\n" : "") + tabAccum.join("\n");
-          tabBlocks.push(block);
+        if (qualifiesAsTab(tabAccum)) {
+          tabBlocks.push(buildBlock());
         } else {
-          // Not a tab block after all — restore the absorbed label and accum.
+          // Not a tab block after all — restore the absorbed lines and accum.
+          if (chordsForTab) nonTabLines.push(chordsForTab);
           if (labelForTab) nonTabLines.push(labelForTab);
           nonTabLines.push(...tabAccum);
         }
         tabAccum = [];
         labelForTab = null;
+        chordsForTab = null;
         nonTabLines.push(line);
       }
     }
-    if (tabAccum.length >= 4) {
-      const block = (labelForTab ? labelForTab + "\n" : "") + tabAccum.join("\n");
-      tabBlocks.push(block);
+    if (qualifiesAsTab(tabAccum)) {
+      tabBlocks.push(buildBlock());
     } else {
+      if (chordsForTab) nonTabLines.push(chordsForTab);
       if (labelForTab) nonTabLines.push(labelForTab);
       nonTabLines.push(...tabAccum);
     }

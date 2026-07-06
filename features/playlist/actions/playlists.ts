@@ -92,23 +92,25 @@ export async function getSavedVariantId(slug: string): Promise<string | null> {
  */
 export async function getSongSaveStateForSlug(
   slug: string,
-): Promise<{ isSaved: boolean; variantId: string | null }> {
+): Promise<{ isSaved: boolean; variantId: string | null; transpose: number }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { isSaved: false, variantId: null };
+  if (!user) return { isSaved: false, variantId: null, transpose: 0 };
 
   const { data } = await supabase
     .from("playlist_songs")
-    .select("variant_id, songs!inner(slug), playlists!inner(owner_id)")
+    .select("variant_id, transpose, songs!inner(slug), playlists!inner(owner_id)")
     .eq("songs.slug", slug)
     .eq("playlists.owner_id", user.id)
     .limit(1)
     .maybeSingle();
 
-  if (!data) return { isSaved: false, variantId: null };
+  if (!data) return { isSaved: false, variantId: null, transpose: 0 };
+  const row = data as Record<string, unknown>;
   return {
     isSaved: true,
-    variantId: ((data as Record<string, unknown>).variant_id as string | null) ?? null,
+    variantId: (row.variant_id as string | null) ?? null,
+    transpose: (row.transpose as number | null) ?? 0,
   };
 }
 
@@ -268,6 +270,7 @@ export async function setSongPlaylists(
   slug: string,
   selectedIds: string[],
   variantId?: string,
+  transpose?: number,
 ): Promise<ActionResult<{ saved: boolean }>> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -290,6 +293,18 @@ export async function setSongPlaylists(
 
   const toAdd = [...desired].filter((id) => !existingIds.has(id));
   const toRemove = [...existingIds].filter((id) => !desired.has(id));
+  const toKeep = [...desired].filter((id) => existingIds.has(id));
+
+  // Saved key follows the screen: re-saving with a different transpose updates
+  // the stored value for memberships that stay selected.
+  const tr = Math.max(-11, Math.min(11, Math.trunc(transpose ?? 0)));
+  if (toKeep.length > 0 && transpose !== undefined) {
+    await supabase
+      .from("playlist_songs")
+      .update({ transpose: tr })
+      .eq("song_id", songId)
+      .in("playlist_id", toKeep);
+  }
 
   if (toRemove.length > 0) {
     await supabase
@@ -318,6 +333,7 @@ export async function setSongPlaylists(
       song_id: songId,
       position: (maxByPlaylist.get(pid) ?? -1) + 1,
       ...(variantId ? { variant_id: variantId } : {}),
+      ...(tr !== 0 ? { transpose: tr } : {}),
     }));
 
     const { error } = await supabase.from("playlist_songs").insert(rows);

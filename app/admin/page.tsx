@@ -1,6 +1,6 @@
 import { PageShell } from "@/shared/components/PageShell";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { Music, Users, Eye, EyeOff, Archive } from "lucide-react";
+import { Music, Users, Eye, EyeOff, Archive, Flag, Clock } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -11,12 +11,14 @@ export const metadata = {
   title: "Адмін-панель — Diez",
 };
 
+const EMPTY = { published: 0, drafts: 0, archived: 0, pending: 0, reports: 0, artists: 0, isAdmin: false };
+
 async function getStats() {
-  if (!hasEnvVars) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
+  if (!hasEnvVars) return EMPTY;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
+  if (!user) return EMPTY;
 
   const admin = createAdminClient();
   const { data: profile } = await admin
@@ -25,19 +27,27 @@ async function getStats() {
     .eq("id", user.id)
     .single();
 
-  if (!profile?.is_admin) return { published: 0, drafts: 0, archived: 0, artists: 0, isAdmin: false };
+  if (!profile?.is_admin) return EMPTY;
 
-  const [pub, drf, arc, art] = await Promise.all([
+  const [pub, drf, arc, pend, art] = await Promise.all([
     admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "published"),
     admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "draft"),
     admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "archived"),
+    admin.from("songs").select("id", { head: true, count: "exact" }).eq("status", "pending"),
     admin.from("artists").select("id", { head: true, count: "exact" }),
   ]);
+
+  // song_reports is added by migration 026 — tolerate its absence pre-migration.
+  let reports = 0;
+  const rep = await admin.from("song_reports").select("id", { head: true, count: "exact" }).eq("status", "open");
+  if (!rep.error) reports = rep.count ?? 0;
 
   return {
     published: pub.count ?? 0,
     drafts: drf.count ?? 0,
     archived: arc.count ?? 0,
+    pending: pend.count ?? 0,
+    reports,
     artists: art.count ?? 0,
     isAdmin: true,
   };
@@ -81,6 +91,24 @@ export default async function AdminPage() {
             count={stats.artists}
             countLabel="виконавців"
             color="#10b981"
+          />
+          <EntityCard
+            href="/admin/reports"
+            icon={<Flag size={32} />}
+            title="Скарги"
+            description="Скарги користувачів на пісні та модерація"
+            count={stats.reports}
+            countLabel="відкритих"
+            color="#dc3c3c"
+          />
+          <EntityCard
+            href="/admin/songs?tab=pending"
+            icon={<Clock size={32} />}
+            title="На модерації"
+            description="Пісні від користувачів, що чекають перевірки"
+            count={stats.pending}
+            countLabel="на перевірці"
+            color="#6366f1"
           />
         </div>
     </PageShell>
