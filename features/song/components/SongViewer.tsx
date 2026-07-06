@@ -507,6 +507,11 @@ export function SongViewer({
   // (voicing switches can change row count; transpose can change chord names).
   const chordScroll = useScrollFade<HTMLDivElement>([song.chords, transpose, noBarreMode, voicingState]);
 
+  // A chord-less arrangement (fingerstyle / tab-only variant) has nothing for
+  // the chord tooling to act on — hide diagrams, transpose, beginner mode and
+  // the instrument switch, and let the lyrics take the freed column.
+  const hasChords = song.chords.length > 0;
+
   const beginnerButton = (
     <button
       type="button"
@@ -547,9 +552,11 @@ export function SongViewer({
       {/* ── 3-column grid (desktop) ───────────────────────────────────────── */}
       <div
         className={focusMode ? "lg:mx-auto lg:max-w-3xl" : "lg:grid lg:gap-5"}
-        style={focusMode ? undefined : { gridTemplateColumns: "280px 1fr 260px" }}
+        style={focusMode ? undefined : { gridTemplateColumns: hasChords ? "280px 1fr 260px" : "1fr 260px" }}
       >
-        {/* ── LEFT: Chord diagrams + Transpose/Capo (sticky) ────────────── */}
+        {/* ── LEFT: Chord diagrams + Transpose/Capo (sticky) — chord tools,
+               dropped entirely for chord-less (tab-only) arrangements ───── */}
+        {hasChords && (
         <aside
           className={`${focusMode ? "hidden" : "hidden lg:flex"} flex-col self-start sticky top-6 gap-4 min-h-0`}
           style={{ maxHeight: "calc(100vh - 3rem)" }}
@@ -586,6 +593,7 @@ export function SongViewer({
           </div>
 
         </aside>
+        )}
 
         {/* ── CENTER: Lyrics ───────────────────────────────────────────────── */}
         <div>
@@ -701,6 +709,9 @@ export function SongViewer({
                     <StrumPatternList patterns={song.strumPatterns} />
                   </div>
                 )}
+                {/* Chord tooling — hidden for chord-less (tab-only) variants. */}
+                {hasChords && (
+                <>
                 {/* Beginner mode */}
                 <button
                   type="button"
@@ -761,6 +772,8 @@ export function SongViewer({
                   noBarreMode={noBarreMode}
                   customVoicings={song.customVoicings}
                 />
+                </>
+                )}
               </div>
 
               {/* Font size — under chord diagrams, above Edit */}
