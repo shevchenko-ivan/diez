@@ -306,13 +306,20 @@ function TabBlock({
   for (let i = 0; i < lines.length; i += sz) systems.push(lines.slice(i, i + sz));
   const positions = chords && chords.length > 0 ? chordPositions(chords, lines) : null;
 
-  const L = Math.max(...lines.map((l) => l.content.length));
-  const ranges: [number, number][] = maxCols === null ? [[0, L]] : wrapRanges(lines, maxCols);
-
   // Flatten systems × wrap-ranges into vertically stacked sub-systems.
+  // Ranges are computed PER SYSTEM: the parser can pack systems of different
+  // widths into one block, and ranges derived from the widest system would
+  // slice past the end of a narrower one — rendering rows of bare string
+  // labels with no content (empty "ghost" systems on narrow screens).
   const subSystems: { sysIndex: number; range: [number, number]; sysLines: ParsedLine[] }[] = [];
   systems.forEach((sysLines, si) => {
-    for (const range of ranges) subSystems.push({ sysIndex: si, range, sysLines });
+    const sysL = Math.max(...sysLines.map((l) => l.content.length));
+    const ranges: [number, number][] = maxCols === null ? [[0, sysL]] : wrapRanges(sysLines, maxCols);
+    for (const range of ranges) {
+      // Defensive: skip a slice with no glyphs on any string (empty system).
+      if (sysLines.every((l) => l.content.slice(range[0], range[1]).trim() === "")) continue;
+      subSystems.push({ sysIndex: si, range, sysLines });
+    }
   });
 
   return (
