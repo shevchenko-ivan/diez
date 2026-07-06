@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { SongCard } from "./SongCard";
 import { TopSongCard } from "./TopSongCard";
-import { useHaptics } from "@/shared/hooks/useHaptics";
 import { type Song } from "../types";
 
 // Home-page "Топ популярних" as a horizontal, infinitely-scrolling strip —
@@ -47,37 +46,10 @@ export function SongStrip({
   // Pin offset against initial.length so concurrent loads can't double-fetch.
   const offsetRef = useRef<number>(initial.length);
   const saved = new Set(savedSlugs);
-  const { trigger } = useHaptics();
-  const lastTickRef = useRef(0);
-
-  // Picker-style tactile feedback while the user drags through the strip.
-  // Fires a short "selection" pulse each time a new card crosses the leading
-  // edge — same sensation as scrubbing a UIDatePicker wheel.
-  //
-  // Bound to `touchmove` (active gesture) rather than `scroll` because that's
-  // the portion of the interaction we can actually drive feedback for on the
-  // web. Android Chrome receives a real motor pulse via navigator.vibrate;
-  // iOS Safari is silent (Apple has never implemented Vibration on web).
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    if (typeof window === "undefined") return;
-    if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
-
-    // Card pitch on mobile — CARD_W 150px + gap-3 (12px) = 162px.
-    const tickWidth = 162;
-
-    const onTouchMove = () => {
-      const tick = Math.floor(el.scrollLeft / tickWidth);
-      if (tick !== lastTickRef.current) {
-        lastTickRef.current = tick;
-        // 8ms pulse — short enough to keep up with a flick swipe.
-        trigger("selection");
-      }
-    };
-    el.addEventListener("touchmove", onTouchMove, { passive: true });
-    return () => el.removeEventListener("touchmove", onTouchMove);
-  }, [trigger]);
+  // NOTE: an earlier version fired a "selection" haptic tick on every card
+  // boundary during touch-scroll (picker-wheel feel). Removed after user
+  // feedback — constant buzzing while browsing carousels reads as a bug,
+  // not as tactile polish. Haptics now fire on real taps only.
 
   useEffect(() => {
     if (exhausted) return;

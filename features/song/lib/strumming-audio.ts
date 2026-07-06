@@ -88,9 +88,6 @@ export function playStroke(audioCtx: AudioContext, stroke: Stroke) {
     src.stop(startAt + tailSec + 0.05);
   }
 
-  if (typeof navigator !== "undefined" && navigator.vibrate) {
-    navigator.vibrate(isAccent ? 50 : isDown ? 28 : 18);
-  }
 }
 
 /**

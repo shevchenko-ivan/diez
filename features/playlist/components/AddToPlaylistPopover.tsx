@@ -187,9 +187,6 @@ export function AddToPlaylistPopover({ slug, variantId, anchorRect, initialLists
   }, [mounted, isMobile, onClose]);
 
   const toggle = (id: string) => {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(10);
-    }
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);

@@ -26,14 +26,13 @@ export function HapticLink({ children, hapticType = "light", onClick, ...props }
   return (
     <Link
       {...props}
+      // Haptic fires on click ONLY. An earlier version also fired on
+      // pointerdown "for snappier feel" — but pointerdown triggers on every
+      // touch, including the start of a scroll gesture, so phones buzzed on
+      // each carousel swipe (user-reported). Click fires only on a real tap.
       onClick={(e) => {
         handleHaptic();
         onClick?.(e as React.MouseEvent<HTMLAnchorElement>);
-      }}
-      onPointerDown={() => {
-        // Trigger on pointer down for snappier feel, still doesn't block click
-        if (hapticType === "strum") strum();
-        else trigger(hapticType);
       }}
     >
       {children}
