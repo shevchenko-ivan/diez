@@ -71,10 +71,11 @@ function StringRow({
 
   // Single monospace line — label, nut and content all sit on the SAME grid
   // (like a real "e|----" tab line). No flex box widths to knock cells off.
+  // Label-less lines (bare fingerpicking blocks) skip both label and nut.
   return (
     <div style={{ whiteSpace: "pre", lineHeight: `${rowH}px`, marginTop: gapTop }}>
-      <span style={{ color: "var(--text-muted)" }}>{name}</span>
-      <span style={{ color: BAR }}>|</span>
+      {name && <span style={{ color: "var(--text-muted)" }}>{name}</span>}
+      {name && <span style={{ color: BAR }}>|</span>}
       {tokens.map((tok, idx) => {
         if (tok.t === "dash") {
           return <span key={idx} style={{ color: DASH }}>{"-".repeat(tok.n)}</span>;
@@ -115,6 +116,10 @@ function parseTabBlock(block: string): { label: string | null; chords: string[] 
     const m = row.match(/^([A-Ha-h][#b]?|[1-6])\|(.*)/);
     if (m) {
       lines.push({ name: m[1], content: m[2] });
+    } else if (/^(?=.*-{5})(?=.*\d)[-0-9hpbrsx()~^.\\/ |]{10,}$/.test(row.trim())) {
+      // Label-less fingerpicking line — the whole row is content, no string
+      // name and no nut bar.
+      lines.push({ name: "", content: row.trim() });
     } else if (lines.length === 0 && row.trim()) {
       label = row.trim();
     }
@@ -176,7 +181,7 @@ function buildChordRowSlice(
   positions: { chord: string; col: number }[],
   start: number,
   end: number,
-  nameLen: number,
+  padCols: number,
 ): string {
   const width = end - start;
   const arr = new Array<string>(width).fill(" ");
@@ -189,7 +194,7 @@ function buildChordRowSlice(
     }
   }
   if (!any) return "";
-  return " ".repeat(nameLen + 1) + arr.join("").replace(/\s+$/, "");
+  return " ".repeat(padCols) + arr.join("").replace(/\s+$/, "");
 }
 
 // Break a system's columns into wrapped slices so each fits `maxCols` display
@@ -236,6 +241,9 @@ function wrapRanges(lines: ParsedLine[], maxCols: number): [number, number][] {
 // letter (…E over E…), where a naive "name === first" check would misfire.
 function systemSize(names: string[]): number {
   const n = names.length;
+  // Label-less blocks carry no string names — period detection would see
+  // identical "" everywhere and split at the smallest divisor. One system.
+  if (names.every((x) => !x)) return n;
   for (let p = 2; p <= n / 2; p++) {
     if (n % p !== 0) continue;
     let ok = true;
@@ -267,6 +275,8 @@ function TabBlock({
   const ref = useRef<HTMLDivElement>(null);
   const [maxCols, setMaxCols] = useState<number | null>(null);
   const nameLen = lines[0]?.name.length ?? 1;
+  // Bare (label-less) lines render no label and no nut — zero left padding.
+  const padCols = lines[0]?.name ? nameLen + 1 : 0;
 
   useEffect(() => {
     const el = ref.current;
@@ -282,14 +292,14 @@ function TabBlock({
       const w = el.clientWidth;
       if (charW > 0 && w > 0) {
         // Subtract the label + nut columns; leave 1 cell of slack.
-        setMaxCols(Math.max(8, Math.floor(w / charW) - (nameLen + 1) - 1));
+        setMaxCols(Math.max(8, Math.floor(w / charW) - padCols - 1));
       }
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fontSize, nameLen]);
+  }, [fontSize, padCols]);
 
   const sz = systemSize(lines.map((l) => l.name));
   const systems: ParsedLine[][] = [];
@@ -316,7 +326,7 @@ function TabBlock({
         {subSystems.map(({ sysIndex, range, sysLines }, idx) => {
           const [start, end] = range;
           const chordRow =
-            sysIndex === 0 && positions ? buildChordRowSlice(positions, start, end, nameLen) : "";
+            sysIndex === 0 && positions ? buildChordRowSlice(positions, start, end, padCols) : "";
           return (
             <div key={idx} style={{ marginTop: idx === 0 ? 0 : Math.round(rowH * 0.8) }}>
               {sysIndex === 0 && positions && (

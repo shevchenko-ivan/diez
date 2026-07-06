@@ -114,6 +114,17 @@ const TAB_LABEL = String.raw`(?:[A-Ha-h][#b]?|[1-6])`;
 const TAB_LINE_RE = new RegExp(
   `^${TAB_LABEL}\\|(?=[^\\n]*-)[-0-9A-Za-z()~^.\\\\/\\s|{}[\\]]+$`,
 );
+// Label-less tab line — fingerpicking blocks written WITHOUT string labels:
+//   -------0------------------0-----------
+//   -----0-----0---0-------0-----0---0----
+// Only tab glyphs, a healthy run of dashes, and at least one fret digit (an
+// all-dash line alone is just a text divider). Grouping still goes through
+// qualifiesAsTab, so stray one-liners never become tabs.
+const BARE_TAB_LINE_RE = /^(?=.*-{5})(?=.*\d)[-0-9hpbrsx()~^.\\/ |]{10,}$/;
+
+function isTabLine(trimmed: string): boolean {
+  return TAB_LINE_RE.test(trimmed) || BARE_TAB_LINE_RE.test(trimmed);
+}
 
 // Decide whether a run of consecutive tab-shaped lines is really a tab block.
 // ≥4 string lines is unambiguous (a full 6-string system, or two stacked
@@ -148,8 +159,41 @@ function normalizeChordToken(s: string): string {
   return out;
 }
 
+// Trim decorations songbooks hang on chord tokens so the core name matches:
+//   "Am,"     — comma-separated lists ("Акорди: Am, Dm, E7, E")
+//   "B(VII)"  — fret-position hint in parens
+//   "(F#)"    — inline chord wrapped in round parens instead of [square]
+function stripChordDecorations(s: string): string {
+  let t = s.replace(/[,;]+$/, "");
+  t = t.replace(/\((?:[IVXivx]+|\d{1,2})\)$/, "");
+  const wrapped = t.match(/^\(([^()]+)\)$/);
+  if (wrapped) t = wrapped[1];
+  return t;
+}
+
 function isChordToken(s: string): boolean {
-  return CHORD_TOKEN_RE.test(normalizeChordToken(s));
+  return CHORD_TOKEN_RE.test(normalizeChordToken(stripChordDecorations(s)));
+}
+
+// Canonical display form of a token that passed isChordToken.
+function chordDisplay(s: string): string {
+  return normalizeChordToken(stripChordDecorations(s));
+}
+
+// Dash-joined progression like "Bm-G-D-Em" — 2+ parts, every part a chord.
+function isChordProgressionToken(s: string): boolean {
+  const parts = stripChordDecorations(s).split(/[-–]/);
+  return parts.length >= 2 && parts.every((p) => p.length > 0 && CHORD_TOKEN_RE.test(normalizeChordToken(p)));
+}
+
+// Some songbooks write inline chords in ROUND parens — "(F#)Каліпсо в
+// сандалях", "(B)І як же" — instead of the [square] notation the inline
+// parser understands. Convert "(X)" → "[X]" only when X is a valid chord
+// token, so parenthetical words ("(2 рази)", "(тихо)") stay untouched.
+function convertRoundParenChords(line: string): string {
+  return line.replace(/\(([^()\s]{1,10})\)/g, (m, inner: string) =>
+    CHORD_TOKEN_RE.test(normalizeChordToken(inner)) ? `[${inner}]` : m,
+  );
 }
 
 // Strip a trailing repeat marker like " - 2 рази", " — 3 раза", " x2", "} 2".
@@ -166,7 +210,7 @@ function isChordOnlyBareLine(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
   const tokens = trimmed.split(/\s+/);
-  return tokens.every((t) => isChordToken(t));
+  return tokens.every((t) => isChordToken(t) || isChordProgressionToken(t));
 }
 
 function isChordOnlyBracketedLine(text: string): boolean {
@@ -184,7 +228,7 @@ function extractChordPositions(line: string): { chord: string; col: number }[] {
     const re = /\[([^\]]+)\]/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
-      if (isChordToken(m[1])) results.push({ chord: normalizeChordToken(m[1]), col: m.index });
+      if (isChordToken(m[1])) results.push({ chord: chordDisplay(m[1]), col: m.index });
     }
   } else {
     // Split on whitespace AND pipe characters. Progressions like
@@ -193,7 +237,17 @@ function extractChordPositions(line: string): { chord: string; col: number }[] {
     const re = /[^\s|]+/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
-      if (isChordToken(m[0])) results.push({ chord: normalizeChordToken(m[0]), col: m.index });
+      if (isChordToken(m[0])) {
+        results.push({ chord: chordDisplay(m[0]), col: m.index });
+      } else if (isChordProgressionToken(m[0])) {
+        // "Bm-G-D-Em" — place each part at its own column inside the token.
+        let off = 0;
+        for (const part of m[0].split(/(?<=[-–])/)) {
+          const core = part.replace(/[-–]$/, "");
+          if (core) results.push({ chord: chordDisplay(core), col: m.index + off });
+          off += part.length;
+        }
+      }
     }
   }
   return results;
@@ -216,7 +270,7 @@ function parseInlineBracketsLine(line: string): ChordLine {
       if (close !== -1) {
         const inner = body.slice(i + 1, close);
         if (isChordToken(inner)) {
-          chords.push({ chord: normalizeChordToken(inner), col: lyricsCol + out.length });
+          chords.push({ chord: chordDisplay(inner), col: lyricsCol + out.length });
           i = close + 1;
           continue;
         }
@@ -414,7 +468,7 @@ function parseMixedLine(line: string): ChordLine {
   let m: RegExpExecArray | null;
   while ((m = re.exec(body)) !== null) {
     if (isChordToken(m[0])) {
-      chords.push({ chord: normalizeChordToken(m[0]), col: lyricsCol + m.index });
+      chords.push({ chord: chordDisplay(m[0]), col: lyricsCol + m.index });
     }
   }
   // Keep the original text as lyrics — the renderer will color chord spans inline.
@@ -529,13 +583,19 @@ export function parseLyricsWithChords(raw: string): {
       return header + lbl + tabAccum.join("\n");
     }
 
-    for (const line of group.dataLines) {
-      if (TAB_LINE_RE.test(line.trim())) {
+    for (const rawLine of group.dataLines) {
+      // Round-paren inline chords → square notation the inline parser reads.
+      const line = convertRoundParenChords(rawLine);
+      if (isTabLine(line.trim())) {
         // Starting a new tab block — absorb a preceding chord line or label.
         if (tabAccum.length === 0 && nonTabLines.length > 0 && labelForTab === null && chordsForTab === null) {
           const prev = nonTabLines[nonTabLines.length - 1];
           const chords = chordTokens(prev);
           if (chords) {
+            // Absorbed into the tab header — but the song still PLAYS these
+            // chords, so they must reach the global list (diagram sidebar,
+            // transpose tooling) like any other chord line.
+            chords.forEach((c) => allChords.add(normalizeChordToken(c)));
             chordsForTab = chords.join(" ");
             chordsLineRaw = nonTabLines.pop()!;
           } else if (looksLikeTabLabel(prev)) {
