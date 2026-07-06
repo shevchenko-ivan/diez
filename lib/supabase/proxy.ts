@@ -80,6 +80,10 @@ export async function updateSession(request: NextRequest) {
     // to call it; without this the API silently 307s to /auth/login and the
     // dropdown shows "Нічого не знайдено" for every query.
     "/api/search",
+    // View counter — most traffic is logged-out guests; without this the
+    // POST 307s to /auth/login and guest views are never counted. The route
+    // has its own rate limit + UUID validation, no auth needed.
+    "/api/songs/view",
     // TEMP: СКАЙ scrape preview (no DB) — remove with app/skay-preview.
     "/skay-preview",
   ];
