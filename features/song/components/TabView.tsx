@@ -371,7 +371,9 @@ function TabBlock({
           >
             {repeat !== undefined && (
               <div style={{ lineHeight: `${rowH}px`, whiteSpace: "pre" }}>
-                <span style={{ color: "var(--orange)", fontWeight: 700 }}>×{repeat}</span>
+                <span style={{ color: "var(--orange)", fontWeight: 700 }}>
+                  ×{repeat} {repeat < 5 ? "рази" : "разів"}
+                </span>
                 <span style={{ color: "var(--text-muted)" }}> · весь уривок</span>
               </div>
             )}
