@@ -430,7 +430,10 @@ export function SongViewer({
     const drawer = sheetDrawerRef.current;
     const content = sheetContentRef.current;
     if (!drawer || !content) return;
-    const threshold = Math.max(1 / window.innerHeight, 0.01);
+    // innerHeight can be 0 (headless/backgrounded contexts) — 1/0 = Infinity
+    // makes the IntersectionObserver constructor throw on a non-finite
+    // threshold and takes the whole page down with it.
+    const threshold = window.innerHeight > 0 ? Math.max(1 / window.innerHeight, 0.01) : 0.01;
     const io = new IntersectionObserver(
       (entries) => {
         const entry = entries.at(-1);
