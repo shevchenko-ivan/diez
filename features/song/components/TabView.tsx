@@ -113,26 +113,6 @@ function stripRepeat(content: string): { content: string; repeat?: number } {
   if (!m) return { content };
   return { content: m[1], repeat: Number(m[2]) };
 }
-
-// How many measures a system spans — non-empty segments between bar lines
-// (union across strings, same as wrapRanges). Names the repeat label's scope:
-// «ці 4 такти», not a vague "whole excerpt" that would seem to cover the
-// neighbouring systems of the block too.
-function measureCount(sysLines: ParsedLine[]): number {
-  const L = Math.max(...sysLines.map((l) => l.content.length));
-  const barSet = new Set<number>();
-  for (const l of sysLines) for (let i = 0; i < l.content.length; i++) if (l.content[i] === "|") barSet.add(i);
-  const starts = [0, ...[...barSet].map((b) => b + 1)].filter((s) => s < L);
-  return new Set(starts).size;
-}
-
-function taktWord(n: number): string {
-  if (n % 100 >= 12 && n % 100 <= 14) return "тактів";
-  if (n % 10 === 1) return "такт";
-  if (n % 10 >= 2 && n % 10 <= 4) return "такти";
-  return "тактів";
-}
-
 function parseTabBlock(block: string): { label: string | null; chords: string[] | null; lines: ParsedLine[] } {
   const rows = block.split("\n");
   let label: string | null = null;
@@ -392,12 +372,6 @@ function TabBlock({
               <div style={{ lineHeight: `${rowH}px`, whiteSpace: "pre" }}>
                 <span style={{ color: "var(--orange)", fontWeight: 700 }}>
                   ×{repeat} {repeat < 5 ? "рази" : "разів"}
-                </span>
-                <span style={{ color: "var(--text-muted)" }}>
-                  {(() => {
-                    const mc = measureCount(sysLines);
-                    return mc === 1 ? " · цей такт" : ` · ці ${mc} ${taktWord(mc)}`;
-                  })()}
                 </span>
               </div>
             )}
