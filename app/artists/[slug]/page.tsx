@@ -4,6 +4,8 @@ import { type Metadata } from "next";
 import { PageShell } from "@/shared/components/PageShell";
 import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
+import { LEGACY_ARTIST_SLUGS } from "@/features/artist/lib/legacy-slugs";
+import { permanentRedirect } from "next/navigation";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { getSavedArtistSlugs } from "@/features/playlist/actions/artist-playlists";
 import { SaveArtistButton } from "@/features/artist/components/SaveArtistButton";
@@ -69,6 +71,11 @@ export default async function ArtistPage({
   const { slug } = await params;
   const { sort = "" } = await searchParams;
   const artist = await getArtistBySlug(slug);
+  // Renamed slug: the DB lookup missed but we know the successor — send
+  // bookmarks and external links to the new address permanently.
+  if (!artist && LEGACY_ARTIST_SLUGS[slug]) {
+    permanentRedirect(`/artists/${LEGACY_ARTIST_SLUGS[slug]}`);
+  }
   const artistName = artist?.name ?? slug;
   const sortMap: Record<string, "views" | "created_at_desc" | "created_at_asc" | "source_views" | "title_asc"> = {
     new: "created_at_desc",

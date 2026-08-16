@@ -48,15 +48,17 @@ export async function generateMetadata({
 
   const difficultyLabel =
     metaSong.difficulty === "easy" ? "легка" : metaSong.difficulty === "medium" ? "середня" : "складна";
-  const title = `${metaSong.title} — ${metaSong.artist}: акорди, текст, тональність | Diez`;
+  // «текст пісні»-queries carry ~40% of impressions (GSC) but converted at
+  // half the CTR of «акорди» while the title led with chords — hence the order.
+  const title = `${metaSong.title} — ${metaSong.artist}: текст пісні й акорди | Diez`;
   // Description is tuned to ~155 chars (Google desktop snippet cap). Leads
-  // with the highest-intent keywords ("акорди", "текст"), then the searchable
+  // with the highest-intent keywords ("текст", "акорди"), then the searchable
   // long-tails ("грати на гітарі", "табулатура") so we cover more query
   // shapes without keyword stuffing.
   const chordList = metaSong.chords.slice(0, 6).join(", ");
   const capoNote = metaSong.capo ? `, капо ${metaSong.capo}` : "";
   const description =
-    `Акорди й текст пісні «${metaSong.title}» — ${metaSong.artist}. ` +
+    `Текст пісні й акорди «${metaSong.title}» — ${metaSong.artist}. ` +
     `Тональність ${metaSong.key}${capoNote}, ${difficultyLabel}. ` +
     `Акорди: ${chordList}. Грай на гітарі, укулеле або піаніно на Diez.`;
 
@@ -366,7 +368,8 @@ export default async function SongPage({
             signal for "«пісня» акорди для укулеле / піаніно" long-tails. The
             links funnel crawl + equity to the instrument hubs. */}
         <p className="mt-6 text-sm" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
-          «{song.title}» можна грати на гітарі,{" "}
+          Це повний текст пісні «{song.title}» — {song.artist} з акордами для гітари. Її також
+          можна грати на{" "}
           <Link href="/songs/instrument/ukulele" className="hover:underline" style={{ color: "var(--text-mid)" }}>
             укулеле
           </Link>{" "}
