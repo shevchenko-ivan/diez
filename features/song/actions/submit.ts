@@ -6,6 +6,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { slugify } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { classifySubmission } from "../lib/detectLang";
+import { extractYoutubeId } from "../lib/youtube";
 
 export type SubmitStatus = "published" | "pending" | "draft";
 
@@ -59,6 +60,7 @@ type Fields = {
   key: string;
   difficulty: string;
   lyricsRaw: string;
+  youtubeRaw: string;
 };
 
 function readFields(formData: FormData): Fields {
@@ -69,7 +71,45 @@ function readFields(formData: FormData): Fields {
     key: (formData.get("key") as string)?.trim() || "Am",
     difficulty: (formData.get("difficulty") as string) || "easy",
     lyricsRaw: (formData.get("lyrics_with_chords") as string)?.trim() || "",
+    youtubeRaw: (formData.get("youtube") as string)?.trim() || "",
   };
+}
+
+// Cover upload limits — mirror the artist-photo rules (see features/artist/actions/submit.ts).
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
+const MIN_COVER_BYTES = 4 * 1024; // reject near-empty files
+const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/**
+ * Validate + upload the song cover into the public `avatars` bucket under the
+ * uploader's own folder (bucket RLS allows writes only there). Returns the
+ * public URL, null when no file was attached, or a user-facing error string.
+ */
+async function uploadCover(
+  formData: FormData,
+  userId: string,
+): Promise<{ url: string | null } | { error: string }> {
+  const file = formData.get("cover") as File | null;
+  if (!file || file.size === 0) return { url: null };
+  if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+    return { error: "Обкладинка: підтримуються лише JPG, PNG або WebP." };
+  }
+  if (file.size > MAX_COVER_BYTES) {
+    return { error: "Обкладинка завелика — максимум 5 МБ." };
+  }
+  if (file.size < MIN_COVER_BYTES) {
+    return { error: "Обкладинка замала або пошкоджена. Завантажте якісніше зображення." };
+  }
+  const supabase = await createClient();
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${userId}/cover-${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) {
+    return { error: `Не вдалося завантажити обкладинку: ${uploadErr.message}` };
+  }
+  return { url: supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl };
 }
 
 function readIntent(formData: FormData): "submit" | "draft" {
@@ -150,6 +190,19 @@ export async function submitSong(_prev: SubmitResult | null, formData: FormData)
   const invalid = validate(intent, f);
   if (invalid) return { ok: false, reason: "validation", message: invalid };
 
+  const youtube_id = extractYoutubeId(f.youtubeRaw);
+  if (f.youtubeRaw && !youtube_id) {
+    return { ok: false, reason: "validation", message: "Не вдалося розпізнати посилання на YouTube. Вставте лінк на відео, напр. https://www.youtube.com/watch?v=…" };
+  }
+
+  const cover = await uploadCover(formData, actor.userId);
+  if ("error" in cover) return { ok: false, reason: "validation", message: cover.error };
+  // Cover is mandatory for user submissions; admins can skip it — their songs
+  // get covers from the enrichment pipeline. Drafts can be saved without one.
+  if (intent === "submit" && !actor.isAdmin && !cover.url) {
+    return { ok: false, reason: "validation", message: "Додайте обкладинку пісні." };
+  }
+
   const { status, ru } = decideOutcome(intent, actor.isAdmin, f.lyricsRaw);
   const parsed = parseLyricsWithChords(f.lyricsRaw);
   const admin = createAdminClient();
@@ -171,6 +224,8 @@ export async function submitSong(_prev: SubmitResult | null, formData: FormData)
       sections: { raw: f.lyricsRaw, sections: parsed.sections },
       status,
       submitted_by: actor.userId,
+      ...(cover.url ? { cover_image: cover.url } : {}),
+      ...(youtube_id ? { youtube_id } : {}),
       ...(status === "published" ? { reviewed_by: actor.userId, reviewed_at: new Date().toISOString() } : {}),
     })
     .select("id")
@@ -228,7 +283,7 @@ export async function updateMySubmission(
   const admin = createAdminClient();
   const { data: song } = await admin
     .from("songs")
-    .select("id, slug, submitted_by, primary_variant_id")
+    .select("id, slug, submitted_by, primary_variant_id, cover_image")
     .eq("id", songId)
     .single();
   if (!song) return { ok: false, reason: "error", message: "Пісню не знайдено." };
@@ -240,6 +295,18 @@ export async function updateMySubmission(
   const f = readFields(formData);
   const invalid = validate(intent, f);
   if (invalid) return { ok: false, reason: "validation", message: invalid };
+
+  const youtube_id = extractYoutubeId(f.youtubeRaw);
+  if (f.youtubeRaw && !youtube_id) {
+    return { ok: false, reason: "validation", message: "Не вдалося розпізнати посилання на YouTube. Вставте лінк на відео, напр. https://www.youtube.com/watch?v=…" };
+  }
+
+  // A newly attached file replaces the cover; otherwise the existing one stays.
+  const cover = await uploadCover(formData, actor.userId);
+  if ("error" in cover) return { ok: false, reason: "validation", message: cover.error };
+  if (intent === "submit" && !actor.isAdmin && !cover.url && !song.cover_image) {
+    return { ok: false, reason: "validation", message: "Додайте обкладинку пісні." };
+  }
 
   const { status, ru } = decideOutcome(intent, actor.isAdmin, f.lyricsRaw);
   const parsed = parseLyricsWithChords(f.lyricsRaw);
@@ -255,6 +322,8 @@ export async function updateMySubmission(
       chords: parsed.chords,
       sections: { raw: f.lyricsRaw, sections: parsed.sections },
       status,
+      ...(cover.url ? { cover_image: cover.url } : {}),
+      youtube_id,
       updated_at: new Date().toISOString(),
       ...(status === "published" ? { reviewed_by: actor.userId, reviewed_at: new Date().toISOString() } : {}),
     })

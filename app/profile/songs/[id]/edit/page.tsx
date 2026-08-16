@@ -31,7 +31,7 @@ export default async function EditSongPage({ params }: { params: Promise<{ id: s
   const admin = createAdminClient();
   const { data: song } = await admin
     .from("songs")
-    .select("id, slug, title, artist, genre, key, difficulty, sections, status, submitted_by")
+    .select("id, slug, title, artist, genre, key, difficulty, sections, status, submitted_by, cover_image, youtube_id")
     .eq("id", id)
     .single();
 
@@ -64,6 +64,8 @@ export default async function EditSongPage({ params }: { params: Promise<{ id: s
     lyricsRaw: sections?.raw ?? "",
     status: (song.status as string) ?? "draft",
     patterns,
+    coverImage: (song.cover_image as string | null) ?? null,
+    youtubeId: (song.youtube_id as string | null) ?? null,
   };
 
   const artists = await getAllArtists();

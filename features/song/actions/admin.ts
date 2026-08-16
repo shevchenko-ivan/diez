@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { slugify } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
+import { extractYoutubeId } from "../lib/youtube";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,18 +83,6 @@ function sanitizeUrl(value: string | null | undefined): string | null {
 // - https://www.youtube.com/embed/LIqeDVeWeHY
 // - https://www.youtube.com/shorts/LIqeDVeWeHY
 // Returns null if nothing looks like a YouTube ID.
-function extractYoutubeId(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const v = value.trim();
-  if (!v) return null;
-  // Bare ID — 11 chars of [A-Za-z0-9_-]
-  if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
-  // Try to pull from a URL
-  const m =
-    v.match(/(?:youtu\.be\/|v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
-
 async function requireAdmin(): Promise<string> {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();

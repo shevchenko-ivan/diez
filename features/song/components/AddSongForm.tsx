@@ -3,7 +3,7 @@
 import { useState, useRef, useActionState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2, ImagePlus, Youtube } from "lucide-react";
 import { submitSong, updateMySubmission, deleteMySubmission } from "@/features/song/actions/submit";
 import { russianLevel } from "@/features/song/lib/detectLang";
 import { slugify } from "@/lib/slugify";
@@ -24,7 +24,13 @@ export interface InitialSong {
   lyricsRaw: string;
   status: string;
   patterns: StrumPattern[];
+  coverImage?: string | null;
+  youtubeId?: string | null;
 }
+
+// Client-side mirror of the server's cover limits (features/song/actions/submit.ts).
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
+const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 interface Props {
   artists?: Artist[];
@@ -60,6 +66,33 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   // Live language check — soft = a few Russian words (nudge), hard = blocked.
   const [lyricsLevel, setLyricsLevel] = useState(() => russianLevel(initial?.lyricsRaw ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
+  // Cover picker: preview of the chosen file (or the song's current cover in
+  // edit mode) + client-side size/type validation before the round-trip.
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(initial?.coverImage ?? null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [youtube, setYoutube] = useState(
+    initial?.youtubeId ? `https://www.youtube.com/watch?v=${initial.youtubeId}` : "",
+  );
+
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+      setCoverError("Підтримуються лише JPG, PNG або WebP.");
+      e.target.value = "";
+      setCoverPreview(initial?.coverImage ?? null);
+      return;
+    }
+    if (file.size > MAX_COVER_BYTES) {
+      setCoverError("Зображення завелике — максимум 5 МБ.");
+      e.target.value = "";
+      setCoverPreview(initial?.coverImage ?? null);
+      return;
+    }
+    setCoverError(null);
+    setCoverPreview(URL.createObjectURL(file));
+  }
 
   const slugPreview = slugify(title);
 
@@ -321,6 +354,74 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
                 )}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Cover upload — required for user submissions (admins: enrichment
+            pipeline fills covers). Validated client-side, again on the server. */}
+        <div className="space-y-2">
+          <label htmlFor="add-song-cover" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
+            Обкладинка {isAdmin ? "" : "*"}
+          </label>
+          <label
+            htmlFor="add-song-cover"
+            className="te-inset px-4 py-3 flex items-center gap-3 cursor-pointer"
+            style={{ borderRadius: "1rem", boxShadow: coverError ? "inset 0 0 0 1.5px rgba(220,60,60,0.55)" : undefined }}
+          >
+            {coverPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverPreview} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <span className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,140,60,0.12)" }}>
+                <ImagePlus size={18} style={{ color: "var(--orange)" }} />
+              </span>
+            )}
+            <span className="min-w-0">
+              <span className="block text-sm font-medium truncate" style={{ color: "var(--text)" }}>
+                {coverPreview ? "Змінити зображення" : "Завантажити зображення"}
+              </span>
+              <span className="block text-[11px]" style={{ color: "var(--text-muted)" }}>
+                JPG, PNG або WebP · до 5 МБ
+              </span>
+            </span>
+            <input
+              id="add-song-cover"
+              ref={coverInputRef}
+              type="file"
+              name="cover"
+              accept="image/jpeg,image/png,image/webp"
+              required={!isAdmin && !(isEdit && initial?.coverImage)}
+              aria-required={!isAdmin && !(isEdit && initial?.coverImage)}
+              onChange={handleCoverChange}
+              className="sr-only"
+            />
+          </label>
+          {coverError && (
+            <p role="alert" className="ml-1 text-[11px] font-bold" style={{ color: "#dc3c3c" }}>{coverError}</p>
+          )}
+        </div>
+
+        {/* Optional YouTube link — feeds the on-page player. */}
+        <div className="space-y-2">
+          <label htmlFor="add-song-youtube" className="text-xs font-bold tracking-widest uppercase ml-1" style={{ color: "var(--text-muted)" }}>
+            Пісня на YouTube <span className="normal-case tracking-normal font-medium opacity-70">(для плеєра, опційно)</span>
+          </label>
+          <div className="te-inset px-4 py-3 flex items-center gap-2" style={{ borderRadius: "1rem" }}>
+            <Youtube size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+            <input
+              id="add-song-youtube"
+              name="youtube"
+              type="text"
+              inputMode="url"
+              value={youtube}
+              onChange={(e) => setYoutube(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=…"
+              className="w-full bg-transparent outline-none text-sm font-medium"
+              style={{ color: "var(--text)" }}
+              autoComplete="off"
+            />
           </div>
         </div>
       </div>
