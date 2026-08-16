@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { slugify } from "@/lib/slugify";
 import { isMissingStatusColumn } from "@/features/artist/lib/status";
+import { matchArtist } from "@/features/artist/lib/match";
 
 export type SubmitArtistResult =
   | { ok: true; artist: { id: string; slug: string; name: string; photo_url: string | null } }
@@ -48,25 +49,23 @@ export async function submitArtist(formData: FormData): Promise<SubmitArtistResu
 
   const admin = createAdminClient();
 
-  // Reuse an existing artist on a case-insensitive exact name match — skip the
-  // upload entirely so we don't orphan a storage object for a duplicate.
-  // Escape ILIKE wildcards: user input like "AC%DC" or "_" must match
-  // literally, not as a pattern (otherwise it can grab an unrelated artist).
-  const namePattern = name.replace(/[\\%_]/g, "\\$&");
-  const { data: existingByName } = await admin
+  // Reuse an existing artist on a normalized match (case-, alphabet- and
+  // alias-insensitive: «оторвальд» → "O.Torvald") — skip the upload entirely
+  // so we don't orphan a storage object for a duplicate. range() lifts the
+  // default 1000-row cap.
+  const { data: allArtists } = await admin
     .from("artists")
-    .select("id, slug, name, photo_url")
-    .ilike("name", namePattern)
-    .limit(1)
-    .maybeSingle();
-  if (existingByName) {
+    .select("id, slug, name, photo_url, aliases")
+    .range(0, 9999);
+  const existing = matchArtist(allArtists ?? [], name);
+  if (existing) {
     return {
       ok: true,
       artist: {
-        id: existingByName.id as string,
-        slug: existingByName.slug as string,
-        name: existingByName.name as string,
-        photo_url: (existingByName.photo_url as string | null) ?? null,
+        id: existing.id as string,
+        slug: existing.slug as string,
+        name: existing.name as string,
+        photo_url: (existing.photo_url as string | null) ?? null,
       },
     };
   }

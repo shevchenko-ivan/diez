@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { classifySubmission } from "../lib/detectLang";
 import { extractYoutubeId } from "../lib/youtube";
+import { matchArtist } from "@/features/artist/lib/match";
 
 export type SubmitStatus = "published" | "pending" | "draft";
 
@@ -168,6 +169,23 @@ function revalidatePublished(slug: string) {
   revalidatePath(`/songs/${slug}`);
 }
 
+/**
+ * Resolve a typed artist name to the canonical `artists.name` — case-, alphabet-
+ * and alias-insensitive (see matchArtist). Songs must reference a real artist
+ * row so the artist page (`.eq("artist", name)`) always finds them; storing the
+ * canonical spelling is what makes that link work. Any status counts: a just-
+ * created pending artist is still a valid target for its author's song.
+ */
+async function resolveCanonicalArtist(
+  admin: ReturnType<typeof createAdminClient>,
+  input: string,
+): Promise<string | null> {
+  if (!input) return null;
+  // range() lifts the default 1000-row cap.
+  const { data } = await admin.from("artists").select("name, aliases").range(0, 9999);
+  return matchArtist(data ?? [], input)?.name ?? null;
+}
+
 /** Validate fields for the chosen intent. Draft only needs a title to anchor it. */
 function validate(intent: "submit" | "draft", f: Fields): string | null {
   if (intent === "draft") {
@@ -195,6 +213,25 @@ export async function submitSong(_prev: SubmitResult | null, formData: FormData)
     return { ok: false, reason: "validation", message: "Не вдалося розпізнати посилання на YouTube. Вставте лінк на відео, напр. https://www.youtube.com/watch?v=…" };
   }
 
+  const admin = createAdminClient();
+
+  // The song must point at a real artist row (canonical spelling) — otherwise
+  // it never shows up on the artist page. Drafts are lenient: free text stays,
+  // but if it already resolves we canonicalize early. Checked BEFORE the cover
+  // upload so a validation error can't orphan a storage object.
+  if (f.artist) {
+    const canonical = await resolveCanonicalArtist(admin, f.artist);
+    if (canonical) {
+      f.artist = canonical;
+    } else if (intent === "submit") {
+      return {
+        ok: false,
+        reason: "validation",
+        message: `Виконавця «${f.artist}» ще немає в каталозі. Оберіть його зі списку підказок або натисніть «Створити» в полі виконавця й додайте його фото.`,
+      };
+    }
+  }
+
   const cover = await uploadCover(formData, actor.userId);
   if ("error" in cover) return { ok: false, reason: "validation", message: cover.error };
   // Cover is mandatory for user submissions; admins can skip it — their songs
@@ -205,7 +242,6 @@ export async function submitSong(_prev: SubmitResult | null, formData: FormData)
 
   const { status, ru } = decideOutcome(intent, actor.isAdmin, f.lyricsRaw);
   const parsed = parseLyricsWithChords(f.lyricsRaw);
-  const admin = createAdminClient();
 
   const baseSlug = slugify(f.title) || `song-${Date.now()}`;
   const { data: existing } = await admin.from("songs").select("slug").eq("slug", baseSlug).maybeSingle();
@@ -299,6 +335,20 @@ export async function updateMySubmission(
   const youtube_id = extractYoutubeId(f.youtubeRaw);
   if (f.youtubeRaw && !youtube_id) {
     return { ok: false, reason: "validation", message: "Не вдалося розпізнати посилання на YouTube. Вставте лінк на відео, напр. https://www.youtube.com/watch?v=…" };
+  }
+
+  // Same artist gate as submitSong — canonicalize or reject before the upload.
+  if (f.artist) {
+    const canonical = await resolveCanonicalArtist(admin, f.artist);
+    if (canonical) {
+      f.artist = canonical;
+    } else if (intent === "submit") {
+      return {
+        ok: false,
+        reason: "validation",
+        message: `Виконавця «${f.artist}» ще немає в каталозі. Оберіть його зі списку підказок або натисніть «Створити» в полі виконавця й додайте його фото.`,
+      };
+    }
   }
 
   // A newly attached file replaces the cover; otherwise the existing one stays.

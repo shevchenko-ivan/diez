@@ -24,12 +24,13 @@ export interface Artist {
 export async function getAllArtists(): Promise<Artist[]> {
   if (!hasEnvVars) return [];
   const client = getClient();
-  const cols = "id, slug, name, photo_url, bio, genre";
+  const cols = "id, slug, name, photo_url, bio, genre, aliases";
+  // range() lifts the default 1000-row cap — the catalogue is past 700 artists.
   let { data, error } = await client
-    .from("artists").select(cols).eq("status", "approved").order("name");
+    .from("artists").select(cols).eq("status", "approved").order("name").range(0, 9999);
   // Pre-027 fallback: no status column yet → return all (old behaviour).
   if (error && isMissingStatusColumn(error)) {
-    ({ data, error } = await client.from("artists").select(cols).order("name"));
+    ({ data, error } = await client.from("artists").select(cols).order("name").range(0, 9999));
   }
   if (error || !data) return [];
   return data as Artist[];

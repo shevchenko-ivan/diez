@@ -12,6 +12,7 @@ import type { StrumPattern } from "@/features/song/types";
 import { StrumPatternsEditor } from "@/features/song/components/StrumPatternsEditor";
 import { SimpleStrumPicker } from "@/features/song/components/SimpleStrumPicker";
 import { ArtistCreateModal } from "@/features/artist/components/ArtistCreateModal";
+import { matchArtist, filterArtistSuggestions } from "@/features/artist/lib/match";
 
 /** Existing song being edited — prefilled into the form. */
 export interface InitialSong {
@@ -96,12 +97,12 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
 
   const slugPreview = slugify(title);
 
-  const suggestions = input.trim().length > 0
-    ? artists.filter((a) => a.name.toLowerCase().includes(input.toLowerCase())).slice(0, 8)
-    : [];
-
-  const exactMatch = artists.some((a) => a.name.toLowerCase() === input.trim().toLowerCase());
-  const canCreate = input.trim().length > 1 && !exactMatch;
+  // Normalized matching (case, транслітерація, aliases): «фіа» знаходить "Fiïnka",
+  // якщо це її alias; "океан ельзи" — «Океан Ельзи». Створення пропонується лише
+  // коли нормалізованого збігу немає — так дублікати не заводяться.
+  const suggestions = filterArtistSuggestions(artists, input);
+  const exactArtist = matchArtist(artists, input);
+  const canCreate = input.trim().length > 1 && !exactArtist;
 
   function pick(name: string) {
     setSelected(name);
@@ -126,6 +127,10 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
 
   function handleBlur() {
     setTimeout(() => setShowSuggestions(false), 150);
+    // The typed text already resolves to an existing artist (up to case /
+    // transliteration / alias) — confirm it silently so the user isn't forced
+    // to click the suggestion they de facto typed out.
+    if (!selected && exactArtist) pick(exactArtist.name);
   }
 
   // Deletes the given draft (or the song being edited). The explicit id matters
@@ -355,6 +360,14 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
               </div>
             )}
           </div>
+          {/* Typed but not confirmed — the song must link to a real artist row,
+              so nudge toward picking a suggestion or creating the artist. */}
+          {input.trim().length > 1 && !selected && !showSuggestions && (
+            <p className="ml-1 text-[11px]" style={{ color: "var(--text-muted)", lineHeight: 1.5 }}>
+              Оберіть виконавця зі списку або створіть нового (з фото) — без цього пісню не буде
+              прив&apos;язано до сторінки виконавця.
+            </p>
+          )}
         </div>
       </div>
 
@@ -549,7 +562,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             type="submit"
             name="intent"
             value="submit"
-            disabled={!finalArtist.trim() || pending}
+            disabled={!selected || pending}
             className="te-pill-btn inline-flex items-center justify-center gap-3 px-8 py-4 text-sm font-bold tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Save size={16} />
