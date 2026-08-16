@@ -22,6 +22,14 @@ interface AdminSong {
   source_views: number | null;
   status: string;
   created_at: string;
+  submitted_by: string | null;
+}
+
+interface SubmitterInfo {
+  name: string;
+  email: string | null;
+  total: number;
+  approved: number;
 }
 
 function formatPopularity(n: number | null): string {
@@ -54,6 +62,7 @@ interface Props {
   sort: string;
   dir: "asc" | "desc";
   tabParam: "published" | "pending" | "draft" | "archived";
+  submitters?: Record<string, SubmitterInfo>;
 }
 
 function SortLink({
@@ -76,7 +85,8 @@ function SortLink({
   );
 }
 
-export function SongsAdminTable({ songs, tab, sort, dir, tabParam }: Props) {
+export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = {} }: Props) {
+  const showSubmitter = tabParam === "pending";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
 
@@ -192,6 +202,7 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam }: Props) {
           <AdminTh><SortLink col="genre" label="Жанр" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
           <AdminTh><SortLink col="difficulty" label="Складність" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
           <AdminTh>Статус</AdminTh>
+          {showSubmitter && <AdminTh title="Хто запропонував пісню">Запропонував</AdminTh>}
           <AdminTh><SortLink col="views" label="Перегляди" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
           <AdminTh title="Популярність за Deezer rank"><SortLink col="source_popularity" label="Джерело" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
           <AdminTh className="w-12"><SortLink col="source_views" title="Перегляди на джерелі" label={<Eye size={13} />} sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
@@ -218,6 +229,23 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam }: Props) {
             <td className="px-4 py-3 opacity-60 text-xs whitespace-nowrap">{song.genre ?? "—"}</td>
             <td className="px-4 py-3"><DifficultyBadge difficulty={song.difficulty} /></td>
             <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={song.status} /></td>
+            {showSubmitter && (() => {
+              const info = song.submitted_by ? submitters[song.submitted_by] : undefined;
+              return (
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {info ? (
+                    <div title={info.email ?? undefined}>
+                      <div className="text-xs font-bold">{info.name}</div>
+                      <div className="text-[11px] opacity-60">
+                        {info.total} запропоновано · {info.approved} схвалено
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="opacity-40">—</span>
+                  )}
+                </td>
+              );
+            })()}
             <td className="px-4 py-3 font-mono text-xs opacity-70">{song.views}</td>
             <td className="px-4 py-3 font-mono text-xs opacity-70" title={song.source_popularity?.toLocaleString() ?? ""}>{formatPopularity(song.source_popularity)}</td>
             <td className="px-4 py-3 font-mono text-xs opacity-70" title={song.source_views?.toLocaleString() ?? ""}>{formatPopularity(song.source_views)}</td>

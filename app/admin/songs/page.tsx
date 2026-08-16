@@ -26,6 +26,14 @@ interface AdminSong {
   source_views: number | null;
   status: string;
   created_at: string;
+  submitted_by: string | null;
+}
+
+interface SubmitterInfo {
+  name: string;
+  email: string | null;
+  total: number;
+  approved: number;
 }
 
 const SORT_COLUMNS: Record<string, string> = {
@@ -73,7 +81,7 @@ export default async function AdminSongsPage({
 
   let query = admin
     .from("songs")
-    .select("id, slug, title, artist, genre, difficulty, views, source_popularity, source_views, status, created_at", { count: "exact" })
+    .select("id, slug, title, artist, genre, difficulty, views, source_popularity, source_views, status, created_at, submitted_by", { count: "exact" })
     .eq("status", tab);
 
   if (q) {
@@ -88,6 +96,37 @@ export default async function AdminSongsPage({
     .range(from, to);
 
   const list = (songs ?? []) as AdminSong[];
+
+  // Хто запропонував пісню + його історія (скільки подав / скільки схвалено).
+  // Показуємо лише на вкладці модерації — у скрейплених пісень submitted_by порожній.
+  const submitters: Record<string, SubmitterInfo> = {};
+  if (tab === "pending") {
+    const submitterIds = [...new Set(
+      list.map((s) => s.submitted_by).filter((v): v is string => !!v),
+    )];
+    if (submitterIds.length > 0) {
+      const [{ data: submitterProfiles }, { data: submittedSongs }] = await Promise.all([
+        admin.from("profiles").select("id, username, email").in("id", submitterIds),
+        // range() піднімає дефолтний ліміт у 1000 рядків, щоб лічильники не брехали
+        admin.from("songs").select("submitted_by, status").in("submitted_by", submitterIds).range(0, 9999),
+      ]);
+      for (const p of submitterProfiles ?? []) {
+        submitters[p.id] = {
+          name: p.username || p.email?.split("@")[0] || "Без імені",
+          email: p.email ?? null,
+          total: 0,
+          approved: 0,
+        };
+      }
+      for (const s of submittedSongs ?? []) {
+        const info = s.submitted_by ? submitters[s.submitted_by] : undefined;
+        if (!info) continue;
+        info.total += 1;
+        if (s.status === "published") info.approved += 1;
+      }
+    }
+  }
+
   const total = count ?? list.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.min(pageNum, totalPages);
@@ -160,7 +199,7 @@ export default async function AdminSongsPage({
 
       <AdminSongsSearch initialQ={q} />
 
-      <SongsAdminTable songs={list} tab={tab === "archived" ? "archived" : "active"} sort={sortKey} dir={sortDir} tabParam={tab} />
+      <SongsAdminTable songs={list} tab={tab === "archived" ? "archived" : "active"} sort={sortKey} dir={sortDir} tabParam={tab} submitters={submitters} />
 
       <AdminSongsPagination currentPage={currentPage} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} />
     </PageShell>
