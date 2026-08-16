@@ -19,8 +19,6 @@ interface AdminSong {
   slug: string;
   title: string;
   artist: string;
-  genre: string;
-  difficulty: string;
   views: number;
   source_popularity: number | null;
   source_views: number | null;
@@ -39,8 +37,6 @@ interface SubmitterInfo {
 const SORT_COLUMNS: Record<string, string> = {
   title: "title",
   artist: "artist",
-  genre: "genre",
-  difficulty: "difficulty",
   views: "views",
   source_popularity: "source_popularity",
   source_views: "source_views",
@@ -81,7 +77,7 @@ export default async function AdminSongsPage({
 
   let query = admin
     .from("songs")
-    .select("id, slug, title, artist, genre, difficulty, views, source_popularity, source_views, status, created_at, submitted_by", { count: "exact" })
+    .select("id, slug, title, artist, views, source_popularity, source_views, status, created_at, submitted_by", { count: "exact" })
     .eq("status", tab);
 
   if (q) {

@@ -4,8 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Pencil, Eye, Archive, Trash2, RotateCcw, ArrowUp, ArrowDown } from "lucide-react";
-import { StatusBadge } from "@/shared/components/StatusBadge";
-import { DifficultyBadge } from "@/shared/components/DifficultyBadge";
 import { AdminTable, AdminTh, AdminTr } from "@/shared/components/AdminTable";
 import { TeButton } from "@/shared/components/TeButton";
 import { updateSongStatus, deleteSong, bulkUpdateSongStatus, bulkDeleteSongs } from "@/features/song/actions/admin";
@@ -15,8 +13,6 @@ interface AdminSong {
   slug: string;
   title: string;
   artist: string;
-  genre: string;
-  difficulty: string;
   views: number;
   source_popularity: number | null;
   source_views: number | null;
@@ -199,9 +195,6 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
           </AdminTh>
           <AdminTh><SortLink col="title" label="Назва" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
           <AdminTh><SortLink col="artist" label="Виконавець" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
-          <AdminTh><SortLink col="genre" label="Жанр" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
-          <AdminTh><SortLink col="difficulty" label="Складність" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
-          <AdminTh>Статус</AdminTh>
           {showSubmitter && <AdminTh title="Хто запропонував пісню">Запропонував</AdminTh>}
           <AdminTh><SortLink col="views" label="Перегляди" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
           <AdminTh title="Популярність за Deezer rank"><SortLink col="source_popularity" label="Джерело" sort={sort} dir={dir} tabParam={tabParam} /></AdminTh>
@@ -226,9 +219,6 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
               </Link>
             </td>
             <td className="px-4 py-3 opacity-80 whitespace-nowrap">{song.artist}</td>
-            <td className="px-4 py-3 opacity-60 text-xs whitespace-nowrap">{song.genre ?? "—"}</td>
-            <td className="px-4 py-3"><DifficultyBadge difficulty={song.difficulty} /></td>
-            <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={song.status} /></td>
             {showSubmitter && (() => {
               const info = song.submitted_by ? submitters[song.submitted_by] : undefined;
               return (
