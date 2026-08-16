@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { slugify } from "@/lib/slugify";
+import { slugify, dedupeSlug } from "@/lib/slugify";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -48,14 +48,11 @@ export async function createArtist(formData: FormData) {
 
   const admin = createAdminClient();
 
-  // Handle slug uniqueness
-  const { data: existing } = await admin
-    .from("artists")
-    .select("slug")
-    .eq("slug", slug)
-    .single();
-
-  const finalSlug = existing ? `${slug}-${Date.now()}` : slug;
+  // Collision → numbered suffix; timestamp only as the last resort (see dedupeSlug).
+  const finalSlug = await dedupeSlug(slug, async (s) => {
+    const { data } = await admin.from("artists").select("slug").eq("slug", s).maybeSingle();
+    return !!data;
+  });
 
   const { error } = await admin.from("artists").insert({
     slug: finalSlug,

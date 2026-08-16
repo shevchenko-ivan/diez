@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { slugify } from "@/lib/slugify";
+import { slugify, dedupeSlug } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { extractYoutubeId } from "../lib/youtube";
 
@@ -122,14 +122,17 @@ export async function createSong(formData: FormData) {
 
   const admin = createAdminClient();
 
-  // Check slug uniqueness, append timestamp suffix if needed
-  const { data: existing } = await admin
-    .from("songs")
-    .select("slug")
-    .eq("slug", slug)
-    .single();
-
-  const finalSlug = existing ? `${slug}-${Date.now()}` : slug;
+  // Slug collision → human-readable fallbacks (artist suffix, then numbers);
+  // timestamp only as the last resort (crawler-hostile, see dedupeSlug).
+  const artistSlugPart = slugify(artist);
+  const finalSlug = await dedupeSlug(
+    slug,
+    async (s) => {
+      const { data } = await admin.from("songs").select("slug").eq("slug", s).maybeSingle();
+      return !!data;
+    },
+    artistSlugPart ? [`${slug}-${artistSlugPart}`] : [],
+  );
 
   // Create the song first (primary_variant_id filled in a second step).
   const { data: songRow, error: songErr } = await admin

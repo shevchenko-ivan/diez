@@ -5,7 +5,7 @@ import { PageShell } from "@/shared/components/PageShell";
 import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
 import { LEGACY_ARTIST_SLUGS } from "@/features/artist/lib/legacy-slugs";
-import { permanentRedirect } from "next/navigation";
+import { permanentRedirect, notFound } from "next/navigation";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { getSavedArtistSlugs } from "@/features/playlist/actions/artist-playlists";
 import { SaveArtistButton } from "@/features/artist/components/SaveArtistButton";
@@ -24,7 +24,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const artist = await getArtistBySlug(slug);
-  const name = artist?.name ?? slug;
+  // Unknown slug → the page 404s (see below); don't emit slug-derived metadata.
+  if (!artist) return {};
+  const name = artist.name;
   const songs = await getSongsByArtist(name);
   const aliases = (artist?.aliases ?? []).filter(a => a && a !== name);
   const aliasPhrase = aliases.length > 0 ? ` (також: ${aliases.join(", ")})` : "";
@@ -76,7 +78,12 @@ export default async function ArtistPage({
   if (!artist && LEGACY_ARTIST_SLUGS[slug]) {
     permanentRedirect(`/artists/${LEGACY_ARTIST_SLUGS[slug]}`);
   }
-  const artistName = artist?.name ?? slug;
+  // Unknown slug → real 404. Previously this fell through and rendered a
+  // 200 page with the raw slug as the artist name and «0 пісень» — a
+  // self-canonicalized soft-404 that Google crawls forever but refuses to
+  // index (a prime feeder of «Проскановано — наразі не проіндексовано»).
+  if (!artist) notFound();
+  const artistName = artist.name;
   const sortMap: Record<string, "views" | "created_at_desc" | "created_at_asc" | "source_views" | "title_asc"> = {
     new: "created_at_desc",
     old: "created_at_asc",

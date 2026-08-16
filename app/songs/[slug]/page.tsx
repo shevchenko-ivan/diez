@@ -19,7 +19,6 @@ import { Navbar } from "@/shared/components/Navbar";
 import { ReportButton } from "@/features/song/components/ReportButton";
 import { TeButton } from "@/shared/components/TeButton";
 import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
-import { slugify } from "@/lib/slugify";
 import { getArtistSeoByName } from "@/features/artist/services/artists";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -132,8 +131,11 @@ export default async function SongPage({
   if (!baseSong) return notFound();
 
   // Artist slug + alternate spellings need the song row, so this runs after.
+  // artistSlug is null when the artist has no (approved) DB row: guessing with
+  // slugify(name) mass-produced internal links to nonexistent /artists/* URLs
+  // (slugify ≠ stored slug), which crawled as soft-404s. Better no link at all.
   const artistSeo = await getArtistSeoByName(baseSong.artist);
-  const artistSlug = artistSeo.slug ?? slugify(baseSong.artist);
+  const artistSlug = artistSeo.slug ?? null;
   const artistAliases = artistSeo.aliases.filter((a) => a && a !== baseSong.artist);
 
   // ?v= takes priority; then the variant the user previously saved; then primary.
@@ -156,7 +158,7 @@ export default async function SongPage({
       "@type": "MusicGroup",
       name: song.artist,
       ...(artistAliases.length > 0 && { alternateName: artistAliases }),
-      url: `${siteUrl}/artists/${artistSlug}`,
+      ...(artistSlug && { url: `${siteUrl}/artists/${artistSlug}` }),
     },
     musicalKey: song.key,
     genre: song.genre,
@@ -175,8 +177,10 @@ export default async function SongPage({
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Diez", item: siteUrl },
       { "@type": "ListItem", position: 2, name: "Пісні", item: `${siteUrl}/songs` },
-      { "@type": "ListItem", position: 3, name: song.artist, item: `${siteUrl}/artists/${artistSlug}` },
-      { "@type": "ListItem", position: 4, name: song.title, item: `${siteUrl}/songs/${song.slug}` },
+      ...(artistSlug
+        ? [{ "@type": "ListItem", position: 3, name: song.artist, item: `${siteUrl}/artists/${artistSlug}` }]
+        : []),
+      { "@type": "ListItem", position: artistSlug ? 4 : 3, name: song.title, item: `${siteUrl}/songs/${song.slug}` },
     ],
   };
 
@@ -307,13 +311,22 @@ export default async function SongPage({
           {/* items-baseline on md+: artist (e-Ukraine) and title (e-Ukraine Head)
               have different vertical metrics, so items-center misaligns them. */}
           <div className="flex flex-col md:flex-row items-center md:items-baseline justify-center md:gap-2 px-2 md:px-4 min-w-0">
-            <Link
-              href={`/artists/${artistSlug}`}
-              className="hover:underline truncate max-w-full"
-              style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.45 }}
-            >
-              {song.artist}
-            </Link>
+            {artistSlug ? (
+              <Link
+                href={`/artists/${artistSlug}`}
+                className="hover:underline truncate max-w-full"
+                style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.45 }}
+              >
+                {song.artist}
+              </Link>
+            ) : (
+              <span
+                className="truncate max-w-full"
+                style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.45 }}
+              >
+                {song.artist}
+              </span>
+            )}
             <h1
               className="truncate"
               style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)", lineHeight: 1.45 }}
@@ -473,7 +486,7 @@ async function RelatedSongs({
 }: {
   artist: string;
   excludeSlug: string;
-  artistSlug: string;
+  artistSlug: string | null;
 }) {
   const otherSongs = await getSongsByArtist(artist, { excludeSlug, limit: 4 });
   if (otherSongs.length === 0) return null;
@@ -486,14 +499,16 @@ async function RelatedSongs({
         >
           Ще від {artist}
         </h2>
-        <TeButton
-          shape="pill"
-          href={`/artists/${artistSlug}`}
-          className="px-3 py-1.5"
-          style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}
-        >
-          Всі пісні →
-        </TeButton>
+        {artistSlug && (
+          <TeButton
+            shape="pill"
+            href={`/artists/${artistSlug}`}
+            className="px-3 py-1.5"
+            style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}
+          >
+            Всі пісні →
+          </TeButton>
+        )}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {otherSongs.map(({ key: _k, ...s }) => (

@@ -76,6 +76,11 @@ export async function updateSession(request: NextRequest) {
     // guests and search engines (otherwise the whole /learn section 307s to
     // /auth/login and is invisible to Google).
     "/learn",
+    // The add-song page has its own guest branch (login CTA) and meta noindex.
+    // It must be reachable anonymously so Googlebot can crawl it once and READ
+    // the noindex — a middleware 307 here would trap the URL in the GSC
+    // «Page with redirect» / «Indexed, though blocked» reports forever.
+    "/add",
     // Hero-search autocomplete on `/` (and 404 page) — guests must be able
     // to call it; without this the API silently 307s to /auth/login and the
     // dropdown shows "Нічого не знайдено" for every query.

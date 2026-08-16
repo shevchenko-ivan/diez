@@ -17,3 +17,22 @@ export function slugify(title: string): string {
     .replace(/^-+|-+$/g, "");
   return raw || "";
 }
+
+/**
+ * Resolve a unique slug against a taken-check: the base first, then the
+ * supplied human-readable variants (e.g. `${base}-${artistSlug}`), then
+ * numbered suffixes. A timestamp is the LAST resort only — timestamp slugs
+ * (`bez-tebe-1776692326498`) read as machine-generated duplicates to crawlers
+ * and correlate with GSC «Проскановано — не проіндексовано».
+ */
+export async function dedupeSlug(
+  base: string,
+  isTaken: (slug: string) => Promise<boolean>,
+  variants: string[] = [],
+): Promise<string> {
+  const numbered = Array.from({ length: 8 }, (_, i) => `${base}-${i + 2}`);
+  for (const candidate of [base, ...variants, ...numbered]) {
+    if (candidate && !(await isTaken(candidate))) return candidate;
+  }
+  return `${base}-${Date.now()}`;
+}

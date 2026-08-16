@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { slugify } from "@/lib/slugify";
+import { slugify, dedupeSlug } from "@/lib/slugify";
 import { isMissingStatusColumn } from "@/features/artist/lib/status";
 import { matchArtist } from "@/features/artist/lib/match";
 
@@ -95,8 +95,11 @@ export async function submitArtist(formData: FormData): Promise<SubmitArtistResu
   const photo_url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
 
   const baseSlug = slugify(name) || `artist-${Date.now()}`;
-  const { data: slugTaken } = await admin.from("artists").select("slug").eq("slug", baseSlug).maybeSingle();
-  const finalSlug = slugTaken ? `${baseSlug}-${Date.now()}` : baseSlug;
+  // Collision → numbered suffix; timestamp only as the last resort.
+  const finalSlug = await dedupeSlug(baseSlug, async (s) => {
+    const { data } = await admin.from("artists").select("slug").eq("slug", s).maybeSingle();
+    return !!data;
+  });
 
   // User-submitted artists land as `pending` — hidden publicly until an admin
   // approves them in the moderation queue (see 027_artist_moderation.sql).

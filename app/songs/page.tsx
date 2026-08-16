@@ -94,7 +94,9 @@ async function SongsContent({ searchParams }: SearchProps) {
   // SERPs render "Diez › Пісні › <topic>" trails. We don't enumerate every
   // song into itemListElement here — there are thousands, and Google's
   // crawler will discover them via the sitemap + on-page links anyway.
-  const pageUrl = topic ? `${siteUrl}/songs?topic=${topic.slug}` : `${siteUrl}/songs`;
+  // Mirror the canonical: the legacy ?topic= form is 308-redirected to
+  // /songs/topic/<slug>, so structured data must assert the canonical URL too.
+  const pageUrl = topic ? `${siteUrl}/songs/topic/${topic.slug}` : `${siteUrl}/songs`;
   const collectionLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",

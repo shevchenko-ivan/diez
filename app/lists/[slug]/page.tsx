@@ -20,6 +20,13 @@ export async function generateMetadata({
   return {
     title: `${playlist.name} — Список | Diez`,
     description: `Добірка з ${playlist.songs.length} пісень на Diez`,
+    // User playlists are thin card grids of songs that already live at
+    // /songs/* — sharing-friendly, but with zero standalone search value.
+    // Without a canonical + noindex these pages fed GSC's «Duplicate without
+    // user-selected canonical» bucket. follow:true keeps link equity flowing
+    // to the song pages.
+    alternates: { canonical: `/lists/${slug}` },
+    robots: { index: false, follow: true },
     openGraph: {
       title: playlist.name,
       description: `Добірка з ${playlist.songs.length} пісень`,

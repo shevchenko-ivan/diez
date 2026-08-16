@@ -129,14 +129,12 @@ export default async function RootLayout({
             user does click play. */}
         <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
 
-        {/* hreflang self-reference. Site is Ukrainian-only, but declaring
-            it explicitly lets Google read the language signal (in addition
-            to `<html lang="uk">`) and silences "hreflang missing" warnings
-            in third-party SEO auditors. Rendered directly in <head> because
-            Next's `alternates.languages` metadata is overridden whenever a
-            page sets its own `alternates.canonical` — which every page does. */}
-        <link rel="alternate" hrefLang="uk" href={siteUrl} />
-        <link rel="alternate" hrefLang="x-default" href={siteUrl} />
+        {/* NO hreflang tags on purpose: rendered from the root layout they
+            declared the HOMEPAGE as the «alternate» of every page, which
+            conflicts with each page's self-canonical and feeds GSC's
+            duplicate/alternate buckets. hreflang must be self-referencing
+            per-URL; a single-language site gets nothing from it — <html
+            lang="uk"> already carries the language signal. */}
       </head>
       <body className="antialiased" suppressHydrationWarning>
         {/* WebSite schema with SearchAction makes Google show a sitelinks

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { slugify } from "@/lib/slugify";
+import { slugify, dedupeSlug } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { classifySubmission } from "../lib/detectLang";
 import { extractYoutubeId } from "../lib/youtube";
@@ -244,8 +244,15 @@ export async function submitSong(_prev: SubmitResult | null, formData: FormData)
   const parsed = parseLyricsWithChords(f.lyricsRaw);
 
   const baseSlug = slugify(f.title) || `song-${Date.now()}`;
-  const { data: existing } = await admin.from("songs").select("slug").eq("slug", baseSlug).maybeSingle();
-  const finalSlug = existing ? `${baseSlug}-${Date.now()}` : baseSlug;
+  const artistSlug = slugify(f.artist);
+  const finalSlug = await dedupeSlug(
+    baseSlug,
+    async (s) => {
+      const { data } = await admin.from("songs").select("slug").eq("slug", s).maybeSingle();
+      return !!data;
+    },
+    artistSlug ? [`${baseSlug}-${artistSlug}`] : [],
+  );
 
   const { data: songRow, error: songErr } = await admin
     .from("songs")
