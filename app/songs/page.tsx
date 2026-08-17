@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { type Metadata } from "next";
+import Link from "next/link";
 import { getSongsPage, type SongsPageArgs } from "@/features/song/services/songs";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { getTopicBySlug } from "@/features/song/data/topics";
@@ -56,6 +57,36 @@ export async function generateMetadata({ searchParams }: SearchProps): Promise<M
 
 interface SearchProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+/**
+ * Numbered links to the paginated catalogue (`/songs/page/N`, alphabetical).
+ * Kept in sync with PER_PAGE in app/songs/page/[n]/page.tsx.
+ */
+function CatalogueIndex({ total }: { total: number }) {
+  const PER_PAGE = 100;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  if (totalPages < 2) return null;
+  return (
+    <nav aria-label="Сторінки каталогу" className="mt-10">
+      <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+        Увесь каталог за абеткою:
+      </p>
+      <ul className="flex flex-wrap gap-1.5">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          <li key={p}>
+            <Link
+              href={`/songs/page/${p}`}
+              className="inline-flex items-center justify-center te-surface text-xs"
+              style={{ minWidth: 34, padding: "0.4rem 0.6rem", borderRadius: "0.75rem", color: "var(--text-muted)", opacity: 0.75 }}
+            >
+              {p}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
 }
 
 async function SongsContent({ searchParams }: SearchProps) {
@@ -188,6 +219,15 @@ async function SongsContent({ searchParams }: SearchProps) {
         savedSlugs={savedSlugs}
         query={queryArgs}
       />
+
+      {/* Crawlable entry into the full catalogue. The infinite list above only
+          emits <a href> for the first 50 songs, so without this everything
+          deeper is reachable by sitemap alone — orphan pages Google crawls but
+          declines to index. Deliberately visible (hidden links read as
+          cloaking) but quiet: a small numbered row under the list. */}
+      {!q && !topic && total > 50 && (
+        <CatalogueIndex total={total} />
+      )}
 
       {/* SEO body text — rendered for crawlers but visually unobtrusive.
           Without ~100+ words Google classifies topic pages as thin content. */}

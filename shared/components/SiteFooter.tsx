@@ -7,6 +7,11 @@ const NAV_COLUMNS = [
     title: "Каталог",
     links: [
       { label: "Пісні",     href: "/songs" },
+      // Entry into the crawlable, alphabetical catalogue pagination. From
+      // every page's footer, so the deep catalogue is never more than two
+      // clicks (or crawl hops) away — /songs itself only exposes the first
+      // 50 songs as links before infinite scroll takes over.
+      { label: "Усі пісні за абеткою", href: "/songs/page/1" },
       { label: "Виконавці", href: "/artists" },
       { label: "Навчання",  href: "/learn" },
     ],

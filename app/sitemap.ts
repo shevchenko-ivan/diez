@@ -46,6 +46,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    // Crawlable catalogue pagination (see app/songs/page/[n]/page.tsx).
+    // Alphabetical and distinct from /songs (popularity-sorted), so page 1 is
+    // a real page of its own. PER_PAGE must match that route.
+    ...Array.from(
+      { length: Math.ceil(songs.length / 100) },
+      (_, i) => ({
+        url: `${siteUrl}/songs/page/${i + 1}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
+      }),
+    ),
     {
       url: `${siteUrl}/chords`,
       lastModified: new Date(),
