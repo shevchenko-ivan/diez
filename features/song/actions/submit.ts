@@ -8,12 +8,35 @@ import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { classifySubmission } from "../lib/detectLang";
 import { extractYoutubeId } from "../lib/youtube";
 import { matchArtist } from "@/features/artist/lib/match";
+import { MAX_IMAGE_BYTES, MIN_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES } from "@/lib/upload-limits";
 
 export type SubmitStatus = "published" | "pending" | "draft";
 
 export type SubmitResult =
   | { ok: true; status: SubmitStatus; slug: string; songId: string; ru?: boolean }
   | { ok: false; reason: "auth" | "blocked" | "validation" | "error"; message: string };
+
+/**
+ * Turn an unknown throw into a short, user-readable line. Server Actions that
+ * throw send only an opaque digest to the browser, so React renders the global
+ * error boundary — the user sees a bare "Error!" and every typed field is
+ * unmounted. Catching here keeps the failure inside the form.
+ */
+function describeError(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === "string" && e) return e;
+  return "невідома помилка";
+}
+
+/** Log server-side (PostHog picks it up) and return a typed failure. */
+function failed(scope: string, e: unknown): SubmitResult {
+  console.error(`[${scope}]`, e);
+  return {
+    ok: false,
+    reason: "error",
+    message: `Не вдалося зберегти пісню: ${describeError(e)}. Текст залишився у формі — спробуйте ще раз.`,
+  };
+}
 
 /**
  * User-facing song submission & editing (distinct from the admin `createSong`).
@@ -76,11 +99,6 @@ function readFields(formData: FormData): Fields {
   };
 }
 
-// Cover upload limits — mirror the artist-photo rules (see features/artist/actions/submit.ts).
-const MAX_COVER_BYTES = 5 * 1024 * 1024;
-const MIN_COVER_BYTES = 4 * 1024; // reject near-empty files
-const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
 /**
  * Validate + upload the song cover into the public `avatars` bucket under the
  * uploader's own folder (bucket RLS allows writes only there). Returns the
@@ -92,25 +110,32 @@ async function uploadCover(
 ): Promise<{ url: string | null } | { error: string }> {
   const file = formData.get("cover") as File | null;
   if (!file || file.size === 0) return { url: null };
-  if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return { error: "Обкладинка: підтримуються лише JPG, PNG або WebP." };
   }
-  if (file.size > MAX_COVER_BYTES) {
-    return { error: "Обкладинка завелика — максимум 5 МБ." };
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { error: `Обкладинка завелика — максимум ${MAX_IMAGE_LABEL}. Зменште зображення та спробуйте ще раз.` };
   }
-  if (file.size < MIN_COVER_BYTES) {
+  if (file.size < MIN_IMAGE_BYTES) {
     return { error: "Обкладинка замала або пошкоджена. Завантажте якісніше зображення." };
   }
-  const supabase = await createClient();
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const path = `${userId}/cover-${Date.now()}.${ext}`;
-  const { error: uploadErr } = await supabase.storage
-    .from("avatars")
-    .upload(path, file, { contentType: file.type, upsert: false });
-  if (uploadErr) {
-    return { error: `Не вдалося завантажити обкладинку: ${uploadErr.message}` };
+  try {
+    const supabase = await createClient();
+    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const path = `${userId}/cover-${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadErr) {
+      return { error: `Не вдалося завантажити обкладинку: ${uploadErr.message}` };
+    }
+    return { url: supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl };
+  } catch (e) {
+    // Storage can throw outright (network reset, timeout) rather than
+    // returning an error object — surface it as a typed field error so the
+    // form shows a message instead of crashing the whole submission.
+    return { error: `Не вдалося завантажити обкладинку: ${describeError(e)}` };
   }
-  return { url: supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl };
 }
 
 function readIntent(formData: FormData): "submit" | "draft" {
@@ -198,7 +223,21 @@ function validate(intent: "submit" | "draft", f: Fields): string | null {
   return null;
 }
 
+/**
+ * Public entry point. Every unexpected throw inside the flow (Supabase
+ * timeouts, storage resets, malformed payloads) is converted into a typed
+ * `{ ok: false }` result so the form can render the message in place and keep
+ * everything the user typed.
+ */
 export async function submitSong(_prev: SubmitResult | null, formData: FormData): Promise<SubmitResult> {
+  try {
+    return await submitSongImpl(_prev, formData);
+  } catch (e) {
+    return failed("submitSong", e);
+  }
+}
+
+async function submitSongImpl(_prev: SubmitResult | null, formData: FormData): Promise<SubmitResult> {
   const actor = await resolveActor();
   if (!actor) return { ok: false, reason: "auth", message: "Щоб додати пісню, увійдіть у свій акаунт." };
   if (actor.isBlocked) return { ok: false, reason: "blocked", message: "Ваш акаунт обмежено в додаванні пісень." };
@@ -319,6 +358,18 @@ export async function updateMySubmission(
   _prev: SubmitResult | null,
   formData: FormData,
 ): Promise<SubmitResult> {
+  try {
+    return await updateMySubmissionImpl(songId, _prev, formData);
+  } catch (e) {
+    return failed("updateMySubmission", e);
+  }
+}
+
+async function updateMySubmissionImpl(
+  songId: string,
+  _prev: SubmitResult | null,
+  formData: FormData,
+): Promise<SubmitResult> {
   const actor = await resolveActor();
   if (!actor) return { ok: false, reason: "auth", message: "Увійдіть, щоб редагувати пісню." };
   if (actor.isBlocked) return { ok: false, reason: "blocked", message: "Ваш акаунт обмежено." };
@@ -413,6 +464,15 @@ export async function updateMySubmission(
 
 /** Delete a song the current user submitted (or any, for admins). */
 export async function deleteMySubmission(songId: string): Promise<{ ok: boolean; message?: string }> {
+  try {
+    return await deleteMySubmissionImpl(songId);
+  } catch (e) {
+    console.error("[deleteMySubmission]", e);
+    return { ok: false, message: `Не вдалося видалити: ${describeError(e)}` };
+  }
+}
+
+async function deleteMySubmissionImpl(songId: string): Promise<{ ok: boolean; message?: string }> {
   const actor = await resolveActor();
   if (!actor) return { ok: false, message: "Увійдіть, щоб видалити пісню." };
 

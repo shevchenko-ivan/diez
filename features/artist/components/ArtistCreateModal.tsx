@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, UserPlus, ImagePlus } from "lucide-react";
 import { submitArtist } from "@/features/artist/actions/submit";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL } from "@/lib/upload-limits";
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MIN_PHOTO_BYTES = 8 * 1024;        // reject near-empty / over-compressed thumbnails
 const MIN_PHOTO_DIMENSION = 400;         // square-ish, usable on the artist page
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -55,8 +55,8 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
       setError("Підтримуються лише JPG, PNG або WebP.");
       return;
     }
-    if (f.size > MAX_PHOTO_BYTES) {
-      setError("Зображення завелике — максимум 5 МБ.");
+    if (f.size > MAX_IMAGE_BYTES) {
+      setError(`Зображення завелике — максимум ${MAX_IMAGE_LABEL}.`);
       return;
     }
     if (f.size < MIN_PHOTO_BYTES) {
@@ -199,7 +199,7 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
               </button>
             )}
             <p className="text-[11px]" style={{ color: "var(--text-muted)", lineHeight: 1.5 }}>
-              JPG, PNG або WebP, до 5 МБ. Краще квадратне фото, від 400×400 px.
+              JPG, PNG або WebP, до {MAX_IMAGE_LABEL}. Краще квадратне фото, від 400×400 px.
             </p>
           </div>
 

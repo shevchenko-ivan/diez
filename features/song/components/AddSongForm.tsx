@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useActionState } from "react";
+import { useState, useEffect, useRef, useActionState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2, ImagePlus, Youtube } from "lucide-react";
-import { submitSong, updateMySubmission, deleteMySubmission } from "@/features/song/actions/submit";
+import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2, ImagePlus, Youtube, RotateCcw, Crop, XCircle as XCircleIcon } from "lucide-react";
+import { submitSong, updateMySubmission, deleteMySubmission, type SubmitResult } from "@/features/song/actions/submit";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES } from "@/lib/upload-limits";
 import { russianLevel } from "@/features/song/lib/detectLang";
 import { slugify } from "@/lib/slugify";
 import type { Artist } from "@/features/artist/services/artists";
@@ -12,6 +13,7 @@ import type { StrumPattern } from "@/features/song/types";
 import { StrumPatternsEditor } from "@/features/song/components/StrumPatternsEditor";
 import { SimpleStrumPicker } from "@/features/song/components/SimpleStrumPicker";
 import { ArtistCreateModal } from "@/features/artist/components/ArtistCreateModal";
+import { ImageCropper } from "@/shared/components/ImageCropper";
 import { matchArtist, filterArtistSuggestions } from "@/features/artist/lib/match";
 
 /** Existing song being edited — prefilled into the form. */
@@ -29,9 +31,53 @@ export interface InitialSong {
   youtubeId?: string | null;
 }
 
-// Client-side mirror of the server's cover limits (features/song/actions/submit.ts).
-const MAX_COVER_BYTES = 5 * 1024 * 1024;
-const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// ─── Local draft autosave ────────────────────────────────────────────────────
+// The form holds a lot of typing — a full song text with chords. Any crash,
+// stray reload or dead network used to wipe it, so mirror the text fields into
+// localStorage as the user types and offer them back on the next visit.
+// Never stores the cover file: a File can't be serialized, and re-picking one
+// is cheap compared to re-typing the lyrics.
+const DRAFT_KEY_PREFIX = "diez:song-form:v1:";
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type StoredDraft = { title: string; artist: string; lyrics: string; youtube: string; savedAt: number };
+
+function draftKey(songId?: string) {
+  return `${DRAFT_KEY_PREFIX}${songId ?? "new"}`;
+}
+
+/** Best-effort read — localStorage throws in private mode / with cookies off. */
+function readDraft(key: string): StoredDraft | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Partial<StoredDraft>;
+    if (typeof d?.title !== "string" || typeof d?.lyrics !== "string") return null;
+    if (Date.now() - (d.savedAt ?? 0) > DRAFT_TTL_MS) return null;   // stale — user moved on
+    return {
+      title: d.title,
+      artist: typeof d.artist === "string" ? d.artist : "",
+      lyrics: d.lyrics,
+      youtube: typeof d.youtube === "string" ? d.youtube : "",
+      savedAt: d.savedAt ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** «3.7 МБ» — one decimal is enough to see how far over the limit a file is. */
+function formatMb(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+function clearDraft(key: string) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* nothing we can do, and nothing worth breaking the form over */
+  }
+}
 
 interface Props {
   artists?: Artist[];
@@ -47,7 +93,32 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   const isEdit = mode === "edit" && !!initial;
 
   // In edit mode the action is bound to the song id; otherwise it inserts.
-  const action = isEdit ? updateMySubmission.bind(null, initial!.songId) : submitSong;
+  const serverAction = isEdit ? updateMySubmission.bind(null, initial!.songId) : submitSong;
+
+  // A Server Action reaches the server over fetch(). When that fetch itself
+  // fails — offline, request body rejected before it reaches our code, a deploy
+  // mid-session — the promise rejects with «TypeError: Failed to fetch». React
+  // escalates an uncaught rejection to the nearest error boundary, which
+  // replaced the entire page with a bare "Error!" and unmounted the form along
+  // with everything the user had typed. Catching it here keeps the user in the
+  // form and turns the crash into a readable banner.
+  const action = async (prev: SubmitResult | null, formData: FormData): Promise<SubmitResult> => {
+    try {
+      return await serverAction(prev, formData);
+    } catch (e) {
+      console.error("[AddSongForm] submit transport failure", e);
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      return {
+        ok: false,
+        reason: "error",
+        message: offline
+          ? "Немає зʼєднання з інтернетом. Текст залишився у формі — увімкніть мережу та натисніть «Надіслати» ще раз."
+          : `Не вдалося надіслати пісню на сервер — запит не дійшов. Текст залишився у формі: спробуйте ще раз. `
+            + `Найчастіша причина — завелика обкладинка (максимум ${MAX_IMAGE_LABEL}), тож спробуйте легше зображення.`,
+      };
+    }
+  };
+
   const [result, formAction, pending] = useActionState(action, null);
 
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
@@ -72,27 +143,91 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(initial?.coverImage ?? null);
   const [coverError, setCoverError] = useState<string | null>(null);
+  // Size of the picked file when it exceeds the limit — kept so the field can
+  // stay red and the submit buttons stay locked until it's replaced.
+  const [coverOversize, setCoverOversize] = useState<number | null>(null);
+  // The file currently attached (null = none picked this session; in edit mode
+  // the song's existing cover may still be showing). Drives the crop/remove
+  // controls, which only make sense for a file we hold in the browser.
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  // Object URLs must be revoked by hand or every re-pick leaks a blob.
+  const previewUrlRef = useRef<string | null>(null);
   const [youtube, setYoutube] = useState(
     initial?.youtubeId ? `https://www.youtube.com/watch?v=${initial.youtubeId}` : "",
   );
 
+  /** Swap the preview to a locally-held file, revoking the previous blob URL. */
+  function showLocalPreview(file: File | null) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = file ? URL.createObjectURL(file) : null;
+    setCoverPreview(previewUrlRef.current ?? initial?.coverImage ?? null);
+  }
+
+  /**
+   * Put a file into the real <input type="file"> so the form still submits it
+   * as ordinary multipart data — the cropper hands back a brand-new File and
+   * this is how it replaces the picked one.
+   */
+  function writeToCoverInput(file: File | null) {
+    const input = coverInputRef.current;
+    if (!input) return;
+    if (!file) {
+      input.value = "";
+      return;
+    }
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+  }
+
+  /** Single place where a picked/cropped file is validated and shown. */
+  function applyCoverFile(file: File) {
+    setCoverFile(file);
+    showLocalPreview(file);
+    if (file.size > MAX_IMAGE_BYTES) {
+      setCoverOversize(file.size);
+      setCoverError(
+        `Файл ${formatMb(file.size)} — це більше за ліміт у ${MAX_IMAGE_LABEL}. `
+        + "Скадруйте його кнопкою «Кадрувати» — зображення стиснеться, — або виберіть інше.",
+      );
+      return;
+    }
+    setCoverOversize(null);
+    setCoverError(null);
+  }
+
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+    // A file of the wrong type isn't an image at all — there's nothing to
+    // preview or crop, so drop it outright.
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       setCoverError("Підтримуються лише JPG, PNG або WebP.");
+      setCoverOversize(null);
+      setCoverFile(null);
       e.target.value = "";
-      setCoverPreview(initial?.coverImage ?? null);
+      showLocalPreview(null);
       return;
     }
-    if (file.size > MAX_COVER_BYTES) {
-      setCoverError("Зображення завелике — максимум 5 МБ.");
-      e.target.value = "";
-      setCoverPreview(initial?.coverImage ?? null);
-      return;
-    }
+    // An oversized file stays selected: the user sees which image they picked,
+    // why it won't go through, and can fix it by cropping. Submit stays blocked
+    // meanwhile — a body over the platform's request cap dies in transit.
+    applyCoverFile(file);
+  }
+
+  function removeCover() {
+    setCoverFile(null);
+    setCoverOversize(null);
     setCoverError(null);
-    setCoverPreview(URL.createObjectURL(file));
+    writeToCoverInput(null);
+    showLocalPreview(null);
+  }
+
+  function handleCropped(file: File) {
+    writeToCoverInput(file);
+    applyCoverFile(file);
+    setCropOpen(false);
   }
 
   const slugPreview = slugify(title);
@@ -146,6 +281,76 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   }
 
   const finalArtist = selected || input;
+
+  // ── Local draft autosave ───────────────────────────────────────────────────
+  // Nothing here talks to the server: it's a safety net for the cases the
+  // server can't help with (browser crash, accidental reload, closed tab).
+  const storageKey = draftKey(initial?.songId);
+  // A draft found on mount is *offered*, never applied silently — in edit mode
+  // it would otherwise clobber the version the server just sent us.
+  const [recovered, setRecovered] = useState<StoredDraft | null>(null);
+  const [restoredNotice, setRestoredNotice] = useState(false);
+  const [localSavedAt, setLocalSavedAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    const d = readDraft(storageKey);
+    if (!d) return;
+    if (!d.title.trim() && !d.lyrics.trim()) return;
+    // Identical to what's already in the form (a plain revisit of an edit
+    // page) — nothing to offer.
+    if (d.title === (initial?.title ?? "") && d.lyrics === (initial?.lyricsRaw ?? "")) return;
+    setRecovered(d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (result?.ok) return;        // already on the server — nothing to keep
+    if (recovered) return;         // don't overwrite an offer the user hasn't answered
+    // Debounced: typing lyrics fires this on every keystroke otherwise.
+    const id = setTimeout(() => {
+      if (!title.trim() && !lyrics.trim()) {
+        clearDraft(storageKey);
+        setLocalSavedAt(null);
+        return;
+      }
+      const savedAt = Date.now();
+      try {
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({ title, artist: finalArtist, lyrics, youtube, savedAt } satisfies StoredDraft),
+        );
+        setLocalSavedAt(savedAt);
+      } catch {
+        // Private mode or quota exceeded — autosave is best-effort.
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [title, finalArtist, lyrics, youtube, storageKey, recovered, result?.ok]);
+
+  // Saved for real — the local copy has served its purpose.
+  useEffect(() => {
+    if (result?.ok) clearDraft(storageKey);
+  }, [result?.ok, storageKey]);
+
+  function applyRecovered(d: StoredDraft) {
+    setTitle(d.title);
+    setLyrics(d.lyrics);
+    setLyricsLevel(russianLevel(d.lyrics));
+    setYoutube(d.youtube);
+    if (d.artist) {
+      setInput(d.artist);
+      // Re-confirm only if the name still resolves to a real artist row —
+      // otherwise the user goes through the usual pick-or-create gate.
+      setSelected(matchArtist(artists, d.artist)?.name ?? "");
+    }
+    setRecovered(null);
+    setRestoredNotice(true);
+  }
+
+  function discardRecovered() {
+    clearDraft(storageKey);
+    setRecovered(null);
+  }
 
   // ── Russian-text result: the song was auto-saved as a draft. Show a clear
   //    dialog explaining it won't be published, with ways out. ──────────────────
@@ -261,6 +466,44 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
           <input type="hidden" name="key" value={initial.key} />
           <input type="hidden" name="difficulty" value={initial.difficulty} />
         </>
+      )}
+
+      {/* Recovered local draft — offered, not applied automatically. */}
+      {recovered && (
+        <div
+          role="status"
+          className="flex flex-col sm:flex-row sm:items-center gap-3 p-4"
+          style={{ borderRadius: "1rem", background: "rgba(255,140,60,0.08)", border: "1px solid rgba(255,140,60,0.28)" }}
+        >
+          <RotateCcw size={18} style={{ color: "var(--orange)", flexShrink: 0 }} />
+          <p className="text-sm flex-1" style={{ color: "var(--text)", lineHeight: 1.5 }}>
+            <span className="font-bold">Знайдено незбережену чернетку</span> у цьому браузері
+            {recovered.title.trim() ? <> — «{recovered.title.trim()}»</> : null}. Відновити текст?
+          </p>
+          <span className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => applyRecovered(recovered)}
+              className="te-pill-btn px-4 py-2 text-xs font-bold"
+            >
+              Відновити
+            </button>
+            <button
+              type="button"
+              onClick={discardRecovered}
+              className="px-3 py-2 text-xs font-bold"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Відхилити
+            </button>
+          </span>
+        </div>
+      )}
+
+      {restoredNotice && (
+        <p className="text-[11px] ml-1" style={{ color: "var(--text-muted)" }}>
+          Текст відновлено з локальної чернетки. Обкладинку потрібно вибрати заново.
+        </p>
       )}
 
       {/* Error / rejection banner */}
@@ -381,7 +624,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
           <label
             htmlFor="add-song-cover"
             className="te-inset px-4 py-3 flex items-center gap-3 cursor-pointer"
-            style={{ borderRadius: "1rem", boxShadow: coverError ? "inset 0 0 0 1.5px rgba(220,60,60,0.55)" : undefined }}
+            style={{ borderRadius: "1rem", boxShadow: coverError || coverOversize ? "inset 0 0 0 1.5px rgba(220,60,60,0.55)" : undefined }}
           >
             {coverPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -395,8 +638,13 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
               <span className="block text-sm font-medium truncate" style={{ color: "var(--text)" }}>
                 {coverPreview ? "Змінити зображення" : "Завантажити зображення"}
               </span>
-              <span className="block text-[11px]" style={{ color: "var(--text-muted)" }}>
-                JPG, PNG або WebP · до 5 МБ
+              <span
+                className="block text-[11px] font-medium"
+                style={{ color: coverOversize ? "#dc3c3c" : "var(--text-muted)" }}
+              >
+                {coverOversize
+                  ? `Обрано ${formatMb(coverOversize)} — понад ліміт`
+                  : `JPG, PNG або WebP · до ${MAX_IMAGE_LABEL}`}
               </span>
             </span>
             <input
@@ -411,8 +659,39 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
               className="sr-only"
             />
           </label>
-          {coverError && (
-            <p role="alert" className="ml-1 text-[11px] font-bold" style={{ color: "#dc3c3c" }}>{coverError}</p>
+          {/* Crop / remove — only for a file we hold locally. The song's
+              existing cover in edit mode lives on the server, so there's
+              nothing here to re-encode or take back. */}
+          {coverFile && (
+            <div className="flex items-center gap-2 ml-1">
+              <button
+                type="button"
+                onClick={() => setCropOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-full"
+                style={{ border: "1px solid var(--surface-dk)", color: "var(--text-mid)" }}
+              >
+                <Crop size={13} /> Кадрувати
+              </button>
+              <button
+                type="button"
+                onClick={removeCover}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-full text-red-500 hover:bg-red-500/10"
+              >
+                <XCircleIcon size={13} /> Видалити
+              </button>
+            </div>
+          )}
+
+          {coverError ? (
+            <p role="alert" className="ml-1 text-[11px] font-bold" style={{ color: "#dc3c3c", lineHeight: 1.5 }}>
+              {coverError}
+            </p>
+          ) : (
+            /* Always-visible limit hint — the rule should be readable before
+               the user picks a file, not only after it's rejected. */
+            <p className="ml-1 text-[11px]" style={{ color: "var(--text-muted)", lineHeight: 1.5 }}>
+              Максимальний розмір файлу — {MAX_IMAGE_LABEL}. Формати: JPG, PNG, WebP.
+            </p>
           )}
         </div>
 
@@ -525,6 +804,12 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
           </p>
         )}
 
+        {localSavedAt && !result?.ok && (
+          <p className="text-[11px] sm:text-right" style={{ color: "var(--text-muted)" }}>
+            Чернетку збережено в цьому браузері — текст не зникне, якщо сторінка перезавантажиться.
+          </p>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
           {/* Delete (edit mode only) — far left */}
           {isEdit && (
@@ -550,7 +835,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             name="intent"
             value="draft"
             formNoValidate
-            disabled={pending || !title.trim()}
+            disabled={pending || !title.trim() || !!coverOversize}
             className="te-pressable inline-flex items-center justify-center gap-2 px-6 py-4 text-sm font-bold rounded-full disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ border: "1px solid var(--border, rgba(0,0,0,0.15))", color: "var(--text-mid)" }}
           >
@@ -562,7 +847,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             type="submit"
             name="intent"
             value="submit"
-            disabled={!selected || pending}
+            disabled={!selected || pending || !!coverOversize}
             className="te-pill-btn inline-flex items-center justify-center gap-3 px-8 py-4 text-sm font-bold tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Save size={16} />
@@ -570,6 +855,15 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
           </button>
         </div>
       </div>
+
+      {cropOpen && coverFile && (
+        <ImageCropper
+          file={coverFile}
+          maxBytes={MAX_IMAGE_BYTES}
+          onCancel={() => setCropOpen(false)}
+          onCropped={handleCropped}
+        />
+      )}
 
       {createOpen && (
         <ArtistCreateModal

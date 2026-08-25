@@ -6,15 +6,15 @@ import { revalidatePath } from "next/cache";
 import { slugify, dedupeSlug } from "@/lib/slugify";
 import { isMissingStatusColumn } from "@/features/artist/lib/status";
 import { matchArtist } from "@/features/artist/lib/match";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES } from "@/lib/upload-limits";
 
 export type SubmitArtistResult =
   | { ok: true; artist: { id: string; slug: string; name: string; photo_url: string | null } }
   | { ok: false; reason: "auth" | "validation" | "error"; message: string };
 
-// Photo upload limits — mirror the avatars bucket (see updateMyProfile).
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+// Size ceiling lives in lib/upload-limits (it has to stay under the platform's
+// request-body cap, or the upload fails as a bare network error).
 const MIN_PHOTO_BYTES = 8 * 1024; // reject near-empty / over-compressed thumbnails
-const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 /**
  * User-facing artist creation (from the "Додати пісню" form, when the typed
@@ -75,11 +75,11 @@ export async function submitArtist(formData: FormData): Promise<SubmitArtistResu
   if (!file || file.size === 0) {
     return { ok: false, reason: "validation", message: "Додайте фото виконавця." };
   }
-  if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return { ok: false, reason: "validation", message: "Підтримуються лише JPG, PNG або WebP." };
   }
-  if (file.size > MAX_PHOTO_BYTES) {
-    return { ok: false, reason: "validation", message: "Зображення завелике — максимум 5 МБ." };
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { ok: false, reason: "validation", message: `Зображення завелике — максимум ${MAX_IMAGE_LABEL}. Зменште фото та спробуйте ще раз.` };
   }
   if (file.size < MIN_PHOTO_BYTES) {
     return { ok: false, reason: "validation", message: "Зображення замале або надто стиснуте. Завантажте якісніше фото." };
