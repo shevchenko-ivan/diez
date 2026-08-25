@@ -29,6 +29,36 @@ import { TeButton } from "@/shared/components/TeButton";
 import { ToggleKnob } from "@/shared/components/ToggleKnob";
 import { InstrumentSwitch } from "./InstrumentSwitch";
 
+// ─── Popover feature detection ───────────────────────────────────────────────
+// `el.matches(":popover-open")` throws `DOMException: SyntaxError — the string
+// did not match the expected pattern` in engines that ship showPopover() but
+// not the selector (Safari 17.0–17.3, early Firefox builds). The throw escaped
+// the effect and took the whole song page down, so probe support once and fall
+// back to a flag we maintain ourselves around show/hidePopover.
+let popoverSelectorSupport: boolean | null = null;
+function supportsPopoverSelector(): boolean {
+  if (popoverSelectorSupport !== null) return popoverSelectorSupport;
+  try {
+    popoverSelectorSupport =
+      typeof CSS !== "undefined" &&
+      typeof CSS.supports === "function" &&
+      CSS.supports("selector(:popover-open)");
+  } catch {
+    popoverSelectorSupport = false;
+  }
+  return popoverSelectorSupport;
+}
+
+/** Is the drawer's popover currently shown? Never throws. */
+function isPopoverOpen(el: HTMLElement, fallback: { current: boolean }): boolean {
+  if (!supportsPopoverSelector()) return fallback.current;
+  try {
+    return el.matches(":popover-open");
+  } catch {
+    return fallback.current;
+  }
+}
+
 // ─── Beginner-mode heuristics ────────────────────────────────────────────────
 // Open/easy voicings a beginner can play without barre.
 const OPEN_CHORDS = new Set([
@@ -382,6 +412,9 @@ export function SongViewer({
   // .dz-bottom-sheet styles in globals.css for the CSS architecture.
   const [sheetOpen, setSheetOpen] = useState(false);
   const sheetDrawerRef = useRef<HTMLDivElement | null>(null);
+  // Mirrors the popover's open state for browsers where `:popover-open`
+  // isn't a valid selector (see isPopoverOpen above).
+  const popoverShownRef = useRef(false);
   const sheetScrollerRef = useRef<HTMLDivElement | null>(null);
   const sheetContentRef = useRef<HTMLDivElement | null>(null);
 
@@ -400,8 +433,15 @@ export function SongViewer({
     if (!drawer || !scroller) return;
     if (window.matchMedia("(min-width: 1024px)").matches) return;
 
-    if (sheetOpen && !drawer.matches(":popover-open")) {
-      drawer.showPopover();
+    if (sheetOpen && !isPopoverOpen(drawer, popoverShownRef)) {
+      try {
+        drawer.showPopover();
+      } catch {
+        // Already shown, or the drawer isn't a valid popover target in this
+        // browser — nothing to animate, and nothing worth crashing over.
+        return;
+      }
+      popoverShownRef.current = true;
       // Browser opens the popover at scroll-initial-target (closed spacer
       // at top). Now scroll to the bottom (open) — scroll-behavior:smooth
       // animates the sheet in.
@@ -416,7 +456,7 @@ export function SongViewer({
         scroller.scrollTo({ top: 0, behavior: "instant" });
         requestAnimationFrame(() => requestAnimationFrame(animateOpen));
       }
-    } else if (!sheetOpen && drawer.matches(":popover-open")) {
+    } else if (!sheetOpen && isPopoverOpen(drawer, popoverShownRef)) {
       // Scroll to closed; the IntersectionObserver below hides the popover
       // once the sheet has fully left the viewport, so the close animation
       // is visible to the user.
@@ -438,8 +478,13 @@ export function SongViewer({
       (entries) => {
         const entry = entries.at(-1);
         if (!entry) return;
-        if (entry.intersectionRatio < threshold && drawer.matches(":popover-open")) {
-          drawer.hidePopover();
+        if (entry.intersectionRatio < threshold && isPopoverOpen(drawer, popoverShownRef)) {
+          try {
+            drawer.hidePopover();
+          } catch {
+            // Not open any more — harmless.
+          }
+          popoverShownRef.current = false;
           // Sync React state — important when dismissal came from a swipe
           // (no setSheetOpen call would have fired from the markup itself).
           setSheetOpen(false);
