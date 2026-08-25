@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, UserPlus, ImagePlus } from "lucide-react";
+import { X, UserPlus, ImagePlus, Crop } from "lucide-react";
 import { submitArtist } from "@/features/artist/actions/submit";
-import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL } from "@/lib/upload-limits";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, formatMb } from "@/lib/upload-limits";
+import { ImageCropper } from "@/shared/components/ImageCropper";
 
 const MIN_PHOTO_BYTES = 8 * 1024;        // reject near-empty / over-compressed thumbnails
 const MIN_PHOTO_DIMENSION = 400;         // square-ish, usable on the artist page
@@ -37,6 +38,10 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  // Size of the picked file when it's over the limit — the photo stays
+  // attached (croppping re-encodes it down) but creation is blocked.
+  const [oversize, setOversize] = useState<number | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => setMounted(true), []);
@@ -49,14 +54,31 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
     return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
   }, [previewUrl]);
 
+  /** Attach a file and swap the preview, revoking the previous blob URL. */
+  function attach(f: File) {
+    setFile(f);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(f);
+    });
+  }
+
   async function pickFile(f: File | null) {
     if (!f) return;
     if (!ALLOWED_PHOTO_TYPES.includes(f.type)) {
       setError("Підтримуються лише JPG, PNG або WebP.");
       return;
     }
+    // Over the limit: keep the photo attached and point at the cropper —
+    // re-encoding a crop brings a phone-sized file down by an order of
+    // magnitude. Creation stays blocked meanwhile.
     if (f.size > MAX_IMAGE_BYTES) {
-      setError(`Зображення завелике — максимум ${MAX_IMAGE_LABEL}.`);
+      setOversize(f.size);
+      setError(
+        `Файл ${formatMb(f.size)} — це більше за ліміт у ${MAX_IMAGE_LABEL}. `
+        + "Скадруйте його кнопкою «Кадрувати» — фото стиснеться, — або виберіть інше.",
+      );
+      attach(f);
       return;
     }
     if (f.size < MIN_PHOTO_BYTES) {
@@ -74,16 +96,23 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
       setError("Не вдалося прочитати зображення. Спробуйте інший файл.");
       return;
     }
+    setOversize(null);
     setError(null);
-    setFile(f);
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(f);
-    });
+    attach(f);
+  }
+
+  /** The cropper always returns a 1000×1000 JPEG, so every gate above passes. */
+  function handleCropped(cropped: File) {
+    setOversize(null);
+    setError(null);
+    attach(cropped);
+    setCropOpen(false);
   }
 
   function clearFile() {
     setFile(null);
+    setOversize(null);
+    setError(null);
     setPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -168,7 +197,12 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
             {previewUrl ? (
               <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                  style={{ boxShadow: oversize ? "0 0 0 2px #dc3c3c" : undefined }}
+                />
                 <div className="flex flex-col gap-1 min-w-0">
                   <button
                     type="button"
@@ -177,6 +211,14 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
                     style={{ color: "var(--text-mid)" }}
                   >
                     Змінити фото
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCropOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-left"
+                    style={{ color: "var(--text-mid)" }}
+                  >
+                    <Crop size={12} /> Кадрувати
                   </button>
                   <button
                     type="button"
@@ -230,13 +272,23 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
             <button
               type="button"
               onClick={handleCreate}
-              disabled={pending || !name.trim() || !file}
+              disabled={pending || !name.trim() || !file || !!oversize}
               className="te-pill-btn px-5 py-2.5 text-sm font-bold disabled:opacity-50"
             >
               {pending ? "Створюємо…" : "Створити"}
             </button>
           </div>
         </div>
+
+        {cropOpen && file && (
+          <ImageCropper
+            file={file}
+            maxBytes={MAX_IMAGE_BYTES}
+            heading="Кадрувати фото"
+            onCancel={() => setCropOpen(false)}
+            onCropped={handleCropped}
+          />
+        )}
       </div>
     </div>,
     document.body,

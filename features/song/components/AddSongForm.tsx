@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2, ImagePlus, Youtube, RotateCcw, Crop, XCircle as XCircleIcon } from "lucide-react";
 import { submitSong, updateMySubmission, deleteMySubmission, type SubmitResult } from "@/features/song/actions/submit";
-import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES } from "@/lib/upload-limits";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES, formatMb } from "@/lib/upload-limits";
 import { russianLevel } from "@/features/song/lib/detectLang";
 import { slugify } from "@/lib/slugify";
 import type { Artist } from "@/features/artist/services/artists";
@@ -64,11 +64,6 @@ function readDraft(key: string): StoredDraft | null {
   } catch {
     return null;
   }
-}
-
-/** «3.7 МБ» — one decimal is enough to see how far over the limit a file is. */
-function formatMb(bytes: number) {
-  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
 }
 
 function clearDraft(key: string) {

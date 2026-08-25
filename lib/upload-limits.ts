@@ -24,3 +24,8 @@ export const MAX_IMAGE_LABEL = "4 МБ";
 export const MIN_IMAGE_BYTES = 4 * 1024;
 
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** «3.7 МБ» — one decimal is enough to see how far over the limit a file is. */
+export function formatMb(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}

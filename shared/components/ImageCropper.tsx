@@ -25,11 +25,19 @@ interface Props {
   file: File;
   /** Refuse to hand back anything larger than this (bytes). */
   maxBytes: number;
+  /** Dialog heading — name what's being cropped. */
+  heading?: string;
   onCancel: () => void;
   onCropped: (file: File) => void;
 }
 
-export function ImageCropper({ file, maxBytes, onCancel, onCropped }: Props) {
+export function ImageCropper({
+  file,
+  maxBytes,
+  heading = "Кадрувати обкладинку",
+  onCancel,
+  onCropped,
+}: Props) {
   const [src, setSrc] = useState<string | null>(null);
   // Natural pixel size of the decoded image; null until it has loaded.
   const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
@@ -142,11 +150,11 @@ export function ImageCropper({ file, maxBytes, onCancel, onCropped }: Props) {
       style={{ background: "rgba(0,0,0,0.55)" }}
       role="dialog"
       aria-modal="true"
-      aria-label="Кадрування обкладинки"
+      aria-label={heading}
     >
       <div className="te-surface w-full max-w-sm p-6 space-y-4" style={{ borderRadius: "1.5rem" }}>
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Кадрувати обкладинку</h3>
+          <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>{heading}</h3>
           <button type="button" onClick={onCancel} aria-label="Закрити" style={{ color: "var(--text-muted)" }}>
             <X size={18} />
           </button>
@@ -159,8 +167,8 @@ export function ImageCropper({ file, maxBytes, onCancel, onCropped }: Props) {
         ) : (
           <>
             <p className="text-[11px]" style={{ color: "var(--text-muted)", lineHeight: 1.5 }}>
-              Перетягніть зображення, щоб вибрати кадр, і масштабуйте повзунком. Обкладинка
-              збережеться квадратною, {OUTPUT_SIZE}×{OUTPUT_SIZE}.
+              Перетягніть зображення, щоб вибрати кадр, і масштабуйте повзунком.
+              Результат — квадрат {OUTPUT_SIZE}×{OUTPUT_SIZE}.
             </p>
 
             <div
