@@ -591,6 +591,37 @@ export function ChordHover({ chord, voicingState, children, customVoicings }: Ch
   const [instrument] = useInstrument();
   const openFreqs = instrument === "ukulele" ? UKE_OPEN_FREQS : GUITAR_OPEN_FREQS;
 
+  // Clamp the popup into the viewport after it renders: horizontally always,
+  // and vertically by flipping below the chord when the default above-placement
+  // would clip past the top edge (chords near the top of the viewport — the
+  // popup used to render off-screen and never appear).
+  //
+  // MUST stay above the `if (!defs && !pianoDefs) return` below: `instrument`
+  // changes after mount (useInstrument hydrates from localStorage), so a chord
+  // with no shape for the newly selected instrument would take that early
+  // return on a later render. With the effect underneath it, the hook count
+  // dropped 8 → 7 and React killed the whole page with «Rendered fewer hooks
+  // than expected» (minified #300). It self-guards on `open`, so running it for
+  // a chord we don't render a popup for costs nothing.
+  useLayoutEffect(() => {
+    if (!open || !pos || !popupRef.current) return;
+    const rect = popupRef.current.getBoundingClientRect();
+    const margin = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const half = rect.width / 2;
+    let next = pos.left;
+    if (next - half < margin) next = half + margin;
+    if (next + half > vw - margin) next = vw - margin - half;
+    if (Math.abs(next - pos.left) > 0.5) setPos((p) => (p ? { ...p, left: next } : p));
+
+    const fitsAbove = pos.top - 8 - rect.height >= margin;
+    const fitsBelow = pos.bottom + 8 + rect.height <= vh - margin;
+    const nextBelow = !fitsAbove && fitsBelow;
+    if (nextBelow !== below) setBelow(nextBelow);
+  }, [open, pos, below]);
+
+
   const pianoDefs = instrument === "piano" ? lookupChordPiano(chord) : null;
   const baseDefs = instrument === "piano" ? null : lookupChordForInstrument(chord, instrument);
   const custom = instrument === "guitar" ? customVoicings?.[chord] : undefined;
@@ -616,28 +647,6 @@ export function ChordHover({ chord, voicingState, children, customVoicings }: Ch
   const hide = () => {
     timeoutRef.current = setTimeout(() => setOpen(false), 150);
   };
-
-  // Clamp the popup into the viewport after it renders: horizontally always,
-  // and vertically by flipping below the chord when the default above-placement
-  // would clip past the top edge (chords near the top of the viewport — the
-  // popup used to render off-screen and never appear).
-  useLayoutEffect(() => {
-    if (!open || !pos || !popupRef.current) return;
-    const rect = popupRef.current.getBoundingClientRect();
-    const margin = 8;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const half = rect.width / 2;
-    let next = pos.left;
-    if (next - half < margin) next = half + margin;
-    if (next + half > vw - margin) next = vw - margin - half;
-    if (Math.abs(next - pos.left) > 0.5) setPos((p) => (p ? { ...p, left: next } : p));
-
-    const fitsAbove = pos.top - 8 - rect.height >= margin;
-    const fitsBelow = pos.bottom + 8 + rect.height <= vh - margin;
-    const nextBelow = !fitsAbove && fitsBelow;
-    if (nextBelow !== below) setBelow(nextBelow);
-  }, [open, pos, below]);
 
   return (
     <span
