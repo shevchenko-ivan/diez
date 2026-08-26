@@ -17,6 +17,18 @@ export type SubmitArtistResult =
 const MIN_PHOTO_BYTES = 8 * 1024; // reject near-empty / over-compressed thumbnails
 
 /**
+ * Turn an unknown throw into a short, user-readable line. A Server Action that
+ * throws sends only an opaque digest to the browser, so React renders the
+ * nearest error boundary — here that tears down the modal *and* the add-song
+ * form behind it, losing everything the user had typed.
+ */
+function describeError(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === "string" && e) return e;
+  return "невідома помилка";
+}
+
+/**
  * User-facing artist creation (from the "Додати пісню" form, when the typed
  * artist isn't in the catalogue). Name + optional uploaded photo + short bio.
  * Reuses an existing artist on an exact name match so users don't spawn
@@ -24,6 +36,19 @@ const MIN_PHOTO_BYTES = 8 * 1024; // reject near-empty / over-compressed thumbna
  * own folder (the bucket's RLS allows writes only there).
  */
 export async function submitArtist(formData: FormData): Promise<SubmitArtistResult> {
+  try {
+    return await submitArtistImpl(formData);
+  } catch (e) {
+    console.error("[submitArtist]", e);
+    return {
+      ok: false,
+      reason: "error",
+      message: `Не вдалося створити виконавця: ${describeError(e)}. Спробуйте ще раз.`,
+    };
+  }
+}
+
+async function submitArtistImpl(formData: FormData): Promise<SubmitArtistResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, reason: "auth", message: "Увійдіть, щоб додати виконавця." };

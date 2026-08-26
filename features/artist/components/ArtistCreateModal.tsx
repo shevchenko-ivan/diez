@@ -129,7 +129,25 @@ export function ArtistCreateModal({ initialName, onClose, onCreated }: Props) {
     fd.set("name", name.trim());
     if (bio.trim()) fd.set("bio", bio.trim());
     if (file) fd.set("photo", file);
-    const res = await submitArtist(fd);
+    // The action reaches the server over fetch(). If that fetch itself fails —
+    // offline, a photo the platform rejects before our code sees it, a deploy
+    // mid-session — the promise rejects, and an uncaught rejection here would
+    // escalate to the error boundary and destroy the add-song form underneath
+    // along with the user's typed lyrics. Keep the failure inside the modal.
+    let res: Awaited<ReturnType<typeof submitArtist>>;
+    try {
+      res = await submitArtist(fd);
+    } catch (err) {
+      console.error("[ArtistCreateModal] submit transport failure", err);
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      setPending(false);
+      setError(
+        offline
+          ? "Немає зʼєднання з інтернетом. Дані у формі збереглися — увімкніть мережу та спробуйте ще раз."
+          : `Не вдалося надіслати запит на сервер. Спробуйте ще раз; якщо не допомагає — зменште фото (до ${MAX_IMAGE_LABEL}) кнопкою «Кадрувати».`,
+      );
+      return;
+    }
     setPending(false);
     if (res.ok) {
       onCreated(res.artist);
