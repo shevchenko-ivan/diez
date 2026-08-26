@@ -75,9 +75,19 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             // Core Web Vitals. Google ranks on LCP/INP/CLS and this site lives
             // on organic search, yet `$web_vitals` had never once been sent —
             // performance was the one thing we had no data on at all.
-            // `network_timing` stays off: it's a session-replay companion that
-            // ships a PerformanceObserver entry per request, and the recorder
-            // here is already deliberately deferred to protect INP.
+            //
+            // Careful: this object does NOT decide the outcome on its own. The
+            // remote config PostHog serves at /array/<key>/config.js wins, and
+            // it mirrors the project settings, not this file. Setting
+            // `web_vitals: true` here changed nothing until
+            // `autocapture_web_vitals_opt_in` was switched on for the project —
+            // the SDK downloaded web-vitals.js and captured nothing.
+            //
+            // Same reason `network_timing: false` below is aspirational rather
+            // than effective: `capture_performance_opt_in` is on at the project
+            // level, so the server sends `network_timing: true` regardless. It
+            // is left here to document the intent — if you want it actually
+            // off, turn that project setting off too.
             capture_performance: { web_vitals: true, network_timing: false },
             // We don't use PostHog Surveys or dead-click autocapture — turning
             // them off stops surveys.js / dead-clicks-autocapture.js from ever
