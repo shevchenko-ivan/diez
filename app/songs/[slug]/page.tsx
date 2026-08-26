@@ -29,6 +29,20 @@ import { VariantSwitcher } from "@/features/song/components/VariantSwitcher";
 import { Suspense, cache } from "react";
 import { SavedToast } from "@/shared/components/SavedToast";
 
+// ─── Request-scoped lookups ──────────────────────────────────────────────────
+// `generateMetadata` and the page body need the same two rows, and both used to
+// query for them separately — four round trips per request instead of two.
+// React's `cache` dedupes them within a single render pass.
+//
+// This also pays for deleting `loading.tsx`. That file made Next wrap the route
+// in an automatic Suspense boundary and flush its skeleton immediately, which
+// committed HTTP 200 before the song lookup resolved — so `notFound()` below
+// could swap the UI but never the status, and every unknown slug answered 200
+// (a soft-404 across all ~2.4k song URLs). The status now waits for the lookup;
+// halving the queries keeps that wait short.
+const getSong = cache(getSongBySlug);
+const getArtistSeo = cache(getArtistSeoByName);
+
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({
@@ -37,12 +51,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const metaSong = await getSongBySlug(slug);
+  const metaSong = await getSong(slug);
   if (!metaSong) return {};
 
   // Artist alternate spellings (e.g. "оторвальд" for "O.Torvald") so the song
   // page is indexable for Cyrillic queries of a Latin-named artist.
-  const { aliases: artistAliases } = await getArtistSeoByName(metaSong.artist);
+  const { aliases: artistAliases } = await getArtistSeo(metaSong.artist);
   const aliasKeywords = artistAliases.filter((a) => a && a !== metaSong.artist);
 
   const difficultyLabel =
@@ -125,7 +139,7 @@ export default async function SongPage({
   // (Previously song was awaited first, then a 2-call parallel batch ran;
   // this collapses one round-trip on mobile networks.)
   const [baseSong, saveState] = await Promise.all([
-    getSongBySlug(slug),
+    getSong(slug),
     getSongSaveStateForSlug(slug),
   ]);
   if (!baseSong) return notFound();
@@ -134,7 +148,7 @@ export default async function SongPage({
   // artistSlug is null when the artist has no (approved) DB row: guessing with
   // slugify(name) mass-produced internal links to nonexistent /artists/* URLs
   // (slugify ≠ stored slug), which crawled as soft-404s. Better no link at all.
-  const artistSeo = await getArtistSeoByName(baseSong.artist);
+  const artistSeo = await getArtistSeo(baseSong.artist);
   const artistSlug = artistSeo.slug ?? null;
   const artistAliases = artistSeo.aliases.filter((a) => a && a !== baseSong.artist);
 
