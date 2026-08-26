@@ -52,7 +52,7 @@ export function AddArtistForm() {
       {/* Name */}
       <div className="space-y-2">
         <label htmlFor="add-artist-name" className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>
-          Ім'я / Назва гурту *
+          Ім&apos;я / Назва гурту *
         </label>
         <div className="te-inset px-4 py-3" style={{ borderRadius: "1rem" }}>
           <input

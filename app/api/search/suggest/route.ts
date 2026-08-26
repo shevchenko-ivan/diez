@@ -165,11 +165,16 @@ export async function GET(req: Request) {
   let resolvedNames: string[] = [];
   if (isFirstPage && nq.length >= 2) {
     const needle = q.toLowerCase();
-    let { data: allArtists, error: artistsErr } = await sb
+    // Split rather than destructured with `let`: only `allArtists` is
+    // reassigned by the fallback below, and the v16 lint config wants every
+    // binding in a destructuring pattern to be reassigned before it allows one.
+    const artistsRes = await sb
       .from("artists")
       .select("slug, name, photo_url, aliases")
       .eq("status", "approved")
       .order("name");
+    let allArtists = artistsRes.data;
+    const artistsErr = artistsRes.error;
     // Pre-027 fallback: no status column yet → list all.
     if (artistsErr && isMissingStatusColumn(artistsErr)) {
       ({ data: allArtists } = await sb

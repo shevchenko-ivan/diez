@@ -263,7 +263,7 @@ export function CookieBanner() {
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text)" }}>
-                  Обов'язкові
+                  Обов&apos;язкові
                 </span>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--orange)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   Завжди увімкнено
