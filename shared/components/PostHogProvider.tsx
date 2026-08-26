@@ -72,6 +72,13 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             // surfacing them in PostHog's Error Tracking view. Zero perf cost
             // — only fires when an error actually throws.
             capture_exceptions: true,
+            // Core Web Vitals. Google ranks on LCP/INP/CLS and this site lives
+            // on organic search, yet `$web_vitals` had never once been sent —
+            // performance was the one thing we had no data on at all.
+            // `network_timing` stays off: it's a session-replay companion that
+            // ships a PerformanceObserver entry per request, and the recorder
+            // here is already deliberately deferred to protect INP.
+            capture_performance: { web_vitals: true, network_timing: false },
             // We don't use PostHog Surveys or dead-click autocapture — turning
             // them off stops surveys.js / dead-clicks-autocapture.js from ever
             // downloading (each is a separate lazy bundle fetched after init).
