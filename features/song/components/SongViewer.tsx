@@ -263,6 +263,27 @@ export function SongViewer({
       ? Math.max(12, Math.floor(SSR_MOBILE_LYRIC_WIDTH / effChWidth) - 1)
       : Infinity;
 
+  // Placeholder height for a content-visibility section, from data we already
+  // have at render time: line count, which lines carry a chord row, and how
+  // many visual rows each line wraps into at the current column width. Being
+  // close matters — the browser lays the section out at this height until it
+  // scrolls near the viewport, then snaps to the real one; every pixel of
+  // error is a layout shift on slower devices (the old flat 500px was off by
+  // up to ~430px per section and put long songs at field CLS 0.6–0.8).
+  const estimateSectionHeight = (section: SongSection): number => {
+    const rowUnit = fontSize * 1.4;
+    let h = section.label ? 28 : 0;
+    for (const line of section.lines) {
+      const totalCols = line.lyricsCol + line.lyrics.length;
+      const visualRows =
+        charsPerRow === Infinity ? 1 : Math.max(1, Math.ceil(Math.max(1, totalCols) / charsPerRow));
+      const hasChordRow = !line.inlineChords && line.chords.length > 0;
+      h += visualRows * (hasChordRow ? 2 : 1) * rowUnit + 4;
+      if (visualRows > 1) h += 14; // wrapped lines push the next one down by 14px
+    }
+    return Math.max(60, Math.round(h));
+  };
+
   const toggleBeginner = () => {
     trigger("light");
     if (beginnerMode) {
@@ -904,15 +925,25 @@ export function SongViewer({
                 className={sIdx > 0 ? "mt-5" : ""}
                 // Defer paint for off-screen song sections after the first two
                 // (which are above-the-fold on most songs and shouldn't have
-                // any first-paint hiccup). `containIntrinsicSize: auto 500px`
-                // reserves a placeholder; once the browser has measured the
-                // real height on the first render, it remembers that value —
-                // so `sectionsRef.current.getBoundingClientRect().bottom`
+                // any first-paint hiccup). The placeholder height is estimated
+                // from the section's own line count instead of a constant —
+                // a flat 500px was off by up to ~300px per section, and every
+                // section scrolled into view on a slow device snapped to its
+                // real height. That snap was the field CLS of 0.6–0.8 on long
+                // songs (short songs have ≤2 sections, never hit this path,
+                // and sat at CLS 0 — the split that exposed the bug). Once the
+                // browser measures the real height it remembers it (the `auto`
+                // keyword) — so `sectionsRef.current.getBoundingClientRect()`
                 // stays accurate and the auto-scroll loop stops at the right
                 // place. Baseline since 2025-09; older browsers ignore.
                 style={
                   sIdx >= 2
-                    ? { contentVisibility: "auto", containIntrinsicSize: "auto 500px" }
+                    ? {
+                        contentVisibility: "auto",
+                        // header (~28px) + per line: chord row + lyric row at
+                        // fontSize 16 × 1.4 line-height + the space-y-1 gap.
+                        containIntrinsicSize: `auto ${estimateSectionHeight(section)}px`,
+                      }
                     : undefined
                 }
               >

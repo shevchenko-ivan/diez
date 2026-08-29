@@ -18,16 +18,15 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
   const resolvedSlug = slug ?? slugify(name);
   const href = `/artists/${resolvedSlug}`;
 
+  // No content-visibility on the card (removed 2026-08): its real height
+  // tracks the grid column width (the avatar is aspect-ratio 1:1), so any
+  // constant containIntrinsicSize is wrong at most viewports — ~199px on a
+  // 375px phone, ~250px at lg. Each of ~140 cards snapping from the 220px
+  // placeholder to its real height on slow devices was the main source of the
+  // field CLS of 1.03 on /artists. Rendering 140 flat cards without the skip
+  // is cheap; the CLS was not.
   return (
-    <div
-      className="flex flex-col items-center gap-2 pt-1"
-      style={{
-        // Skip layout/paint for cards outside the viewport (helps long /artists
-        // grid). Placeholder height ≈ avatar + 2 lines of label. Baseline 2025-09.
-        contentVisibility: "auto",
-        containIntrinsicSize: "auto 220px",
-      }}
-    >
+    <div className="flex flex-col items-center gap-2 pt-1">
       {/* Round avatar — only the circle is pressable */}
       <HapticLink
         href={href}
