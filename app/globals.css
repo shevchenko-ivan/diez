@@ -2037,3 +2037,29 @@ html[data-theme="dark"] {
     100% { --sheet-backdrop: 1; }   /* scroll max  = open   */
   }
 }
+
+/* ─── Artist card (features/artist/components/ArtistCard.tsx) ────────────────
+   Hoisted out of the component: as an inline <style> it rendered once per
+   card — 150 duplicate copies on /artists. */
+/* Zoom the photo INSIDE the circle on hover, not the circle itself. The
+   wrapper's overflow:hidden keeps the zoom masked to the circle. */
+.artist-avatar img,
+.artist-avatar .artist-fallback { transition: transform 200ms ease; }
+.artist-avatar:hover img,
+.artist-avatar:hover .artist-fallback { transform: scale(1.08); }
+.artist-avatar { transition: transform 160ms ease; }
+.artist-avatar:active { transform: scale(0.98); }
+/* Hide the heart by default on hover-capable devices; reveal on row hover.
+   Keep it visible when the artist is saved so un-saving is always possible. */
+@media (hover: hover) {
+  .artist-row:not(.is-saved) .artist-save {
+    opacity: 0;
+    transition: opacity 140ms ease;
+    pointer-events: none;
+  }
+  .artist-row:not(.is-saved):hover .artist-save,
+  .artist-row:not(.is-saved):focus-within .artist-save {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

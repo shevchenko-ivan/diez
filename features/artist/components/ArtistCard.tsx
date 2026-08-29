@@ -100,34 +100,9 @@ export function ArtistCard({ name, songsCount, color, image, slug, saved }: Arti
         </div>
       </div>
 
-      <style>{`
-        /* Zoom the photo INSIDE the circle on hover, not the circle itself.
-           The wrapper's overflow:hidden keeps the zoom masked to the circle,
-           so it never overflows the card box. Scaling the wrapper instead
-           would push past the parent's content-visibility paint containment
-           and clip the circle's left/right edges. */
-        .artist-avatar img,
-        .artist-avatar .artist-fallback { transition: transform 200ms ease; }
-        .artist-avatar:hover img,
-        .artist-avatar:hover .artist-fallback { transform: scale(1.08); }
-        .artist-avatar { transition: transform 160ms ease; }
-        .artist-avatar:active { transform: scale(0.98); }
-        /* Hide heart by default on hover-capable devices; reveal on row hover.
-           Keep it visible whenever the artist is already saved so the user
-           always has a way to un-save without hunting for it. */
-        @media (hover: hover) {
-          .artist-row:not(.is-saved) .artist-save {
-            opacity: 0;
-            transition: opacity 140ms ease;
-            pointer-events: none;
-          }
-          .artist-row:not(.is-saved):hover .artist-save,
-          .artist-row:not(.is-saved):focus-within .artist-save {
-            opacity: 1;
-            pointer-events: auto;
-          }
-        }
-      `}</style>
+      {/* Hover/save styles live in globals.css (.artist-avatar / .artist-row):
+          an inline <style> here shipped once PER CARD — 150 copies and ~1KB
+          each on /artists, most of the page's 975KB of raw HTML. */}
     </div>
   );
 }
