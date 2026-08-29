@@ -1,12 +1,12 @@
 import { type Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 // Song pages are admin-editable — force fresh fetch on every request so
 // edits to tempo/strumming/variants appear immediately without fighting
 // Next.js's route-level and fetch-level caches.
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { getSongBySlug, getSongsByArtist, getSongsSharingChords, applyVariant } from "@/features/song/services/songs";
+import { getSongBySlug, getSongSlugRedirect, getSongsByArtist, getSongsSharingChords, applyVariant } from "@/features/song/services/songs";
 import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongActions } from "@/features/song/components/SongActions";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
@@ -142,7 +142,18 @@ export default async function SongPage({
     getSong(slug),
     getSongSaveStateForSlug(slug),
   ]);
-  if (!baseSong) return notFound();
+  if (!baseSong) {
+    // Migration 030 renamed timestamp slugs; keep the old URLs alive with a
+    // 308 (bookmarks, GSC, external links). Preserve ?v/?t across the hop.
+    const target = await getSongSlugRedirect(slug);
+    if (target) {
+      const qs = new URLSearchParams();
+      if (variantId) qs.set("v", variantId);
+      if (transposeParam) qs.set("t", transposeParam);
+      permanentRedirect(`/songs/${target}${qs.size ? `?${qs}` : ""}`);
+    }
+    return notFound();
+  }
 
   // Artist slug + alternate spellings need the song row, so this runs after.
   // artistSlug is null when the artist has no (approved) DB row: guessing with

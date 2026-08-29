@@ -455,6 +455,27 @@ export const getSongsSharingChords = unstable_cache(
 // via revalidateTag is flaky after server actions, so admin edits to tempo/
 // strumming appeared stale on the viewer. Direct fetch is fast enough and
 // the result is per-request-deduped by Next automatically.
+/**
+ * Old-slug lookup for permanent redirects (migration 030 renamed ~110
+ * timestamp slugs to {title}-{artist}). Consulted only after getSongBySlug
+ * misses, so the happy path pays nothing. Deliberately swallows every error:
+ * this code deploys BEFORE the migration that creates the table, and a
+ * missing-relation error here must read as "no redirect", not a crash.
+ */
+export async function getSongSlugRedirect(slug: string): Promise<string | null> {
+  if (!hasEnvVars) return null;
+  try {
+    const { data } = await getClient()
+      .from("slug_redirects")
+      .select("new_slug")
+      .eq("old_slug", slug)
+      .maybeSingle();
+    return (data?.new_slug as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getSongBySlug(slug: string): Promise<Song | undefined> {
   if (!hasEnvVars) return undefined;
   const client = getClient();
