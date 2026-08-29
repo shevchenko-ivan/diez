@@ -31,6 +31,102 @@
   font-display: swap;
 }
 
+/* ── Metric-compatible fallbacks ─────────────────────────────────────────────
+   All faces above are font-display: swap, and e-Ukraine is ~15–23% WIDER than
+   the platform fallbacks at the same size. On a cold cache the page painted
+   in the system font, then every text block re-wrapped when e-Ukraine
+   arrived — one massive layout shift. Field CLS: /artists 1.03, / 0.83,
+   /profile 0.74, each as a single shift entry; pages reached with a warm
+   font cache sat at 0.
+
+   These local-font faces are size-adjusted so the pre-swap render occupies
+   the same width, making the swap nearly invisible to layout. The numbers
+   are advance-width sums of a representative UA+Latin sentence computed from
+   the actual font files with fontTools — NOT per-alphabet averages (spaces
+   and letter frequency shift the answer by >10%), and NOT in-browser
+   measurements (the embedded test pane both refused to load the woff2 faces
+   and ignored size-adjust on local() sources, so it can't verify any of
+   this; real Chrome/Android does apply it).
+
+   Android has no Arial; a local() face that doesn't resolve is skipped, so
+   both families sit in every stack. Vertical overrides come straight from
+   the e-Ukraine files (ascent 514 / descent -100 / gap 0 at upm 512) —
+   they matter only where line-height is left at `normal`. */
+@font-face {
+  font-family: 'e-Ukraine Fallback';
+  font-weight: 100 500;
+  src: local('Arial');
+  size-adjust: 121.7%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'e-Ukraine Fallback';
+  font-weight: 501 900;
+  src: local('Arial Bold'), local('Arial');
+  size-adjust: 115.4%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'e-Ukraine Fallback Android';
+  font-weight: 100 500;
+  src: local('Roboto');
+  size-adjust: 120.4%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'e-Ukraine Fallback Android';
+  font-weight: 501 900;
+  src: local('Roboto Bold'), local('Roboto');
+  size-adjust: 121.2%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+/* Head cuts share the body cuts' widths to within 0.3% (measured), so the
+   Head fallbacks reuse the same numbers under the Head stack's names. */
+@font-face {
+  font-family: 'e-Ukraine Head Fallback';
+  font-weight: 100 500;
+  src: local('Arial');
+  size-adjust: 121.7%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'e-Ukraine Head Fallback';
+  font-weight: 501 900;
+  src: local('Arial Bold'), local('Arial');
+  size-adjust: 115.4%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'e-Ukraine Head Fallback Android';
+  font-weight: 100 500;
+  src: local('Roboto');
+  size-adjust: 120.4%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'e-Ukraine Head Fallback Android';
+  font-weight: 501 900;
+  src: local('Roboto Bold'), local('Roboto');
+  size-adjust: 121.2%;
+  ascent-override: 100.4%;
+  descent-override: 19.5%;
+  line-gap-override: 0%;
+}
+
 /* ── e-Ukraine Head — display cut for headings (h1/h2) ──────────────────────── */
 @font-face {
   font-family: 'e-Ukraine Head';
@@ -157,7 +253,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'e-Ukraine', -apple-system, sans-serif;
+    font-family: 'e-Ukraine', 'e-Ukraine Fallback', 'e-Ukraine Fallback Android', -apple-system, sans-serif;
     /* e-Ukraine only ships 400/500 cuts, so the old 450 rounded UP to Medium
        and made all default-weight text look heavier. Pin to Regular (400). */
     font-weight: 400;
@@ -171,7 +267,7 @@
 
   /* Headings use the e-Ukraine Head display cut; body/UI stays e-Ukraine. */
   h1, h2 {
-    font-family: 'e-Ukraine Head', 'e-Ukraine', -apple-system, sans-serif;
+    font-family: 'e-Ukraine Head', 'e-Ukraine Head Fallback', 'e-Ukraine Head Fallback Android', 'e-Ukraine', -apple-system, sans-serif;
   }
 
   input, textarea, select {
@@ -405,7 +501,7 @@
   }
 
   .te-label {
-    font-family: 'e-Ukraine', sans-serif;
+    font-family: 'e-Ukraine', 'e-Ukraine Fallback', 'e-Ukraine Fallback Android', sans-serif;
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
