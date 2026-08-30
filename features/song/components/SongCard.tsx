@@ -72,7 +72,7 @@ export function SongCard({ ...props }: SongCardProps) {
           title={`${props.title} — ${props.artist}`}
           fill
           sizes="(max-width: 1024px) 50vw, 360px"
-          priority={typeof props.index === "number" && props.index < 4}
+          priority={typeof props.index === "number" && props.index < 2}
           iconSize={40}
         />
       </div>

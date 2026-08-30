@@ -63,7 +63,12 @@ export function TopSongCard({
           // First 6 cards span the row on desktop and are above the fold.
           // The hero subhead is the actual LCP element on /, but eager
           // loading here avoids re-shuffling priorities once the hero paints.
-          priority={typeof index === "number" && index < 6}
+          // Preload only the very first cover: six preloads competed with the
+          // font preloads for simulated bandwidth and pushed the lab LCP of
+          // the hero h1 out to ~8s (fonts are what the model ties text LCP
+          // to). On mobile the strip sits below the fold anyway, and the
+          // covers are same-origin /_covers webps that load instantly.
+          priority={index === 0}
           iconSize={40}
         />
       </div>
