@@ -51,6 +51,24 @@ export function jsonLdScript(data: unknown): string {
  */
 export function coverThumb(url: string | null | undefined, px = 500): string | null {
   if (!url) return null;
+  // Wikimedia originals → thumbnail path. Full-size Commons photos reach
+  // 11 MB; the thumb endpoint serves the same image in tens of KB. Anonymous
+  // traffic reliably gets only the pre-generated bucket widths (arbitrary ones
+  // 400), so map px to the nearest bucket ≥ px. SVG/TIFF are skipped — their
+  // thumbs get an extra .png suffix this rewrite doesn't produce.
+  const wm = url.match(
+    /^https:\/\/upload\.wikimedia\.org\/wikipedia\/([^/]+)\/([0-9a-f])\/([0-9a-f]{2})\/([^/?#]+\.(?:jpe?g|png|webp))$/i,
+  );
+  if (wm) {
+    const bucket = px <= 120 ? 120 : px <= 250 ? 250 : px <= 330 ? 330 : 500;
+    return `https://upload.wikimedia.org/wikipedia/${wm[1]}/thumb/${wm[2]}/${wm[3]}/${wm[4]}/${bucket}px-${wm[4]}`;
+  }
+  // Supabase storage → image-transform endpoint: resizes and, via Accept
+  // negotiation, re-encodes to webp (a 5 MB original PNG comes back ~45 KB).
+  // Covers files that have no size in the URL at all (artist photos, avatars,
+  // uploaded covers).
+  const sb = url.match(/^(https:\/\/[a-z0-9]+\.supabase\.co)\/storage\/v1\/object\/public\/(.+)$/);
+  if (sb) return `${sb[1]}/storage/v1/render/image/public/${sb[2]}?width=${px}&quality=75`;
   return url
     .replace(/\/\d+x\d+(-\d)/, `/${px}x${px}$1`) // Deezer: 1000x1000-000000-…
     .replace(/\/\d+x\d+bb\.(jpg|png)/i, `/${px}x${px}bb.$1`) // iTunes

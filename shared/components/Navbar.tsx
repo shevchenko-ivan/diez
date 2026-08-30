@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
 import { TeButton } from "@/shared/components/TeButton";
 import { DiezLogo } from "@/shared/components/DiezLogo";
+import { coverThumb } from "@/lib/utils";
 import { InstallAppButton } from "@/shared/components/InstallAppButton";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 
@@ -211,7 +212,7 @@ export function Navbar() {
                     // (Google/Supabase) — пропускаємо /_next/image proxy.
                     // width/height — щоб уникнути CLS при swap-у з ініціала.
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={userAvatarUrl} alt="" width={28} height={28} className="w-full h-full object-cover" />
+                    <img src={coverThumb(userAvatarUrl, 120) as string} alt="" width={28} height={28} className="w-full h-full object-cover" />
                   ) : (
                     userInitial
                   )}

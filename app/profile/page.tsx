@@ -12,6 +12,7 @@ import Link from "next/link";
 import { TeButton } from "@/shared/components/TeButton";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { coverThumb } from "@/lib/utils";
 import { Suspense } from "react";
 
 async function signOut() {
@@ -81,7 +82,7 @@ async function ProfileDashboard() {
           <div className="w-24 h-24 mb-4 te-inset flex items-center justify-center rounded-full overflow-hidden">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              <img src={coverThumb(avatarUrl, 250) as string} alt="" className="w-full h-full object-cover" />
             ) : (
               <UserIcon size={40} style={{ color: "var(--text-muted)" }} />
             )}
