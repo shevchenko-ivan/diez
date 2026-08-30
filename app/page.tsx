@@ -9,13 +9,18 @@ import { localCover, localArtistPhoto } from "@/lib/cover-manifest";
 import { TOPICS } from "@/features/song/data/topics";
 import { getArtists } from "@/features/artist/services/artists";
 import { ArtistStrip } from "@/features/artist/components/ArtistStrip";
-import { getSavedSlugs, getMyPlaylists } from "@/features/playlist/actions/playlists";
-import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
-import { MySongCard } from "@/features/song/components/MySongCard";
 import { SiteFooter } from "@/shared/components/SiteFooter";
-import { createClient } from "@/lib/supabase/server";
+import { PersonalHomeSections } from "@/features/home/PersonalHomeSections";
 
-export const revalidate = 3600;
+// Fully static + ISR: the page carries nothing per-user at render time (the
+// personal sections and saved hearts hydrate client-side — see
+// PersonalHomeSections and SavedSlugsProvider), so it serves from the CDN
+// with ~50ms TTFB instead of a per-request server render. force-static is
+// required because the shared layout reads headers() (Save-Data), which would
+// otherwise keep the route dynamic — same pattern as the topic/instrument
+// listings.
+export const dynamic = "force-static";
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: "Diez — Акорди для гітари",
@@ -32,12 +37,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [trendingPage, freshSongs, artists, savedSlugs, myPlaylists] = await Promise.all([
+  const [trendingPage, freshSongs, artists] = await Promise.all([
     getSongsPage({ sortBy: "source_views", limit: 12 }),
     getFreshSongs(12),
     getArtists(12),
-    getSavedSlugs(),
-    getMyPlaylists(),
   ]);
 
   // Above-the-fold covers: swap in the first-party build-time snapshot where
@@ -55,21 +58,6 @@ export default async function HomePage() {
     photo_url: localArtistPhoto(a.slug) ?? a.photo_url,
   }));
 
-  // Songs the signed-in user submitted — shown with their publication status so
-  // authors can track them right from the home page. Empty (and the section
-  // hidden) for guests or users who haven't added anything.
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  let mySongs: Record<string, unknown>[] = [];
-  if (user) {
-    const { data } = await supabase
-      .from("songs")
-      .select("id, slug, title, artist, status, cover_image, cover_color")
-      .eq("submitted_by", user.id)
-      .order("created_at", { ascending: false })
-      .limit(8);
-    mySongs = (data ?? []) as Record<string, unknown>[];
-  }
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
@@ -123,7 +111,7 @@ export default async function HomePage() {
             <SongStrip
               variant="featured"
               initial={trending}
-              savedSlugs={Array.from(savedSlugs)}
+              savedSlugs={[]}
               loadMore={loadMoreTrending}
               initialExhausted={trending.length < 12}
             />
@@ -135,27 +123,6 @@ export default async function HomePage() {
           <section className="mb-10">
             <SectionHeader title="Виконавці" href="/artists" />
             <ArtistStrip initial={artistsLocal} initialExhausted={artistsLocal.length < 12} />
-          </section>
-        )}
-
-        {/* ── 3.5 Додані пісні (author's submissions + status) ────────────── */}
-        {mySongs.length > 0 && (
-          <section className="mb-10">
-            <SectionHeader title="Додані пісні" href="/profile" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 sm:gap-3">
-              {mySongs.slice(0, 4).map((song) => (
-                <MySongCard
-                  key={song.id as string}
-                  id={song.id as string}
-                  slug={song.slug as string}
-                  title={song.title as string}
-                  artist={song.artist as string}
-                  status={song.status as string}
-                  coverImage={(song.cover_image as string) ?? undefined}
-                  coverColor={(song.cover_color as string) ?? undefined}
-                />
-              ))}
-            </div>
           </section>
         )}
 
@@ -191,24 +158,17 @@ export default async function HomePage() {
             <SongStrip
               variant="featured"
               initial={fresh}
-              savedSlugs={Array.from(savedSlugs)}
+              savedSlugs={[]}
               loadMore={loadMoreFresh}
               initialExhausted={fresh.length < 12}
             />
           </section>
         )}
 
-        {/* ── 6. Мої списки ────────────────────────────────────────────────── */}
-        {myPlaylists.length > 0 && (
-          <section className="mb-10">
-            <SectionHeader title="Мої списки" href="/profile/lists" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 sm:gap-3">
-              {myPlaylists.slice(0, 4).map((p) => (
-                <PlaylistCard key={p.id} playlist={p} />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── 6. Персональні секції («Додані пісні» + «Мої списки») —
+            client-side, бо сторінка статична; гості не роблять жодного
+            запиту (див. PersonalHomeSections). */}
+        <PersonalHomeSections />
 
       </main>
 

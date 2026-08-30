@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/shared/components/ThemeProvider";
 import { Toaster } from "@/shared/components/Toaster";
 import { PostHogProvider } from "@/shared/components/PostHogProvider";
 import { LiteModeProvider } from "@/shared/components/LiteModeProvider";
+import { SavedSlugsProvider } from "@/shared/components/SavedSlugsProvider";
 import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -174,6 +175,7 @@ export default async function RootLayout({
         <ScrollbarAutoHide />
         <PostHogProvider>
           <LiteModeProvider initialLite={initialLite}>
+            <SavedSlugsProvider>
             <ThemeProvider>
               {/* Skip link — first focusable element on every page (WCAG 2.4.1).
                   Visually hidden until focused, then anchored to the top-left. */}
@@ -184,6 +186,7 @@ export default async function RootLayout({
               <Toaster />
               <CookieBanner />
             </ThemeProvider>
+            </SavedSlugsProvider>
           </LiteModeProvider>
         </PostHogProvider>
         <Analytics />

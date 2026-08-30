@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { createPortal } from "react-dom";
 import { Heart, X } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
@@ -9,6 +9,7 @@ import { getPlaylistsForSong, setSongPlaylists } from "@/features/playlist/actio
 import type { PlaylistSummary } from "@/features/playlist/types";
 import { getClient } from "@/lib/supabase/client";
 import { useHaptics } from "@/shared/hooks/useHaptics";
+import { SavedSlugsContext } from "@/shared/components/SavedSlugsProvider";
 
 interface Props {
   slug: string;
@@ -29,6 +30,15 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
   const { trigger } = useHaptics();
 
   useEffect(() => setSaved(initialSaved), [initialSaved]);
+
+  // Static pages (home, topic/instrument) can't know the user's saves at
+  // render time — the provider fetches them client-side and this upgrades the
+  // heart to "saved". Upgrade only: a server-provided initialSaved (dynamic
+  // pages) or a fresh user toggle must never be forced back to false.
+  const savedCtx = useContext(SavedSlugsContext);
+  useEffect(() => {
+    if (savedCtx?.has(slug)) setSaved(true);
+  }, [savedCtx, slug]);
 
   const prefetch = () => {
     if (prefetchStarted.current) return;
