@@ -5,6 +5,7 @@ import { HeroSearch } from "@/features/song/components/SongCard";
 import { SongStrip } from "@/features/song/components/SongStrip";
 import { loadMoreTrending, loadMoreFresh } from "@/features/song/actions/strip";
 import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
+import { localCover } from "@/lib/cover-manifest";
 import { TOPICS } from "@/features/song/data/topics";
 import { getArtists } from "@/features/artist/services/artists";
 import { ArtistStrip } from "@/features/artist/components/ArtistStrip";
@@ -39,7 +40,12 @@ export default async function HomePage() {
     getMyPlaylists(),
   ]);
 
-  const trending = trendingPage.songs;
+  // Above-the-fold covers: swap in the first-party build-time snapshot where
+  // available (tools/prefetch-covers.ts) — CDN URL stays as the fallback.
+  const trending = trendingPage.songs.map((s) => ({
+    ...s,
+    coverImage: localCover(s.slug) ?? s.coverImage,
+  }));
 
   // Songs the signed-in user submitted — shown with their publication status so
   // authors can track them right from the home page. Empty (and the section

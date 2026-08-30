@@ -57,3 +57,6 @@ next-env.d.ts
 # supabase CLI local state
 /supabase/.branches/
 /supabase/.temp/
+
+# build-time cover snapshot (tools/prefetch-covers.ts)
+/public/_covers/
