@@ -138,6 +138,12 @@ export function HeroSearch() {
   const [loadingMore, setLoadingMore] = useState(false);
   const offsetRef = useRef(0);
   const moreCtrlRef = useRef<AbortController | null>(null);
+  // First-page responses per term, so backspacing / retyping within the same
+  // visit renders instantly instead of re-hitting the network.
+  const memoRef = useRef<Map<string, {
+    songs: SongSuggestion[]; lyricsSongs: SongSuggestion[]; artists: ArtistSuggestion[];
+    hasMore: boolean; nextOffset: number;
+  }>>(new Map());
   const [activeIndex, setActiveIndex] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -153,6 +159,16 @@ export function HeroSearch() {
       setActiveIndex(-1);
       return;
     }
+    const cached = memoRef.current.get(term);
+    if (cached) {
+      setSongs(cached.songs);
+      setLyricsSongs(cached.lyricsSongs);
+      setArtists(cached.artists);
+      setHasMore(cached.hasMore);
+      offsetRef.current = cached.nextOffset;
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
@@ -164,9 +180,22 @@ export function HeroSearch() {
         setArtists(data.artists ?? []);
         setHasMore(!!data.hasMore);
         offsetRef.current = data.nextOffset ?? 0;
+        if (res.ok) {
+          memoRef.current.set(term, {
+            songs: data.songs ?? [],
+            lyricsSongs: data.lyricsSongs ?? [],
+            artists: data.artists ?? [],
+            hasMore: !!data.hasMore,
+            nextOffset: data.nextOffset ?? 0,
+          });
+          // Bound the memo — a long typing session shouldn't grow it forever.
+          if (memoRef.current.size > 50) {
+            memoRef.current.delete(memoRef.current.keys().next().value!);
+          }
+        }
       } catch { /* ignore */ }
       finally { setLoading(false); }
-    }, 180);
+    }, 120);
     return () => { clearTimeout(t); ctrl.abort(); };
   }, [q]);
 

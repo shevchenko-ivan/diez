@@ -52,6 +52,36 @@ function rateLimit(ip: string): boolean {
   return true;
 }
 
+type ArtistRow = { slug: string; name: string; photo_url: string | null; aliases: string[] | null };
+
+// Artist catalogue cache, module scope per edge instance. Without it every
+// first-page keystroke re-fetched the full list (~150 rows, ~30KB, 150-250ms)
+// sequentially ahead of the songs query. Artists change rarely; 5 minutes of
+// staleness in a suggest dropdown is invisible.
+let artistCache: { rows: ArtistRow[]; at: number } | null = null;
+const ARTIST_CACHE_TTL = 5 * 60_000;
+
+async function getAllArtists(sb: ReturnType<typeof getClient>): Promise<ArtistRow[]> {
+  if (artistCache && Date.now() - artistCache.at < ARTIST_CACHE_TTL) return artistCache.rows;
+  const res = await sb
+    .from("artists")
+    .select("slug, name, photo_url, aliases")
+    .eq("status", "approved")
+    .order("name");
+  let rows = res.data;
+  // Pre-027 fallback: no status column yet → list all.
+  if (res.error && isMissingStatusColumn(res.error)) {
+    ({ data: rows } = await sb
+      .from("artists")
+      .select("slug, name, photo_url, aliases")
+      .order("name"));
+  }
+  const out = (rows ?? []) as ArtistRow[];
+  // Never cache an errored/empty fetch — the next request should retry.
+  if (out.length) artistCache = { rows: out, at: Date.now() };
+  return out;
+}
+
 type SongRow = {
   slug: string;
   title: string;
@@ -165,24 +195,7 @@ export async function GET(req: Request) {
   let resolvedNames: string[] = [];
   if (isFirstPage && nq.length >= 2) {
     const needle = q.toLowerCase();
-    // Split rather than destructured with `let`: only `allArtists` is
-    // reassigned by the fallback below, and the v16 lint config wants every
-    // binding in a destructuring pattern to be reassigned before it allows one.
-    const artistsRes = await sb
-      .from("artists")
-      .select("slug, name, photo_url, aliases")
-      .eq("status", "approved")
-      .order("name");
-    let allArtists = artistsRes.data;
-    const artistsErr = artistsRes.error;
-    // Pre-027 fallback: no status column yet → list all.
-    if (artistsErr && isMissingStatusColumn(artistsErr)) {
-      ({ data: allArtists } = await sb
-        .from("artists")
-        .select("slug, name, photo_url, aliases")
-        .order("name"));
-    }
-    const matched = ((allArtists ?? []) as { slug: string; name: string; photo_url: string | null; aliases: string[] | null }[])
+    const matched = (await getAllArtists(sb))
       .filter((a) => {
         if (normalizeForSearch(a.name).includes(nq)) return true;
         return (a.aliases ?? []).some(
@@ -203,10 +216,13 @@ export async function GET(req: Request) {
   }
 
   // Chain .or() per token so PostgREST ANDs the token groups together.
+  // songs_search is a published-only view executed with owner rights: the
+  // anon RLS policy on songs blocks the ILIKE patterns from reaching the
+  // trigram indexes (ILIKE is not leakproof), degrading every keystroke to a
+  // ~350ms seq scan. Through the view the same query runs in ~50-80ms.
   let songsQuery = sb
-    .from("songs")
-    .select("slug, title, artist, difficulty, cover_image, cover_color, views")
-    .eq("status", "published");
+    .from("songs_search")
+    .select("slug, title, artist, difficulty, cover_image, cover_color, views");
   for (const tf of tokenFilters) songsQuery = songsQuery.or(tf);
   songsQuery = songsQuery.order("views", { ascending: false }).range(offset, offset + rawSize - 1);
   const songsRes = await songsQuery;

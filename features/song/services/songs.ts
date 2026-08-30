@@ -299,10 +299,12 @@ export const getSongsPage = unstable_cache(
   async (args: SongsPageArgs = {}): Promise<{ songs: Song[]; total: number }> => {
     if (!hasEnvVars) return { songs: [], total: 0 };
     const { q = "", difficulty, sortBy = "views", offset = 0, limit = 50, topic } = args;
+    // songs_search = published-only view with owner rights: under the anon RLS
+    // policy the ILIKE search patterns can't use the trigram indexes (ILIKE is
+    // not leakproof) and every uncached search seq-scans the catalogue.
     let qry = getClient()
-      .from("songs")
-      .select(SONG_LIST_COLUMNS, { count: "exact" })
-      .eq("status", "published");
+      .from("songs_search")
+      .select(SONG_LIST_COLUMNS, { count: "exact" });
     if (topic) {
       const t = getTopicBySlug(topic);
       if (!t) return { songs: [], total: 0 };
