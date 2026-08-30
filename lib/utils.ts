@@ -66,9 +66,12 @@ export function coverThumb(url: string | null | undefined, px = 500): string | n
   // Supabase storage → image-transform endpoint: resizes and, via Accept
   // negotiation, re-encodes to webp (a 5 MB original PNG comes back ~45 KB).
   // Covers files that have no size in the URL at all (artist photos, avatars,
-  // uploaded covers).
+  // uploaded covers). width alone does NOT keep the aspect ratio (a 640×640
+  // original came back 250×640) — resize=contain with a square box scales
+  // proportionally and leaves any cropping to the CSS object-cover, exactly
+  // like the untransformed original behaved.
   const sb = url.match(/^(https:\/\/[a-z0-9]+\.supabase\.co)\/storage\/v1\/object\/public\/(.+)$/);
-  if (sb) return `${sb[1]}/storage/v1/render/image/public/${sb[2]}?width=${px}&quality=75`;
+  if (sb) return `${sb[1]}/storage/v1/render/image/public/${sb[2]}?width=${px}&height=${px}&resize=contain&quality=75`;
   return url
     .replace(/\/\d+x\d+(-\d)/, `/${px}x${px}$1`) // Deezer: 1000x1000-000000-…
     .replace(/\/\d+x\d+bb\.(jpg|png)/i, `/${px}x${px}bb.$1`) // iTunes
