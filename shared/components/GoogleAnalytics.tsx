@@ -67,9 +67,17 @@ export function GoogleAnalytics() {
           gtag('config', '${GA_ID}');
         `}
       </Script>
+      {/* The heavy external bundle loads at browser idle (lazyOnload), not
+          during hydration: 171 KB + ~230 ms of main thread were competing with
+          LCP/INP on slow devices, and afterInteractive also emitted a preload
+          that put it on the critical path. The consent-default snippet above
+          stays afterInteractive — it must queue into dataLayer before this
+          file executes, and being inline it costs no network. Events queued
+          in between are replayed by gtag.js when it arrives, so nothing is
+          lost — the page_view just fires a moment later. */}
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
     </>
   );
