@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, ListMusic } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { getClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
 import { TeButton } from "@/shared/components/TeButton";
 import { DiezLogo } from "@/shared/components/DiezLogo";
@@ -41,13 +41,16 @@ export function Navbar() {
   };
 
   useEffect(() => {
-    const sb = createClient();
+    // The supabase client chunk loads lazily (see lib/supabase/client) — guard
+    // against unmount landing before the import resolves.
+    let disposed = false;
+    let unsubscribe: (() => void) | null = null;
 
     function fallbackName(email: string) {
       return email ? email.split("@")[0] : "";
     }
 
-    async function load() {
+    async function load(sb: Awaited<ReturnType<typeof getClient>>) {
       try {
         // getSession reads from localStorage — no network call, instant
         const { data: { session } } = await sb.auth.getSession();
@@ -71,22 +74,29 @@ export function Navbar() {
       }
     }
 
-    load();
+    (async () => {
+      const sb = await getClient();
+      if (disposed) return;
 
-    const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setNavUser(null); return; }
-      const email = session.user.email ?? "";
-      setNavUser({ email, isAdmin: false, displayName: fallbackName(email), avatarUrl: null });
-      sb.from("profiles").select("is_admin, username, avatar_url").eq("id", session.user.id).single()
-        .then(({ data }) => setNavUser({
-          email,
-          isAdmin: !!data?.is_admin,
-          displayName: data?.username?.trim() || fallbackName(email),
-          avatarUrl: data?.avatar_url ?? null,
-        }));
-    });
+      load(sb);
 
-    return () => listener.subscription.unsubscribe();
+      const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
+        if (!session) { setNavUser(null); return; }
+        const email = session.user.email ?? "";
+        setNavUser({ email, isAdmin: false, displayName: fallbackName(email), avatarUrl: null });
+        sb.from("profiles").select("is_admin, username, avatar_url").eq("id", session.user.id).single()
+          .then(({ data }) => setNavUser({
+            email,
+            isAdmin: !!data?.is_admin,
+            displayName: data?.username?.trim() || fallbackName(email),
+            avatarUrl: data?.avatar_url ?? null,
+          }));
+      });
+      if (disposed) { listener.subscription.unsubscribe(); return; }
+      unsubscribe = () => listener.subscription.unsubscribe();
+    })();
+
+    return () => { disposed = true; unsubscribe?.(); };
   }, []);
 
   // Close dropdown on outside click
@@ -113,7 +123,7 @@ export function Navbar() {
   }, [dropdownOpen, mobileOpen]);
 
   async function signOut() {
-    await createClient().auth.signOut();
+    await (await getClient()).auth.signOut();
     setDropdownOpen(false);
     window.location.href = "/";
   }

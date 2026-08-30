@@ -3,7 +3,7 @@
 import { useEffect, Suspense, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import type posthogJsType from "posthog-js";
-import { createClient } from "@/lib/supabase/client";
+import { getClient } from "@/lib/supabase/client";
 import { readConsent } from "./CookieBanner";
 
 /**
@@ -167,23 +167,33 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 function AuthIdentifier({ posthog }: { posthog: PostHogClient | null }) {
   useEffect(() => {
     if (!posthog) return;
-    const sb = createClient();
+    // The supabase chunk loads lazily — guard the subscription against an
+    // unmount that lands before the import resolves.
+    let disposed = false;
+    let unsubscribe: (() => void) | null = null;
 
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        posthog.identify(session.user.id, { email: session.user.email });
-      }
-    });
+    (async () => {
+      const sb = await getClient();
+      if (disposed) return;
 
-    const { data: listener } = sb.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        posthog.identify(session.user.id, { email: session.user.email });
-      } else if (event === "SIGNED_OUT") {
-        posthog.reset();
-      }
-    });
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          posthog.identify(session.user.id, { email: session.user.email });
+        }
+      });
 
-    return () => listener.subscription.unsubscribe();
+      const { data: listener } = sb.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          posthog.identify(session.user.id, { email: session.user.email });
+        } else if (event === "SIGNED_OUT") {
+          posthog.reset();
+        }
+      });
+      if (disposed) { listener.subscription.unsubscribe(); return; }
+      unsubscribe = () => listener.subscription.unsubscribe();
+    })();
+
+    return () => { disposed = true; unsubscribe?.(); };
   }, [posthog]);
 
   return null;

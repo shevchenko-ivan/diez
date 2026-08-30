@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { getClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useState } from "react";
 import { TeButton } from "@/shared/components/TeButton";
@@ -13,7 +13,7 @@ export function ForgotPasswordForm() {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = createClient();
+    const supabase = await getClient();
     setIsLoading(true);
     setError(null);
 

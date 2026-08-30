@@ -7,7 +7,7 @@ import { TeButton } from "@/shared/components/TeButton";
 import { AddToPlaylistPopover } from "@/features/playlist/components/AddToPlaylistPopover";
 import { getPlaylistsForSong, setSongPlaylists } from "@/features/playlist/actions/playlists";
 import type { PlaylistSummary } from "@/features/playlist/types";
-import { createClient } from "@/lib/supabase/client";
+import { getClient } from "@/lib/supabase/client";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 
 interface Props {
@@ -45,7 +45,7 @@ export function SaveHeartButton({ slug, initialSaved = false, variant = "floatin
     // Capture anchor rect before awaiting — currentTarget is nulled after await.
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-    const supabase = createClient();
+    const supabase = await getClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setAuthOpen(true);

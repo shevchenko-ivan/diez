@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { getClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { TeButton } from "@/shared/components/TeButton";
 
@@ -9,7 +9,7 @@ export function GoogleAuthButton({ label = "Продовжити з Google" }: {
   const [error, setError] = useState<string | null>(null);
 
   const handleGoogle = async () => {
-    const supabase = createClient();
+    const supabase = await getClient();
     setIsLoading(true);
     setError(null);
 

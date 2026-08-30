@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Heart } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
 import { BottomSheet } from "@/shared/components/BottomSheet";
-import { createClient } from "@/lib/supabase/client";
+import { getClient } from "@/lib/supabase/client";
 import { useHaptics } from "@/shared/hooks/useHaptics";
 import { AddArtistToPlaylistPopover } from "./AddArtistToPlaylistPopover";
 
@@ -47,7 +47,7 @@ export function SaveArtistButton({
     // gets nulled across the async boundary.
     anchorRectRef.current = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-    const supabase = createClient();
+    const supabase = await getClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setAuthOpen(true);
