@@ -1,15 +1,19 @@
-// Build-time cover snapshot for the home page's above-the-fold strip.
+// Build-time snapshot of the home page's images.
 //
-// Downloads the covers of the current "Топ популярних" songs (the same query
-// the home page runs), compresses them to 500px webp and writes them to
-// public/_covers/ together with a slug → path manifest. The page then serves
-// its LCP image first-party — no third-party DNS/TLS on the critical path and
-// a smaller payload than the source CDNs ship.
+// Downloads the covers of the current "Топ популярних" + "Нові пісні" songs
+// (the same queries the home page runs) and the photos of ALL approved
+// artists, compresses them to 500px webp and writes them to public/_covers/
+// together with a manifest ({"s:<slug>": path, "a:<slug>": path}). The page
+// swaps them in with the CDN URL as fallback, so the first screen renders
+// entirely first-party — no third-party DNS/TLS on the LCP critical path.
 //
-// Freshness: the list is re-snapshotted on every deploy. A song that rotates
-// into the top between deploys is simply absent from the manifest and renders
-// from its CDN URL exactly as before — stale copies are impossible by
-// construction (unused files are wiped, hashes bust browser caches).
+// Artists are snapshotted in full (≈150 photos, ~30-50 KB each) instead of
+// replicating the strip's ranking logic (score aggregation + curated order,
+// features/artist/services/artists.ts) — whatever the strip shows is covered.
+//
+// Freshness: re-snapshotted on every deploy. A song/artist missing from the
+// manifest renders from its CDN URL exactly as before; content hashes in the
+// filenames bust caches; the whole directory is wiped before regeneration.
 //
 // This script must NEVER fail the build: every failure path logs and exits 0.
 import { mkdir, rm, writeFile, readFile } from "node:fs/promises";
@@ -18,7 +22,8 @@ import path from "node:path";
 import { coverThumb } from "../lib/utils";
 
 const OUT_DIR = path.join(process.cwd(), "public", "_covers");
-const LIMIT = 12; // matches getSongsPage({ sortBy: "source_views", limit: 12 })
+const SONGS_LIMIT = 12; // matches both home-page song strips' limit
+const CONCURRENCY = 8;
 
 // `npm run build` locally doesn't load .env.local (Next does that only for its
 // own process) — read it manually so the snapshot works outside Vercel too.
@@ -35,24 +40,39 @@ async function loadEnvLocal() {
   }
 }
 
+type Task = { key: string; slug: string; url: string };
+
 async function main() {
   await loadEnvLocal();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) {
+  if (!base || !key) {
     console.log("[covers] Supabase env missing — skipping snapshot");
     return;
   }
+  const rest = async (q: string): Promise<Record<string, string | null>[]> => {
+    const r = await fetch(`${base}/rest/v1/${q}`, { headers: { apikey: key } });
+    if (!r.ok) throw new Error(`REST ${q.split("?")[0]}: HTTP ${r.status}`);
+    return r.json();
+  };
 
-  const res = await fetch(
-    `${url}/rest/v1/songs_search?select=slug,cover_image&order=source_views.desc.nullslast&limit=${LIMIT}`,
-    { headers: { apikey: key } },
-  );
-  if (!res.ok) {
-    console.log(`[covers] top-songs fetch failed (HTTP ${res.status}) — skipping snapshot`);
+  const tasks: Task[] = [];
+  try {
+    const [trending, fresh, artists] = await Promise.all([
+      rest(`songs_search?select=slug,cover_image&order=source_views.desc.nullslast&limit=${SONGS_LIMIT}`),
+      rest(`songs_search?select=slug,cover_image&order=created_at.desc&limit=${SONGS_LIMIT}`),
+      rest(`artists?select=slug,photo_url&status=eq.approved`),
+    ]);
+    for (const r of [...trending, ...fresh]) {
+      if (r.slug && r.cover_image) tasks.push({ key: `s:${r.slug}`, slug: r.slug, url: r.cover_image });
+    }
+    for (const r of artists) {
+      if (r.slug && r.photo_url) tasks.push({ key: `a:${r.slug}`, slug: r.slug, url: r.photo_url });
+    }
+  } catch (e) {
+    console.log(`[covers] ${String(e)} — skipping snapshot`);
     return;
   }
-  const rows = (await res.json()) as { slug: string; cover_image: string | null }[];
 
   // sharp is a transitive dependency of next; if a future lockfile drops it,
   // fall back to storing the CDN bytes untouched rather than failing.
@@ -67,38 +87,62 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
 
   const manifest: Record<string, string> = {};
-  for (const row of rows) {
-    if (!row.cover_image) continue;
-    try {
-      const src = coverThumb(row.cover_image, 500) ?? row.cover_image;
-      const r = await fetch(src);
-      if (!r.ok) {
-        console.log(`[covers] ${row.slug}: HTTP ${r.status} — skip`);
-        continue;
-      }
-      let buf: Buffer = Buffer.from(await r.arrayBuffer());
-      let ext = "jpg";
-      if (sharp) {
-        buf = await sharp(buf)
-          .resize(500, 500, { fit: "inside", withoutEnlargement: true })
-          .webp({ quality: 82 })
-          .toBuffer();
-        ext = "webp";
-      }
-      // Content hash in the name: a re-snapshot with a changed cover gets a
-      // new URL, so long-lived browser/CDN caches can never serve stale bytes.
-      const hash = createHash("sha1").update(buf).digest("hex").slice(0, 8);
-      const file = `${row.slug}.${hash}.${ext}`;
-      await writeFile(path.join(OUT_DIR, file), buf);
-      manifest[row.slug] = `/_covers/${file}`;
-      console.log(`[covers] ${row.slug}: ${(buf.length / 1024).toFixed(0)} KB`);
-    } catch (e) {
-      console.log(`[covers] ${row.slug}: ${String(e)} — skip`);
+  // Songs sharing one cover (or an artist photo doubling as a cover) download
+  // and encode once.
+  const byUrl = new Map<string, Promise<string | null>>();
+  let done = 0;
+
+  const processOne = async (t: Task): Promise<void> => {
+    let file = await byUrl.get(t.url);
+    if (file === undefined) {
+      const p = (async (): Promise<string | null> => {
+        const src = coverThumb(t.url, 500) ?? t.url;
+        // Wikimedia 429s concurrent bursts — back off and retry a couple of
+        // times before giving up on a file.
+        let r = await fetch(src);
+        for (let retry = 0; !r.ok && r.status === 429 && retry < 3; retry++) {
+          await new Promise((res) => setTimeout(res, 4000 * (retry + 1)));
+          r = await fetch(src);
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        let buf: Buffer = Buffer.from(await r.arrayBuffer());
+        let ext = "jpg";
+        if (sharp) {
+          buf = await sharp(buf)
+            .resize(500, 500, { fit: "inside", withoutEnlargement: true })
+            .webp({ quality: 82 })
+            .toBuffer();
+          ext = "webp";
+        }
+        const hash = createHash("sha1").update(buf).digest("hex").slice(0, 8);
+        const name = `${t.slug}.${hash}.${ext}`;
+        await writeFile(path.join(OUT_DIR, name), buf);
+        return name;
+      })();
+      byUrl.set(t.url, p.catch(() => null));
+      file = await p.catch((e) => {
+        console.log(`[covers] ${t.key}: ${String(e)} — skip`);
+        return null;
+      });
+    } else {
+      file = await file;
     }
-  }
+    if (file) {
+      manifest[t.key] = `/_covers/${file}`;
+      done++;
+    }
+  };
+
+  // Bounded parallelism — stay gentle with the CDNs (Wikimedia 429s bursts).
+  const queue = [...tasks];
+  await Promise.all(
+    Array.from({ length: CONCURRENCY }, async () => {
+      for (let t = queue.shift(); t; t = queue.shift()) await processOne(t);
+    }),
+  );
 
   await writeFile(path.join(OUT_DIR, "manifest.json"), JSON.stringify(manifest));
-  console.log(`[covers] snapshot: ${Object.keys(manifest).length}/${rows.length} covers`);
+  console.log(`[covers] snapshot: ${done}/${tasks.length} images`);
 }
 
 main().catch((e) => console.log("[covers] failed:", String(e)));

@@ -5,7 +5,7 @@ import { HeroSearch } from "@/features/song/components/SongCard";
 import { SongStrip } from "@/features/song/components/SongStrip";
 import { loadMoreTrending, loadMoreFresh } from "@/features/song/actions/strip";
 import { getSongsPage, getFreshSongs } from "@/features/song/services/songs";
-import { localCover } from "@/lib/cover-manifest";
+import { localCover, localArtistPhoto } from "@/lib/cover-manifest";
 import { TOPICS } from "@/features/song/data/topics";
 import { getArtists } from "@/features/artist/services/artists";
 import { ArtistStrip } from "@/features/artist/components/ArtistStrip";
@@ -45,6 +45,14 @@ export default async function HomePage() {
   const trending = trendingPage.songs.map((s) => ({
     ...s,
     coverImage: localCover(s.slug) ?? s.coverImage,
+  }));
+  const fresh = freshSongs.map((s) => ({
+    ...s,
+    coverImage: localCover(s.slug) ?? s.coverImage,
+  }));
+  const artistsLocal = artists.map((a) => ({
+    ...a,
+    photo_url: localArtistPhoto(a.slug) ?? a.photo_url,
   }));
 
   // Songs the signed-in user submitted — shown with their publication status so
@@ -126,7 +134,7 @@ export default async function HomePage() {
         {artists.length > 0 && (
           <section className="mb-10">
             <SectionHeader title="Виконавці" href="/artists" />
-            <ArtistStrip initial={artists} initialExhausted={artists.length < 12} />
+            <ArtistStrip initial={artistsLocal} initialExhausted={artistsLocal.length < 12} />
           </section>
         )}
 
@@ -182,10 +190,10 @@ export default async function HomePage() {
             <SectionHeader title="Щойно на струнах" href="/songs?sort=new" />
             <SongStrip
               variant="featured"
-              initial={freshSongs}
+              initial={fresh}
               savedSlugs={Array.from(savedSlugs)}
               loadMore={loadMoreFresh}
-              initialExhausted={freshSongs.length < 12}
+              initialExhausted={fresh.length < 12}
             />
           </section>
         )}

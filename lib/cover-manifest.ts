@@ -1,14 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-// Build-time cover snapshot (see tools/prefetch-covers.ts): top-list covers
-// are downloaded at build, compressed and served first-party from /public.
-// The manifest maps slug → local path; a song that isn't in it (rotated into
-// the top after the last build, or the snapshot was skipped) falls back to
-// its CDN URL. Server-only — reads the filesystem.
+// Build-time image snapshot (see tools/prefetch-covers.ts): home-page covers
+// and artist photos are downloaded at build, compressed and served
+// first-party from /public. The manifest maps namespaced keys ("s:<slug>" for
+// songs, "a:<slug>" for artists) → local path; anything missing (rotated in
+// after the last build, or the snapshot was skipped) falls back to its CDN
+// URL. Server-only — reads the filesystem.
 let cache: Record<string, string> | null | undefined;
 
-export function localCover(slug: string): string | null {
+function lookup(key: string): string | null {
   if (cache === undefined) {
     try {
       cache = JSON.parse(
@@ -18,5 +19,13 @@ export function localCover(slug: string): string | null {
       cache = null;
     }
   }
-  return cache?.[slug] ?? null;
+  return cache?.[key] ?? null;
+}
+
+export function localCover(slug: string): string | null {
+  return lookup(`s:${slug}`);
+}
+
+export function localArtistPhoto(slug: string): string | null {
+  return lookup(`a:${slug}`);
 }

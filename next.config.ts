@@ -72,6 +72,15 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      // Build-time image snapshot (tools/prefetch-covers.ts): filenames carry
+      // a content hash, so the bytes behind a URL can never change — cache
+      // forever instead of Vercel's default max-age=0 revalidation.
+      {
+        source: "/_covers/:file*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
     ];
   },
   async redirects() {
