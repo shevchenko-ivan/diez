@@ -122,6 +122,13 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href={`https://${phAssetsHost}`} />
         <link rel="dns-prefetch" href={phIngest.origin} />
 
+        {/* Full preconnect for the cover CDN: the LCP element on the home page
+            is a song-card cover served from Deezer's CDN, so DNS+TLS to it sit
+            directly on the LCP critical path (~300-500ms on slow mobile).
+            Unlike the lazy PostHog origins above, this connection is used by
+            the very first paint of the card grid — preconnect is honest here. */}
+        <link rel="preconnect" href="https://cdn-images.dzcdn.net" />
+
         {/* dns-prefetch (lighter than preconnect — only DNS, no TLS) for
             YouTube. The iframe API is only loaded when the user taps play
             on a song page, so a full preconnect would waste a handshake on

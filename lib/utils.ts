@@ -72,6 +72,12 @@ export function coverThumb(url: string | null | undefined, px = 500): string | n
   // like the untransformed original behaved.
   const sb = url.match(/^(https:\/\/[a-z0-9]+\.supabase\.co)\/storage\/v1\/object\/public\/(.+)$/);
   if (sb) return `${sb[1]}/storage/v1/render/image/public/${sb[2]}?width=${px}&height=${px}&resize=contain&quality=75`;
+  // YouTube video thumbs used as fallback covers: maxresdefault reaches
+  // 210 KB. mq (320×180) / hq720 (1280×720) are the 16:9 variants without the
+  // letterbox bars that hqdefault/sddefault bake in (bars would show through
+  // a square object-cover crop).
+  const yt = url.match(/^(https:\/\/i\.ytimg\.com\/vi\/[^/]+\/)(?:maxres|sd|hq)?default\.jpg$/);
+  if (yt) return `${yt[1]}${px <= 320 ? "mqdefault" : "hq720"}.jpg`;
   return url
     .replace(/\/\d+x\d+(-\d)/, `/${px}x${px}$1`) // Deezer: 1000x1000-000000-…
     .replace(/\/\d+x\d+bb\.(jpg|png)/i, `/${px}x${px}bb.$1`) // iTunes
