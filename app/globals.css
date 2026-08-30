@@ -127,27 +127,35 @@
   line-gap-override: 0%;
 }
 
-/* ── e-Ukraine Head — display cut for headings (h1/h2) ──────────────────────── */
+/* ── e-Ukraine Head — display cut for headings (h1/h2) ────────────────────────
+   font-display: optional (НЕ swap, як у текстових faces вище): h1 — LCP-елемент
+   головної, і late swap заголовка перераховувався симулятором PSI як новий
+   LCP-кандидат у момент довантаження шрифта (лаб. LCP 7-8с при польовому 2.3с,
+   ~24 бали Lighthouse). optional: якщо шрифт не встиг за ~100мс блок-вікно —
+   сторінка живе з метрично-підігнаним фолбеком (див. size-adjust faces вище),
+   перемальовки нема. preload у layout.tsx лишається — на нормальному з'єднанні
+   шрифт встигає, і брендовий вигляд зберігається; з другого візиту він у кеші
+   завжди. Текстові faces (e-Ukraine) лишаються swap — вони не LCP. */
 @font-face {
   font-family: 'e-Ukraine Head';
   src: url('/fonts/e-UkraineHead-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 @font-face {
   font-family: 'e-Ukraine Head';
   src: url('/fonts/e-UkraineHead-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 @font-face {
   font-family: 'e-Ukraine Head';
   src: url('/fonts/e-UkraineHead-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @tailwind base;
