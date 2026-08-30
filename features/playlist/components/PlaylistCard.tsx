@@ -71,8 +71,14 @@ export function PlaylistCard({ playlist, publicLink = false }: Props) {
                   ["--fan-rest" as string]: `rotate(${rotation}deg)`,
                   ["--fan-hover" as string]: `rotate(${hoverRotation}deg) ${hoverTranslate}`,
                   zIndex: isCenter ? 3 : 1,
-                  backgroundImage: isImg ? `url(${c})` : undefined,
-                  background: !isImg ? `linear-gradient(145deg, ${c}CC, ${c}66)` : undefined,
+                  // Both branches go through background-image (a gradient is a
+                  // valid image value). Mixing the `background` SHORTHAND with
+                  // `backgroundImage` in one style object is a trap on
+                  // client-side mounts: React writes undefined keys as '', and
+                  // assigning ''to the shorthand via CSSOM wipes the longhand
+                  // set just before it — the covers vanished when this card
+                  // moved into the client-rendered PersonalHomeSections.
+                  backgroundImage: isImg ? `url(${c})` : `linear-gradient(145deg, ${c}CC, ${c}66)`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                   boxShadow: "0 6px 16px rgba(0,0,0,0.18), 0 0 0 3px var(--bg)",
