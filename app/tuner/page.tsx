@@ -4,13 +4,26 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { GuitarTuner } from "@/features/tuner/components/GuitarTuner";
 import { jsonLdScript } from "@/lib/utils";
 
+// Title targets the query as typed. «тюнер для гітари онлайн» has no strong
+// Ukrainian-language result at all (SERP audit 31.08.2026: the top is ru/en
+// tools) — but the old title «Тюнер — Diez» contained neither «гітара» nor
+// «онлайн», so the page couldn't rank for the very query it answers.
 export const metadata: Metadata = {
-  title: "Тюнер — Diez",
-  description: "Хроматичний тюнер для гітари. Увімкніть мікрофон і настройте гітару за стандартним строєм EADGBE.",
+  title: "Тюнер для гітари онлайн — налаштування через мікрофон | Diez",
+  description:
+    "Безкоштовний хроматичний тюнер для гітари онлайн українською. Увімкніть мікрофон — і настройте гітару за строєм EADGBE прямо в браузері, без застосунків.",
+  keywords: [
+    "тюнер для гітари онлайн",
+    "тюнер для гітари",
+    "налаштувати гітару онлайн",
+    "настроїти гітару через мікрофон",
+    "тюнер онлайн українською",
+    "гітарний тюнер",
+  ],
   alternates: { canonical: "/tuner" },
   openGraph: {
-    title: "Тюнер — Diez",
-    description: "Настройте гітару через мікрофон за стандартним строєм EADGBE.",
+    title: "Тюнер для гітари онлайн — налаштування через мікрофон | Diez",
+    description: "Настройте гітару через мікрофон за стандартним строєм EADGBE — безкоштовно, у браузері.",
     type: "website",
     url: "/tuner",
   },
@@ -58,6 +71,48 @@ const howToLd = {
   ],
 };
 
+// FAQPage schema — the «як настроїти гітару …» question cluster (тюнером /
+// без тюнера / на слух / через телефон) is the long tail this page and the
+// /learn article share. Same invisible-JSON-LD pattern as the song pages.
+const faqLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Який стрій показує тюнер?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Тюнер хроматичний — він розпізнає будь-яку ноту, тож підходить і для стандартного строю гітари EADGBE (мі-ля-ре-соль-сі-мі), і для знижених строїв. Орієнтуйтеся на назву ноти та відхилення в центах.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Чи потрібно щось встановлювати або платити?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ні. Тюнер працює безкоштовно прямо в браузері — на телефоні чи ноутбуці. Потрібен лише дозвіл на доступ до мікрофона.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Як настроїти гітару без тюнера?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Гітару можна настроїти на слух за п'ятим ладом: затиснута на 5-му ладу струна має звучати як наступна відкрита (виняток — третя струна, її тиснуть на 4-му ладу). Покроково цей і інші способи розібрані в статті «Як настроїти гітару» в розділі Навчання на Diez.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Чому гітара швидко розстроюється?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Найчастіші причини — нові струни, які ще тягнуться, перепади температури й вологості та слабкі кілки. Нові струни варто кілька разів акуратно потягнути і настроїти повторно; після цього стрій тримається значно довше.",
+      },
+    },
+  ],
+};
+
 export default function TunerPage() {
   return (
     <PageShell maxWidth="4xl">
@@ -66,8 +121,13 @@ export default function TunerPage() {
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: jsonLdScript(howToLd) }}
       />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }}
+      />
       <PageHeader
-        title="Тюнер"
+        title="Тюнер для гітари онлайн"
         subtitle="Стандартний стрій EADGBE — увімкніть мікрофон і грайте"
       />
       <GuitarTuner />
