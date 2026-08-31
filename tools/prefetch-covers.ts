@@ -146,6 +146,23 @@ async function main() {
     }),
   );
 
+  // Second chance for anything that failed the main pass: sequential, after a
+  // long pause, so a Wikimedia rate-limit window has expired. A missed file
+  // silently falls back to the hotlinked CDN URL — which, for Wikimedia,
+  // now also plants a third-party cookie on the page and costs the
+  // Best-Practices audit (caught in prod on 2026-08-31: one artist photo
+  // missed the snapshot and the homepage served upload.wikimedia.org
+  // directly). One retry lap closes the overwhelming majority of those.
+  const missed = tasks.filter((t) => !(t.key in manifest));
+  if (missed.length > 0) {
+    console.log(`[covers] retry pass for ${missed.length} missed file(s)…`);
+    await new Promise((res) => setTimeout(res, 15_000));
+    for (const t of missed) {
+      byUrl.delete(t.url);
+      await processOne(t);
+    }
+  }
+
   await writeFile(path.join(OUT_DIR, "manifest.json"), JSON.stringify(manifest));
   console.log(`[covers] snapshot: ${done}/${tasks.length} images`);
 }
