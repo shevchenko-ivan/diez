@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Guitar } from "lucide-react";
 import { coverThumb } from "@/lib/utils";
 
@@ -13,32 +12,33 @@ import { coverThumb } from "@/lib/utils";
 // (--bg → --surface-dk), so it stays warm and a touch darker than the row in
 // both light and dark themes. Fills its parent — the parent controls size,
 // aspect ratio and border radius.
+//
+// Deliberately a plain <img>, NOT next/image. Covers are served pre-encoded
+// from /_covers (or straight from the source CDN), so next/image's optimizer
+// added nothing here (`unoptimized`) — while its lazy/priority handling kept
+// planting <link rel="preload"> tags: next/image emits one for `priority`,
+// `fetchPriority="high"` AND plain `loading="eager"` alike, and React SSR
+// itself emits one for any eager/high-priority <img> (both verified
+// 2026-08-31; six head preloads once competed with the font preloads and
+// cost 10 PSI points). A plain lazy <img> gets no preload, and unlocks a
+// real srcset for the two snapshot cuts.
 
 interface SongCoverProps {
   src?: string | null;
   alt: string;
   /** Hover tooltip — kept for SEO parity with the previous markup. */
   title?: string;
-  /** Use next/image `fill` (parent must be positioned). Otherwise pass width/height. */
+  /** Absolutely-fill the (positioned) parent. Otherwise pass width/height. */
   fill?: boolean;
   width?: number;
   height?: number;
+  /** srcset slot sizes; defaults to `${width}px` when width is given. */
   sizes?: string;
-  priority?: boolean;
   /**
-   * Render a plain `<img loading="eager">` instead of next/image — the ONLY
-   * un-lazy path that adds no `<head>` preload. Two traps mapped by building
-   * every variant (2026-08-31):
-   *  - next/image emits `<link rel="preload">` for `priority`,
-   *    `fetchPriority="high"` AND plain `loading="eager"` alike;
-   *  - React's SSR itself emits a preload for ANY `<img>` carrying
-   *    `fetchPriority="high"`, plain tags included.
-   * Hence: plain img, eager, and deliberately NO fetchPriority — Chrome
-   * bumps in-viewport images on its own after layout. Six head preloads
-   * once competed with the font preloads and cost 10 PSI points.
-   * Nothing else is lost: covers are `unoptimized` anyway (no srcset), and
-   * the onError fallback works identically on `<img>`. Takes precedence
-   * over `priority`.
+   * Eager-load (out of the browser's lazy queue) — for covers on the first
+   * screen, one of which is the mobile LCP element. React SSR still emits a
+   * preload link for an eager <img>, so grant this only to genuinely visible
+   * cards; a below-the-fold eager cover is a wasted head preload.
    */
   plainEager?: boolean;
   /** Guitar icon size for the fallback. Scale to the container. */
@@ -53,7 +53,6 @@ export function SongCover({
   width,
   height,
   sizes,
-  priority,
   plainEager,
   iconSize = 24,
 }: SongCoverProps) {
@@ -62,6 +61,18 @@ export function SongCover({
   // Serve directly from the source CDN (bypass Vercel's Image Optimization
   // quota), downscaled via the URL so the payload stays light.
   const thumb = coverThumb(src);
+
+  // Snapshot covers ship in two cuts — 500px and a `.300.webp` twin under the
+  // same hash (tools/prefetch-covers.ts) — so the browser picks by slot size
+  // and DPR: PSI's emulated phone (150px slot, DPR 1.75) and real DPR-2
+  // phones take the 300px cut, DPR-3 screens keep the full 500px. CDN
+  // fallback URLs have no twin, so they stay single-candidate.
+  const isSnapshot =
+    typeof thumb === "string" && thumb.startsWith("/_covers/") && thumb.endsWith(".webp");
+  const srcSet = isSnapshot
+    ? `${(thumb as string).replace(/\.webp$/, ".300.webp")} 300w, ${thumb} 500w`
+    : undefined;
+  const sizesAttr = srcSet ? (sizes ?? (width ? `${width}px` : "100vw")) : undefined;
 
   return (
     <div
@@ -73,44 +84,24 @@ export function SongCover({
       }}
     >
       {showImage ? (
-        plainEager ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumb as string}
-            alt={alt}
-            title={title}
-            loading="eager"
-            decoding="async"
-            width={fill ? undefined : width}
-            height={fill ? undefined : height}
-            className={fill ? "absolute inset-0 w-full h-full object-cover" : "w-full h-full object-cover"}
-            onError={() => setErrored(true)}
-          />
-        ) : fill ? (
-          <Image
-            src={thumb as string}
-            alt={alt}
-            title={title}
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumb as string}
+          srcSet={srcSet}
+          sizes={sizesAttr}
+          alt={alt}
+          title={title}
+          loading={plainEager ? "eager" : "lazy"}
+          decoding="async"
+          width={fill ? undefined : width}
+          height={fill ? undefined : height}
+          className={
             fill
-            sizes={sizes}
-            priority={priority}
-            unoptimized
-            className="object-cover"
-            onError={() => setErrored(true)}
-          />
-        ) : (
-          <Image
-            src={thumb as string}
-            alt={alt}
-            title={title}
-            width={width}
-            height={height}
-            priority={priority}
-            unoptimized
-            className="w-full h-full object-cover"
-            onError={() => setErrored(true)}
-          />
-        )
+              ? "absolute inset-0 w-full h-full object-cover"
+              : "w-full h-full object-cover"
+          }
+          onError={() => setErrored(true)}
+        />
       ) : (
         <span
           aria-hidden="true"

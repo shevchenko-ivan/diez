@@ -61,7 +61,11 @@ export function TopSongCard({
           alt={`Обкладинка пісні «${title}» — ${artist}`}
           title={`${title} — ${artist}`}
           fill
-          sizes="(max-width: 768px) 45vw, 17vw"
+          // Exact slot widths (SongStrip's CARD_W is w-[150px] sm:w-[200px]):
+          // accurate sizes are what let the 300w srcset candidate win the
+          // pick on phones — the old 45vw guess (~185px) overshot the slot
+          // and pushed high-DPR picks back to 500w.
+          sizes="(max-width: 639px) 150px, 200px"
           // The trending strip starts ~390px down, so on a 412x823 phone its
           // first cards are ON the first screen, and one of them IS the
           // mobile LCP element (150x150 = 22500px² beats the hero h1's

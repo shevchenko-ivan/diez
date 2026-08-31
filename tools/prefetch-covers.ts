@@ -105,10 +105,12 @@ async function main() {
           r = await fetch(src);
         }
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        let buf: Buffer = Buffer.from(await r.arrayBuffer());
+        const orig: Buffer = Buffer.from(await r.arrayBuffer());
+        let buf: Buffer = orig;
         let ext = "jpg";
+        let small: Buffer | null = null;
         if (sharp) {
-          buf = await sharp(buf)
+          buf = await sharp(orig)
             .resize(500, 500, { fit: "inside", withoutEnlargement: true })
             // q75 over q82: ~22% smaller on the heavy photographic covers
             // (58 KB → 45 KB measured on a 500px Deezer source) with nothing
@@ -118,10 +120,25 @@ async function main() {
             .webp({ quality: 75 })
             .toBuffer();
           ext = "webp";
+          // 300px twin for srcset (SongCover derives its URL by convention:
+          // `<base>.300.webp` next to the 500px cut, same hash). 300 and not
+          // 250: cards render at 150 CSS px on phones and Lighthouse/PSI
+          // emulates DPR 1.75, i.e. 262.5 physical px — a 250w candidate
+          // would lose the srcset pick to 500w, a 300w wins it. Encoded from
+          // the original bytes, not the 500px webp, to avoid double lossy.
+          small = await sharp(orig)
+            .resize(300, 300, { fit: "inside", withoutEnlargement: true })
+            .webp({ quality: 75 })
+            .toBuffer();
         }
         const hash = createHash("sha1").update(buf).digest("hex").slice(0, 8);
         const name = `${t.slug}.${hash}.${ext}`;
+        // Both cuts must land or neither: a manifest entry whose .300 twin is
+        // missing would put a 404 into srcset and trip the onError fallback.
         await writeFile(path.join(OUT_DIR, name), buf);
+        if (small) {
+          await writeFile(path.join(OUT_DIR, name.replace(/\.webp$/, ".300.webp")), small);
+        }
         return name;
       })();
       byUrl.set(t.url, p.catch(() => null));
