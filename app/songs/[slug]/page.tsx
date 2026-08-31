@@ -7,6 +7,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getSongBySlug, getSongSlugRedirect, getSongsByArtist, getSongsSharingChords, applyVariant } from "@/features/song/services/songs";
+import { chordPageFor, type ChordPage } from "@/features/song/data/chord-pages";
 import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongActions } from "@/features/song/components/SongActions";
 import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
@@ -418,6 +419,12 @@ export default async function SongPage({
           — перемкніть інструмент над акордами й транспонуйте тональність у будь-яку зручну.
         </p>
 
+        {/* Chord dictionary links — one line, all viewports. Feeds crawl +
+            equity from every song page into /chords/<slug> landings (the
+            dictionary pages link songs back, closing the loop). Exact-quality
+            matches only: Am7 has no page and silently drops out. */}
+        <ChordDictionaryLinks chords={song.chords} />
+
         {/* Report mechanism (Apple App Review 1.2 — UGC) */}
         <div className="mt-3">
           <ReportButton slug={slug} />
@@ -501,6 +508,37 @@ async function AdminEditSheetButton({ slug, variantId }: { slug: string; variant
       <Pencil size={14} />
       Редагувати
     </TeButton>
+  );
+}
+
+// Inline chord-dictionary strip under the lyrics: the song's chords that
+// have a /chords/<slug> landing page, deduped (flat spellings collapse into
+// their sharp-canonical page).
+function ChordDictionaryLinks({ chords }: { chords: string[] | null }) {
+  const pages = Array.from(new Set(chords ?? []))
+    .map(chordPageFor)
+    .filter((p): p is ChordPage => !!p)
+    .filter((p, i, arr) => arr.findIndex((x) => x.slug === p.slug) === i)
+    .slice(0, 10);
+  if (pages.length === 0) return null;
+  return (
+    <p className="mt-2 text-sm" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+      Як затискати акорди з пісні:{" "}
+      {pages.map((p, i) => (
+        <span key={p.slug}>
+          {i > 0 && ", "}
+          <Link
+            href={`/chords/${p.slug}`}
+            className="hover:underline"
+            style={{ color: "var(--text-mid)" }}
+            title={`Акорд ${p.name} (${p.ukr}) — аплікатура`}
+          >
+            {p.name}
+          </Link>
+        </span>
+      ))}
+      .
+    </p>
   );
 }
 

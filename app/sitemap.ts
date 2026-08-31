@@ -3,6 +3,7 @@ import { getAllSongCovers } from "@/features/song/services/songs";
 import { getRankedArtists } from "@/features/artist/services/artists";
 import { TOPICS } from "@/features/song/data/topics";
 import { INSTRUMENTS } from "@/features/song/data/instruments";
+import { CHORD_PAGES } from "@/features/song/data/chord-pages";
 import { ARTICLES } from "@/features/learn/articles";
 import { siteUrl } from "@/lib/utils";
 
@@ -64,6 +65,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    // Chord dictionary landings (`/chords/<slug>`) — «акорд am на гітарі»
+    // class queries; 29 evergreen pages generated from the voicing data.
+    ...CHORD_PAGES.map((c) => ({
+      url: `${siteUrl}/chords/${c.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     // Songs with their cover image attached — Google's image-sitemap
     // extension feeds Google Images search. Each cover-bearing song becomes
     // a candidate for queries like «обкладинка <song>», which a chord-site

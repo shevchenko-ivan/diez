@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import {
   identifyChord,
   noteAt,
   noteName,
   type ChordMatch,
 } from "../data/chord-templates";
+import { chordPageFor } from "../data/chord-pages";
 import { ChordDiagram, lookupChord } from "./ChordDiagram";
 import { TeButton } from "@/shared/components/TeButton";
 
@@ -396,6 +398,10 @@ export function ChordIdentifier() {
             {matches.slice(0, 12).map((match, i) => {
               const defs = lookupChord(match.root + match.quality);
               const def = defs?.[0];
+              // Common chords link to their dictionary landing page — this is
+              // the «натисніть на назву акорду» promise from the HowTo schema
+              // on the parent page.
+              const dictPage = chordPageFor(match.root + match.quality);
 
               return (
                 <div
@@ -403,12 +409,23 @@ export function ChordIdentifier() {
                   className="te-surface rounded-xl flex flex-col items-center"
                   style={{ padding: "12px 16px" }}
                 >
-                  <span
-                    className="text-lg font-bold mb-1"
-                    style={{ color: "var(--orange)" }}
-                  >
-                    {match.name}
-                  </span>
+                  {dictPage ? (
+                    <Link
+                      href={`/chords/${dictPage.slug}`}
+                      className="text-lg font-bold mb-1 hover:underline"
+                      style={{ color: "var(--orange)" }}
+                      title={`Акорд ${dictPage.name} (${dictPage.ukr}) — аплікатура і пісні`}
+                    >
+                      {match.name}
+                    </Link>
+                  ) : (
+                    <span
+                      className="text-lg font-bold mb-1"
+                      style={{ color: "var(--orange)" }}
+                    >
+                      {match.name}
+                    </span>
+                  )}
                   {def && (
                     <ChordDiagram
                       name={match.root + match.quality}

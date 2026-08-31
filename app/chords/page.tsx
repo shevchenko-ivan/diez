@@ -1,7 +1,9 @@
 import { type Metadata } from "next";
+import Link from "next/link";
 import { PageShell } from "@/shared/components/PageShell";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ChordIdentifier } from "@/features/song/components/ChordIdentifier";
+import { CHORD_PAGES } from "@/features/song/data/chord-pages";
 import { jsonLdScript } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -71,6 +73,36 @@ export default function ChordsPage() {
         subtitle="Натисніть на гриф, щоб позначити позиції пальців"
       />
       <ChordIdentifier />
+
+      {/* Dictionary index — the crawlable entry into /chords/<slug> landing
+          pages (they also interlink each other and every song page links its
+          own chords, but a hub-level list gives Google one canonical place
+          that links all 29). */}
+      <section className="mt-14">
+        <h2
+          className="text-xs font-bold uppercase tracking-widest mb-4"
+          style={{ color: "var(--text-muted)" }}
+        >
+          Довідник акордів
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {CHORD_PAGES.map((p) => (
+            <Link
+              key={p.slug}
+              href={`/chords/${p.slug}`}
+              className="te-surface px-3 py-1.5 rounded-lg text-sm hover:underline"
+              style={{ color: "var(--text-mid)" }}
+              title={`Акорд ${p.name} (${p.ukr}) — аплікатура і пісні`}
+            >
+              {p.name}
+            </Link>
+          ))}
+        </div>
+        <p className="text-sm mt-4" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+          Кожна сторінка — аплікатури для гітари, укулеле й піаніно, варіант без
+          баре та пісні з каталогу, у яких звучить цей акорд.
+        </p>
+      </section>
     </PageShell>
   );
 }
