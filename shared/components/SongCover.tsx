@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Guitar } from "lucide-react";
-import { coverThumb } from "@/lib/utils";
+import { coverThumb, snapshotSrcSet } from "@/lib/utils";
 
 // ── Song cover with graceful fallback ─────────────────────────────────────────
 // Renders the cover image; when there's no src OR the URL fails to load
@@ -62,16 +62,10 @@ export function SongCover({
   // quota), downscaled via the URL so the payload stays light.
   const thumb = coverThumb(src);
 
-  // Snapshot covers ship in two cuts — 500px and a `.300.webp` twin under the
-  // same hash (tools/prefetch-covers.ts) — so the browser picks by slot size
-  // and DPR: PSI's emulated phone (150px slot, DPR 1.75) and real DPR-2
-  // phones take the 300px cut, DPR-3 screens keep the full 500px. CDN
-  // fallback URLs have no twin, so they stay single-candidate.
-  const isSnapshot =
-    typeof thumb === "string" && thumb.startsWith("/_covers/") && thumb.endsWith(".webp");
-  const srcSet = isSnapshot
-    ? `${(thumb as string).replace(/\.webp$/, ".300.webp")} 300w, ${thumb} 500w`
-    : undefined;
+  // Two snapshot cuts via srcset (see snapshotSrcSet) — PSI's emulated phone
+  // (150px slot, DPR 1.75) and real DPR-2 phones take the 300px cut, DPR-3
+  // screens keep the full 500px. CDN fallback URLs stay single-candidate.
+  const srcSet = snapshotSrcSet(thumb);
   const sizesAttr = srcSet ? (sizes ?? (width ? `${width}px` : "100vw")) : undefined;
 
   return (

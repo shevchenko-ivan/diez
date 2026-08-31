@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { HapticLink } from "@/shared/components/HapticLink";
-import { coverThumb } from "@/lib/utils";
+import { coverThumb, snapshotSrcSet } from "@/lib/utils";
 import { loadMoreArtists } from "../actions/strip";
 import type { Artist } from "../services/artists";
 
@@ -67,6 +66,8 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
         const initial = artist.name.charAt(0).toUpperCase();
         const hue = artist.name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
         const placeholderBg = `hsl(${hue}, 40%, 68%)`;
+        const photo = artist.photo_url ? (coverThumb(artist.photo_url, 240) as string) : null;
+        const photoSrcSet = snapshotSrcSet(photo);
         return (
           <HapticLink
             key={artist.slug}
@@ -85,17 +86,24 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
               }}
             >
               {artist.photo_url ? (
-                // Served unoptimized (Vercel Image Optimization quota is
-                // finite) and downscaled via the source-CDN URL so the payload
-                // stays small without going through /_next/image.
-                <Image
-                  src={coverThumb(artist.photo_url, 240) as string}
+                // Plain <img>, not next/image: photos are pre-encoded (the
+                // homepage's initial 12 come from the /_covers snapshot, the
+                // rest arrive as CDN thumbs via coverThumb), so the optimizer
+                // added nothing — while blocking srcset. Snapshot photos ship
+                // a 300px twin; this 120px circle takes it up to DPR 2.5,
+                // which was PSI's top "Improve image delivery" item (307 KiB:
+                // 500px files in 120px slots).
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photo as string}
+                  srcSet={photoSrcSet}
+                  sizes={photoSrcSet ? "120px" : undefined}
                   alt={`${artist.name} — фото виконавця`}
                   title={artist.name}
                   width={120}
                   height={120}
-                  sizes="120px"
-                  unoptimized
+                  loading="lazy"
+                  decoding="async"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (

@@ -49,6 +49,21 @@ export function jsonLdScript(data: unknown): string {
  *
  * Unknown hosts are returned unchanged.
  */
+/**
+ * srcset for build-time snapshot images (tools/prefetch-covers.ts): every
+ * `/_covers/<base>.webp` (500px) ships with a `<base>.300.webp` twin under
+ * the same hash, so the browser can pick by slot size and DPR — a 150px card
+ * slot at DPR ≤2 (and Lighthouse's emulated 1.75) takes the 300px cut, DPR-3
+ * screens keep the 500px. CDN URLs have no twin → undefined, single-candidate
+ * `src` only. Keep in sync with the twin-naming convention in the prefetch
+ * script; a candidate pointing at a missing file would 404 into the
+ * component's onError fallback.
+ */
+export function snapshotSrcSet(url: string | null | undefined): string | undefined {
+  if (!url || !url.startsWith("/_covers/") || !url.endsWith(".webp")) return undefined;
+  return `${url.replace(/\.webp$/, ".300.webp")} 300w, ${url} 500w`;
+}
+
 export function coverThumb(url: string | null | undefined, px = 500): string | null {
   if (!url) return null;
   // Wikimedia originals → thumbnail path. Full-size Commons photos reach
