@@ -54,58 +54,34 @@ export async function updateSession(request: NextRequest) {
     user = null;
   }
 
-  // Public routes — accessible without login.
-  // Must match the approved routing in CLAUDE.md exactly.
-  // `/privacy`, `/terms`, `/about` are linked from the Google OAuth consent
-  // screen and need to be reachable to guests; without them the OAuth app
-  // publish flow fails Google's "homepage / privacy / terms must be public"
-  // check.
-  // `/lists`, `/tuner`, `/chords` are public utility pages that the navbar
-  // exposes to guests.
-  const publicPaths = [
-    "/songs",
-    "/artists",
-    "/about",
-    "/privacy",
-    "/terms",
-    "/copyright",
-    "/lists",
-    "/tuner",
-    "/chords",
-    // Beginner guitar articles — public content hub, must be crawlable by
-    // guests and search engines (otherwise the whole /learn section 307s to
-    // /auth/login and is invisible to Google).
-    "/learn",
-    // The add-song page has its own guest branch (login CTA) and meta noindex.
-    // It must be reachable anonymously so Googlebot can crawl it once and READ
-    // the noindex — a middleware 307 here would trap the URL in the GSC
-    // «Page with redirect» / «Indexed, though blocked» reports forever.
-    "/add",
-    // Hero-search autocomplete on `/` (and 404 page) — guests must be able
-    // to call it; without this the API silently 307s to /auth/login and the
-    // dropdown shows "Нічого не знайдено" for every query.
-    "/api/search",
-    // View counter — most traffic is logged-out guests; without this the
-    // POST 307s to /auth/login and guest views are never counted. The route
-    // has its own rate limit + UUID validation, no auth needed.
-    "/api/songs/view",
-    // TEMP: СКАЙ scrape preview (no DB) — remove with app/skay-preview.
-    "/skay-preview",
-  ];
+  // Default-allow: only truly private areas force the login redirect.
+  //
+  // This used to be a default-deny allowlist (publicPaths) — and every URL
+  // NOT on the list, including any mistyped or stale external link, answered
+  // 307 → /auth/login rendering «Вхід — Diez» with HTTP 200. To crawlers
+  // that's a soft-404 factory: Google filed each hit under «Page with
+  // redirect» instead of dropping it, and guests never saw the real 404
+  // page. Unknown paths now fall through to Next's not-found route and
+  // return an honest 404 status.
+  //
+  // Safe by design: the redirect here is UX, not the security boundary —
+  // /admin re-checks is_admin server-side (app/admin/page.tsx), /profile
+  // re-checks the session (app/profile/page.tsx), and RLS guards the data
+  // itself. `/ui-kit` stays gated so the internal design playground never
+  // renders to guests (robots.txt additionally Disallows it — the pair keeps
+  // it out of the index without a crawlable redirect chain).
+  //
+  // `/api/*` keeps the old private-by-default behavior for every route
+  // except the guest endpoints (search autocomplete + view counter) — a new
+  // API route must opt IN to being public here.
+  const path = request.nextUrl.pathname;
+  const inPrefix = (p: string) => path === p || path.startsWith(`${p}/`);
+  const publicApi = ["/api/search", "/api/songs/view"];
+  const isProtected =
+    ["/admin", "/profile", "/ui-kit"].some(inPrefix) ||
+    (inPrefix("/api") && !publicApi.some(inPrefix));
 
-  // SEO endpoints — Google / Bing must be able to crawl these without auth.
-  // Without this guard the proxy 307s to /auth/login, which makes the entire
-  // catalogue invisible to search engines (one of the most common reasons
-  // a Next.js + Supabase MVP gets zero organic traffic).
-  const seoFiles = ["/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/llms.txt"];
-
-  const isPublic =
-    request.nextUrl.pathname === "/" ||
-    request.nextUrl.pathname.startsWith("/auth") ||
-    seoFiles.includes(request.nextUrl.pathname) ||
-    publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
-
-  if (!isPublic && !user) {
+  if (isProtected && !user) {
     // Protected route — redirect to login, remembering where to return.
     const url = request.nextUrl.clone();
     const original = request.nextUrl.pathname + request.nextUrl.search;
