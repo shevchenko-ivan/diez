@@ -5,8 +5,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageShell } from "@/shared/components/PageShell";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { LoadingState } from "@/shared/components/LoadingState";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { ListsSkeleton } from "@/features/playlist/components/PlaylistSkeletons";
 import { createClient } from "@/lib/supabase/server";
 import { getMyPlaylists } from "@/features/playlist/actions/playlists";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
@@ -57,7 +57,7 @@ async function ListsContent() {
 export default function ListsPage() {
   return (
     <PageShell>
-      <Suspense fallback={<LoadingState message="Завантаження списків..." />}>
+      <Suspense fallback={<ListsSkeleton />}>
         <ListsContent />
       </Suspense>
     </PageShell>

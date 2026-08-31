@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { PageShell } from "@/shared/components/PageShell";
-import { LoadingState } from "@/shared/components/LoadingState";
+import { ManageSkeleton } from "@/features/playlist/components/PlaylistSkeletons";
 import { createClient } from "@/lib/supabase/server";
 import { getMyPlaylistById } from "@/features/playlist/services/playlists";
 import { PlaylistManager } from "@/features/playlist/components/PlaylistManager";
@@ -55,7 +55,7 @@ export default async function ManageListPage({
   const { id } = await params;
   return (
     <PageShell>
-      <Suspense fallback={<LoadingState message="Завантаження..." />}>
+      <Suspense fallback={<ManageSkeleton />}>
         <ManageContent id={id} />
       </Suspense>
     </PageShell>
