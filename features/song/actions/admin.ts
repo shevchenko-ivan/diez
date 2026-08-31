@@ -3,7 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { pingIndexNow } from "@/lib/indexnow";
 import { slugify, dedupeSlug } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { extractYoutubeId } from "../lib/youtube";
@@ -180,6 +182,10 @@ export async function createSong(formData: FormData) {
   revalidatePath("/artists");
   revalidatePath("/");
   revalidatePath(`/songs/${finalSlug}`);
+  // Push the fresh URL to Bing/DDG via IndexNow. `after()` — the ping must
+  // not delay the redirect, and a bare un-awaited fetch can be killed when
+  // the serverless invocation ends.
+  after(() => pingIndexNow([`/songs/${finalSlug}`, "/songs"]));
   redirect(`/songs/${finalSlug}`);
 }
 
@@ -405,6 +411,10 @@ export async function updateSongStatus(formData: FormData) {
   revalidatePath("/artists");
   revalidatePath("/admin");
   revalidatePath("/");
+  // Any status flip changes what the URL serves (published → live page,
+  // archived/draft → 404) — either way IndexNow should trigger a recrawl.
+  const changedSlug = await getSongSlug(songId);
+  if (changedSlug) after(() => pingIndexNow([`/songs/${changedSlug}`, "/songs"]));
 }
 
 // ─── Update song ──────────────────────────────────────────────────────────────

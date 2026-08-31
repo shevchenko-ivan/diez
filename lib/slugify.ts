@@ -30,7 +30,10 @@ export async function dedupeSlug(
   isTaken: (slug: string) => Promise<boolean>,
   variants: string[] = [],
 ): Promise<string> {
-  const numbered = Array.from({ length: 8 }, (_, i) => `${base}-${i + 2}`);
+  // 48 numbered fallbacks, not 8: «ой у лузі червона калина» has 10+ covers
+  // in the catalogue, so -2…-9 was exhausted and the Date.now() last resort
+  // below minted a fresh crawler-hostile timestamp slug (caught 31.08.2026).
+  const numbered = Array.from({ length: 48 }, (_, i) => `${base}-${i + 2}`);
   for (const candidate of [base, ...variants, ...numbered]) {
     if (candidate && !(await isTaken(candidate))) return candidate;
   }

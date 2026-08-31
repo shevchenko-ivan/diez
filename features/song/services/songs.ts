@@ -188,6 +188,12 @@ async function fetchAllPublishedSongs<T>(columns: string): Promise<T[]> {
       .from("songs")
       .select(columns)
       .eq("status", "published")
+      // Stable order is required for correct pagination: .range() without
+      // .order() lets Postgres return nondeterministic page boundaries, so
+      // rows can repeat or vanish between pages (and this helper feeds the
+      // sitemap, where duplicates/missing URLs are directly visible to
+      // crawlers).
+      .order("id", { ascending: true })
       .range(offset, offset + pageSize - 1);
     if (error || !data || data.length === 0) break;
     out.push(...(data as unknown as T[]));
@@ -278,12 +284,33 @@ const getNoBarreSlugs = unstable_cache(
   { revalidate: 1800, tags: ["songs"] },
 );
 
+// Slug list for songs playable with at most `max` unique chords — the
+// «Пісні на 3 акорди» topic. Same shape as getNoBarreSlugs above; the arg is
+// part of the cache key, so different `max` values cache independently.
+const getMaxChordsSlugs = unstable_cache(
+  async (max: number): Promise<string[]> => {
+    if (!hasEnvVars) return [];
+    const rows = await fetchAllPublishedSongs<{ slug: string; chords: string[] | null }>(
+      "slug, chords",
+    );
+    return rows
+      .filter((r) => {
+        const unique = new Set(r.chords ?? []);
+        return unique.size > 0 && unique.size <= max;
+      })
+      .map((r) => r.slug);
+  },
+  ["max-chords-slugs"],
+  { revalidate: 1800, tags: ["songs"] },
+);
+
 // Resolve a Topic into a `slug IN (...)` set so the page query can paginate
 // and sort like any other listing. Returns null when the topic has no
 // matching songs, which the caller renders as an empty result.
 async function resolveTopicSlugs(topic: Topic): Promise<string[] | null> {
   if (topic.match.kind === "slugs") return topic.match.slugs;
   if (topic.match.kind === "no-barre") return await getNoBarreSlugs();
+  if (topic.match.kind === "max-chords") return await getMaxChordsSlugs(topic.match.max);
   if (topic.match.kind === "artists") {
     const { data } = await getClient()
       .from("songs")
