@@ -60,15 +60,20 @@ export function TopSongCard({
           title={`${title} — ${artist}`}
           fill
           sizes="(max-width: 768px) 45vw, 17vw"
-          // First 6 cards span the row on desktop and are above the fold.
-          // The hero subhead is the actual LCP element on /, but eager
-          // loading here avoids re-shuffling priorities once the hero paints.
-          // Preload only the very first cover: six preloads competed with the
-          // font preloads for simulated bandwidth and pushed the lab LCP of
-          // the hero h1 out to ~8s (fonts are what the model ties text LCP
-          // to). On mobile the strip sits below the fold anyway, and the
-          // covers are same-origin /_covers webps that load instantly.
+          // This strip starts ~390px down, so on a 412x823 phone the first
+          // three cards are ON the first screen — an earlier note here
+          // assumed it sat below the fold and left them all lazy. A 150x150
+          // cover (22500px²) outranks the hero h1 (15540px²), so the LCP
+          // element on mobile is a card in this strip: it was queueing behind
+          // ~20 lazy images and landing at 4.2s despite weighing 8 KB.
+          //
+          // Only the first card gets `priority`. Six preloads once competed
+          // with the font preloads and pushed the lab LCP to ~8s, so the rest
+          // get eager + high fetch priority instead: out of the lazy queue,
+          // nothing added to <head>.
           priority={index === 0}
+          loading={index !== undefined && index < 3 ? "eager" : undefined}
+          fetchPriority={index !== undefined && index < 3 ? "high" : undefined}
           iconSize={40}
         />
       </div>

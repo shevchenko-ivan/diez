@@ -110,7 +110,12 @@ async function main() {
         if (sharp) {
           buf = await sharp(buf)
             .resize(500, 500, { fit: "inside", withoutEnlargement: true })
-            .webp({ quality: 82 })
+            // q75 over q82: ~22% smaller on the heavy photographic covers
+            // (58 KB → 45 KB measured on a 500px Deezer source) with nothing
+            // visible at the 150px the cards actually render at. Cover weight
+            // is what makes the homepage's lab score swing ~10 points between
+            // builds, since the trending set — and its images — changes.
+            .webp({ quality: 75 })
             .toBuffer();
           ext = "webp";
         }

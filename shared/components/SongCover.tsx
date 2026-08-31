@@ -25,6 +25,16 @@ interface SongCoverProps {
   height?: number;
   sizes?: string;
   priority?: boolean;
+  /**
+   * Escape hatch for above-the-fold covers that must NOT get a `<head>`
+   * preload. `priority` gives eager loading AND a preload link; six of those
+   * once competed with the font preloads and blew the lab LCP out to ~8s.
+   * Passing `loading="eager"` + `fetchPriority="high"` instead takes the image
+   * out of the lazy queue without adding anything to the critical head.
+   * Ignored when `priority` is set (next/image already implies both).
+   */
+  loading?: "eager" | "lazy";
+  fetchPriority?: "high" | "low" | "auto";
   /** Guitar icon size for the fallback. Scale to the container. */
   iconSize?: number;
 }
@@ -38,10 +48,16 @@ export function SongCover({
   height,
   sizes,
   priority,
+  loading,
+  fetchPriority,
   iconSize = 24,
 }: SongCoverProps) {
   const [errored, setErrored] = useState(false);
   const showImage = !!src && !errored;
+  // next/image sets both itself when `priority` is on, and passing them
+  // alongside it logs a conflict warning.
+  const loadingProp = priority ? undefined : loading;
+  const fetchPriorityProp = priority ? undefined : fetchPriority;
   // Serve directly from the source CDN (bypass Vercel's Image Optimization
   // quota), downscaled via the URL so the payload stays light.
   const thumb = coverThumb(src);
@@ -64,6 +80,8 @@ export function SongCover({
             fill
             sizes={sizes}
             priority={priority}
+            loading={loadingProp}
+            fetchPriority={fetchPriorityProp}
             unoptimized
             className="object-cover"
             onError={() => setErrored(true)}
@@ -76,6 +94,8 @@ export function SongCover({
             width={width}
             height={height}
             priority={priority}
+            loading={loadingProp}
+            fetchPriority={fetchPriorityProp}
             unoptimized
             className="w-full h-full object-cover"
             onError={() => setErrored(true)}
