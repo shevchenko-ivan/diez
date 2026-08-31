@@ -67,13 +67,20 @@ export function TopSongCard({
           // element on mobile is a card in this strip: it was queueing behind
           // ~20 lazy images and landing at 4.2s despite weighing 8 KB.
           //
-          // Only the first card gets `priority`. Six preloads once competed
-          // with the font preloads and pushed the lab LCP to ~8s, so the rest
-          // get eager + high fetch priority instead: out of the lazy queue,
-          // nothing added to <head>.
+          // Only the first card gets `priority` — and there is no lighter way
+          // to un-lazy the next few. next/image emits a <link rel="preload">
+          // for ALL THREE of `priority`, `fetchPriority="high"` and plain
+          // `loading="eager"`; measured on this page, adding eager to cards
+          // 1-2 took it from 2 image preloads to 6. That pile-up is what once
+          // competed with the font preloads and pushed lab LCP to ~8s, and it
+          // cost 10 perf points (86 → 76) when tried again on 2026-08-31.
+          //
+          // So the LCP cover here still waits in the lazy queue. Fixing that
+          // properly means dropping next/image for these cards in favour of a
+          // plain <img loading="eager">, which is the only way to get eager
+          // loading without a head preload — a bigger change than it looks,
+          // since next/image also handles the error fallback.
           priority={index === 0}
-          loading={index !== undefined && index < 3 ? "eager" : undefined}
-          fetchPriority={index !== undefined && index < 3 ? "high" : undefined}
           iconSize={40}
         />
       </div>
