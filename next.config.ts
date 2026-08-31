@@ -81,6 +81,22 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
+      // Brand fonts. Vercel's default for public/ is max-age=0 + revalidate,
+      // which costs every returning visitor a 304 round-trip BEFORE any text
+      // paints — three of these are <link rel="preload">ed, so they sit right
+      // on the render path. The files change maybe once a year.
+      //
+      // Filenames carry no content hash, so `immutable` is a contract: when a
+      // face is re-cut (e.g. the Aug 2026 subsetting pass), the new file MUST
+      // get a new name — `e-Ukraine-Regular.v2.woff2` — or returning visitors
+      // keep the old bytes for a year. Renaming means updating @font-face in
+      // globals.css and the preloads in app/layout.tsx.
+      {
+        source: "/fonts/:file*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
     ];
   },
   async redirects() {
