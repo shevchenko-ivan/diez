@@ -14,7 +14,7 @@ import {
 import { lookupChordUke, UKE_OPEN_FREQS } from "@/features/song/data/chord-templates-ukulele";
 import { lookupChordPiano } from "@/features/song/data/chord-templates-piano";
 import { CHORD_PAGES, getChordPage, UKR_NOTE } from "@/features/song/data/chord-pages";
-import { getSongsSharingChords } from "@/features/song/services/songs";
+import { getSongsWithChord } from "@/features/song/services/songs";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
 
 // ── Chord dictionary page (/chords/<slug>) ───────────────────────────────────
@@ -120,7 +120,7 @@ export default async function ChordPage({
   const noBarreAlt = mainDef?.barre ? lookupNoBarreVoicing(name) : null;
   const ukeDef = lookupChordUke(name)?.[0];
   const pianoDef = lookupChordPiano(name)?.[0];
-  const songs = await getSongsSharingChords([name], { excludeSlug: "", limit: 12 });
+  const songs = await getSongsWithChord(name, 12);
 
   // Notes that make up the chord, from the piano intervals (root is first).
   const noteNames = (pianoDef?.notes ?? []).map((s) => NOTES[((s % 12) + 12) % 12]);

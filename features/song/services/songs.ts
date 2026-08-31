@@ -430,6 +430,30 @@ export const getSongsByArtist = unstable_cache(
 );
 
 /**
+ * Songs whose chord array contains one specific chord — the song list on the
+ * /chords/<slug> dictionary pages. NOT getSongsSharingChords: that one ranks
+ * and filters by ≥3-chord overlap with a seed song, so a single-chord seed
+ * always comes back empty. `.contains` (Postgres `@>`) keeps the filter on
+ * the database side; popularity order, small slice.
+ */
+export const getSongsWithChord = unstable_cache(
+  async (chord: string, limit = 12): Promise<Song[]> => {
+    if (!hasEnvVars) return [];
+    const { data, error } = await getClient()
+      .from("songs")
+      .select(SONG_LIST_COLUMNS)
+      .eq("status", "published")
+      .contains("chords", [chord])
+      .order("views", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data.map(mapRow);
+  },
+  ["songs-with-chord"],
+  { revalidate: 1800, tags: ["songs"] },
+);
+
+/**
  * Songs that share **chords** with a given song — used for the
  * "Пісні з тими ж акордами" internal-linking block on song-detail pages.
  *
