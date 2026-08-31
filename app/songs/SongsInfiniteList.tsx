@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Music } from "lucide-react";
 import { SongCover } from "@/shared/components/SongCover";
@@ -13,6 +13,18 @@ import { type SongsPageArgs } from "@/features/song/services/songs";
 
 const PAGE_SIZE = 50;
 
+// Loaded pages, keyed by the serialized query, surviving soft navigations.
+// Without this, coming BACK to the catalogue remounts the list with only the
+// first 50 rows: the browser restores the old (deep) scroll offset, clamps it
+// to the now-short page, and the user lands at the bottom with the sentinel
+// ~1000px ABOVE the viewport — outside the observer's margin, so loading
+// never resumes (stuck list), and when they scroll up past the sentinel,
+// 50 rows (~4400px) insert above the fold and shove the whole screen down —
+// the 0.9–1.1 field CLS bursts on /songs and topic pages traced to exactly
+// this bounce pattern. Session-lifetime staleness is acceptable here.
+const listCache = new Map<string, { songs: Song[]; total: number }>();
+const LIST_CACHE_MAX = 8;
+
 export function SongsInfiniteList({
   initialSongs,
   initialTotal,
@@ -24,14 +36,46 @@ export function SongsInfiniteList({
   savedSlugs: string[];
   query: Omit<SongsPageArgs, "offset" | "limit">;
 }) {
-  const [songs, setSongs] = useState<Song[]>(initialSongs);
-  const [total, setTotal] = useState(initialTotal);
+  const cacheKey = useMemo(() => JSON.stringify(query), [query]);
+  const [songs, setSongs] = useState<Song[]>(() => {
+    const cached = listCache.get(cacheKey);
+    return cached && cached.songs.length > initialSongs.length ? cached.songs : initialSongs;
+  });
+  const [total, setTotal] = useState(() => listCache.get(cacheKey)?.total ?? initialTotal);
   const [isPending, startTransition] = useTransition();
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Sentinel's viewport-relative top right before an append commits; non-null
+  // only when the insert point sits above the viewport (user below the list
+  // end), which is when the new rows would shove everything they're looking
+  // at downward.
+  const anchorRef = useRef<number | null>(null);
   const saved = new Set(savedSlugs);
   const lite = useLiteMode();
 
   const hasMore = songs.length < total;
+
+  useEffect(() => {
+    if (songs.length > PAGE_SIZE) {
+      listCache.set(cacheKey, { songs, total });
+      // Refresh insertion order so the oldest query is the one evicted.
+      const entry = listCache.get(cacheKey)!;
+      listCache.delete(cacheKey);
+      listCache.set(cacheKey, entry);
+      while (listCache.size > LIST_CACHE_MAX) {
+        listCache.delete(listCache.keys().next().value!);
+      }
+    }
+  }, [songs, total, cacheKey]);
+
+  // Manual scroll anchoring: when rows were inserted above the viewport,
+  // shift scroll by the same delta before paint. Screen-space positions stay
+  // put, so the user keeps their place and no layout-shift entry is recorded.
+  useLayoutEffect(() => {
+    if (anchorRef.current === null || !sentinelRef.current) return;
+    const delta = sentinelRef.current.getBoundingClientRect().top - anchorRef.current;
+    anchorRef.current = null;
+    if (delta > 0) window.scrollBy(0, delta);
+  }, [songs.length]);
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) return;
@@ -40,6 +84,8 @@ export function SongsInfiniteList({
         if (!entries[0].isIntersecting || isPending) return;
         startTransition(async () => {
           const res = await fetchSongsPage({ ...query, offset: songs.length, limit: PAGE_SIZE });
+          const top = sentinelRef.current?.getBoundingClientRect().top;
+          anchorRef.current = top !== undefined && top < 0 ? top : null;
           setSongs((prev) => [...prev, ...res.songs]);
           setTotal(res.total);
         });
