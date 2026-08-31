@@ -64,15 +64,17 @@ export function SongCard({ ...props }: SongCardProps) {
         }}
       >
         {/* Cover — descriptive alt doubles as Google Image Search input +
-            screen-reader label. `priority` skips lazy loading for the first few
-            above-the-fold cards. */}
+            screen-reader label. No `priority` here: an index<2 rule used to
+            preload the first cards, but as of 2026-08-31 no live consumer
+            passes `index` (both homepage strips render TopSongCard), so it
+            was dead code — and a head preload from a card component is a
+            footgun anyway: image preloads compete with the font preloads. */}
         <SongCover
           src={lite ? null : props.coverImage}
           alt={`Обкладинка пісні «${props.title}» — ${props.artist}`}
           title={`${props.title} — ${props.artist}`}
           fill
           sizes="(max-width: 1024px) 50vw, 360px"
-          priority={typeof props.index === "number" && props.index < 2}
           iconSize={40}
         />
       </div>

@@ -11,6 +11,8 @@ export interface TopSongCardProps {
   coverImage?: string | null;
   coverColor?: string | null;
   index?: number;
+  /** Plain-img eager cover (no head preload) — see SongCover.plainEager. */
+  eagerCover?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ export function TopSongCard({
   artist,
   coverImage,
   coverColor,
-  index,
+  eagerCover,
 }: TopSongCardProps) {
   const lite = useLiteMode();
   const fallbackColor = coverColor || "#C8D5E8";
@@ -60,27 +62,17 @@ export function TopSongCard({
           title={`${title} — ${artist}`}
           fill
           sizes="(max-width: 768px) 45vw, 17vw"
-          // This strip starts ~390px down, so on a 412x823 phone the first
-          // three cards are ON the first screen — an earlier note here
-          // assumed it sat below the fold and left them all lazy. A 150x150
-          // cover (22500px²) outranks the hero h1 (15540px²), so the LCP
-          // element on mobile is a card in this strip: it was queueing behind
-          // ~20 lazy images and landing at 4.2s despite weighing 8 KB.
-          //
-          // Only the first card gets `priority` — and there is no lighter way
-          // to un-lazy the next few. next/image emits a <link rel="preload">
-          // for ALL THREE of `priority`, `fetchPriority="high"` and plain
-          // `loading="eager"`; measured on this page, adding eager to cards
-          // 1-2 took it from 2 image preloads to 6. That pile-up is what once
-          // competed with the font preloads and pushed lab LCP to ~8s, and it
-          // cost 10 perf points (86 → 76) when tried again on 2026-08-31.
-          //
-          // So the LCP cover here still waits in the lazy queue. Fixing that
-          // properly means dropping next/image for these cards in favour of a
-          // plain <img loading="eager">, which is the only way to get eager
-          // loading without a head preload — a bigger change than it looks,
-          // since next/image also handles the error fallback.
-          priority={index === 0}
+          // The trending strip starts ~390px down, so on a 412x823 phone its
+          // first cards are ON the first screen, and one of them IS the
+          // mobile LCP element (150x150 = 22500px² beats the hero h1's
+          // 15540px²) — left lazy it queued behind ~20 images and landed at
+          // 4.2s despite weighing 8 KB. `eagerCover` (passed by the homepage
+          // only for the visible slice of the trending strip; the fresh strip
+          // far below the fold stays lazy) routes through SongCover.plainEager
+          // — a plain <img loading="eager">, the only un-lazy path that adds
+          // NO <head> preload. See that prop's comment for the two preload
+          // traps (next/image and React SSR) mapped on 2026-08-31.
+          plainEager={eagerCover}
           iconSize={40}
         />
       </div>

@@ -114,6 +114,11 @@ export default async function HomePage() {
               savedSlugs={[]}
               loadMore={loadMoreTrending}
               initialExhausted={trending.length < 12}
+              // First screen on mobile shows ~2.5 cards of this strip and one
+              // of them is the mobile LCP element — eager-load the visible
+              // slice (plain <img>, zero head preloads). The fresh strip
+              // below stays fully lazy.
+              eagerFirst={3}
             />
           </section>
         )}

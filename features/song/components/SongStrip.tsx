@@ -29,6 +29,12 @@ interface Props {
    *   visible on touch). Used for the "Топ популярних" shelf on /.
    */
   variant?: "default" | "featured";
+  /**
+   * How many leading cards render their cover as a plain eager <img> (no
+   * lazy queue, no <head> preload — see SongCover.plainEager). Set only for
+   * strips that sit on the first screen; below-the-fold strips stay lazy.
+   */
+  eagerFirst?: number;
 }
 
 export function SongStrip({
@@ -37,6 +43,7 @@ export function SongStrip({
   loadMore,
   initialExhausted = false,
   variant = "default",
+  eagerFirst = 0,
 }: Props) {
   const [songs, setSongs] = useState<Song[]>(initial);
   const [exhausted, setExhausted] = useState(initialExhausted);
@@ -103,6 +110,7 @@ export function SongStrip({
               coverImage={s.coverImage}
               coverColor={s.coverColor}
               index={i}
+              eagerCover={i < eagerFirst}
             />
           ) : (
             <SongCard

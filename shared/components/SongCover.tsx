@@ -26,15 +26,21 @@ interface SongCoverProps {
   sizes?: string;
   priority?: boolean;
   /**
-   * Loading hint passed straight to next/image. Note that it is NOT a way to
-   * avoid a `<head>` preload: next/image emits `<link rel="preload">` for
-   * `loading="eager"` just as it does for `priority` and
-   * `fetchPriority="high"` (verified on this codebase, 2026-08-31). Reach for
-   * it only when an extra preload is acceptable.
-   *
-   * Ignored when `priority` is set (next/image already implies eager).
+   * Render a plain `<img loading="eager">` instead of next/image — the ONLY
+   * un-lazy path that adds no `<head>` preload. Two traps mapped by building
+   * every variant (2026-08-31):
+   *  - next/image emits `<link rel="preload">` for `priority`,
+   *    `fetchPriority="high"` AND plain `loading="eager"` alike;
+   *  - React's SSR itself emits a preload for ANY `<img>` carrying
+   *    `fetchPriority="high"`, plain tags included.
+   * Hence: plain img, eager, and deliberately NO fetchPriority — Chrome
+   * bumps in-viewport images on its own after layout. Six head preloads
+   * once competed with the font preloads and cost 10 PSI points.
+   * Nothing else is lost: covers are `unoptimized` anyway (no srcset), and
+   * the onError fallback works identically on `<img>`. Takes precedence
+   * over `priority`.
    */
-  loading?: "eager" | "lazy";
+  plainEager?: boolean;
   /** Guitar icon size for the fallback. Scale to the container. */
   iconSize?: number;
 }
@@ -48,14 +54,11 @@ export function SongCover({
   height,
   sizes,
   priority,
-  loading,
+  plainEager,
   iconSize = 24,
 }: SongCoverProps) {
   const [errored, setErrored] = useState(false);
   const showImage = !!src && !errored;
-  // next/image sets this itself when `priority` is on, and passing both
-  // alongside each other logs a conflict warning.
-  const loadingProp = priority ? undefined : loading;
   // Serve directly from the source CDN (bypass Vercel's Image Optimization
   // quota), downscaled via the URL so the payload stays light.
   const thumb = coverThumb(src);
@@ -70,7 +73,20 @@ export function SongCover({
       }}
     >
       {showImage ? (
-        fill ? (
+        plainEager ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumb as string}
+            alt={alt}
+            title={title}
+            loading="eager"
+            decoding="async"
+            width={fill ? undefined : width}
+            height={fill ? undefined : height}
+            className={fill ? "absolute inset-0 w-full h-full object-cover" : "w-full h-full object-cover"}
+            onError={() => setErrored(true)}
+          />
+        ) : fill ? (
           <Image
             src={thumb as string}
             alt={alt}
@@ -78,7 +94,6 @@ export function SongCover({
             fill
             sizes={sizes}
             priority={priority}
-            loading={loadingProp}
             unoptimized
             className="object-cover"
             onError={() => setErrored(true)}
@@ -91,7 +106,6 @@ export function SongCover({
             width={width}
             height={height}
             priority={priority}
-            loading={loadingProp}
             unoptimized
             className="w-full h-full object-cover"
             onError={() => setErrored(true)}
