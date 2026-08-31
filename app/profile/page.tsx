@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";
-import { LoadingState } from "@/shared/components/LoadingState";
+import { ProfileSkeleton } from "./ProfileSkeleton";
 import { SongCard } from "@/features/song/components/SongCard";
 import { MySongCard } from "@/features/song/components/MySongCard";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
@@ -232,7 +232,7 @@ async function ProfileDashboard() {
 export default function ProfilePage() {
   return (
     <PageShell footer={false}>
-      <Suspense fallback={<LoadingState message="Завантаження профілю..." />}>
+      <Suspense fallback={<ProfileSkeleton />}>
         <ProfileDashboard />
       </Suspense>
     </PageShell>

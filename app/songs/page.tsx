@@ -5,7 +5,7 @@ import { getSongsPage, type SongsPageArgs } from "@/features/song/services/songs
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { getTopicBySlug } from "@/features/song/data/topics";
 import { PageShell } from "@/shared/components/PageShell";
-import { LoadingState } from "@/shared/components/LoadingState";
+import { SongsSkeleton } from "./SongsSkeleton";
 import { SortSelect } from "./SortSelect";
 import { SongsInfiniteList } from "./SongsInfiniteList";
 import { SearchSubmitButton } from "./SearchSubmitButton";
@@ -246,7 +246,7 @@ async function SongsContent({ searchParams }: SearchProps) {
 export default function SongsPage({ searchParams }: SearchProps) {
   return (
     <PageShell>
-      <Suspense fallback={<LoadingState />}>
+      <Suspense fallback={<SongsSkeleton />}>
         <SongsContent searchParams={searchParams} />
       </Suspense>
     </PageShell>
