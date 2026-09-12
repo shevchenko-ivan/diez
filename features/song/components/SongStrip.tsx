@@ -111,6 +111,9 @@ export function SongStrip({
               coverColor={s.coverColor}
               index={i}
               eagerCover={i < eagerFirst}
+              // Only the very first eager card is the LCP candidate — one
+              // fetchpriority=high hint, never a batch (see SongCover).
+              lcpPriority={eagerFirst > 0 && i === 0}
             />
           ) : (
             <SongCard

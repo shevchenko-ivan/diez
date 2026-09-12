@@ -41,6 +41,14 @@ interface SongCoverProps {
    * cards; a below-the-fold eager cover is a wasted head preload.
    */
   plainEager?: boolean;
+  /**
+   * Mark THE LCP candidate (the first visible card on the homepage): the
+   * <img> gets fetchPriority="high" and React SSR upgrades its preload to
+   * fetchpriority=high too — exactly what Lighthouse's LCP-discovery
+   * checklist asks for. One image only: the 31.08 regression came from six
+   * eager cards, not from a single high-priority hint.
+   */
+  lcpPriority?: boolean;
   /** Guitar icon size for the fallback. Scale to the container. */
   iconSize?: number;
 }
@@ -54,6 +62,7 @@ export function SongCover({
   height,
   sizes,
   plainEager,
+  lcpPriority,
   iconSize = 24,
 }: SongCoverProps) {
   const [errored, setErrored] = useState(false);
@@ -85,7 +94,8 @@ export function SongCover({
           sizes={sizesAttr}
           alt={alt}
           title={title}
-          loading={plainEager ? "eager" : "lazy"}
+          loading={plainEager || lcpPriority ? "eager" : "lazy"}
+          fetchPriority={lcpPriority ? "high" : undefined}
           decoding="async"
           width={fill ? undefined : width}
           height={fill ? undefined : height}

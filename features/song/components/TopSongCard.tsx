@@ -13,6 +13,8 @@ export interface TopSongCardProps {
   index?: number;
   /** Plain-img eager cover (no head preload) — see SongCover.plainEager. */
   eagerCover?: boolean;
+  /** The single LCP candidate — see SongCover.lcpPriority. */
+  lcpPriority?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export function TopSongCard({
   coverImage,
   coverColor,
   eagerCover,
+  lcpPriority,
 }: TopSongCardProps) {
   const lite = useLiteMode();
   const fallbackColor = coverColor || "#C8D5E8";
@@ -77,6 +80,7 @@ export function TopSongCard({
           // NO <head> preload. See that prop's comment for the two preload
           // traps (next/image and React SSR) mapped on 2026-08-31.
           plainEager={eagerCover}
+          lcpPriority={lcpPriority}
           iconSize={40}
         />
       </div>
