@@ -11,7 +11,6 @@ import { SavedSlugsProvider } from "@/shared/components/SavedSlugsProvider";
 import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { GoogleAnalytics } from "@/shared/components/GoogleAnalytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -191,7 +190,11 @@ export default async function RootLayout({
         </PostHogProvider>
         <Analytics />
         <SpeedInsights />
-        <GoogleAnalytics />
+        {/* No Google Analytics: gtag.js was the single largest script on
+            every page (171 KiB, a 62 ms long task after load) and duplicated
+            what PostHog + Vercel Analytics already collect. Removed
+            12.09.2026 as part of the INP work; re-add only together with a
+            real Ads use case. */}
       </body>
     </html>
   );

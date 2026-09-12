@@ -19,11 +19,11 @@ import { withPostHogConfig } from "@posthog/nextjs-config";
 // - YouTube: for the embedded player iframe on song pages
 const cspReportOnly = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://va.vercel-scripts.com https://www.googletagmanager.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://va.vercel-scripts.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://upload.wikimedia.org https://*.supabase.co https://*.mzstatic.com https://i.ytimg.com https://i.scdn.co https://*.dzcdn.net https://*.musify.club https://*.posthog.com https://www.google-analytics.com https://*.google-analytics.com",
+  "img-src 'self' data: blob: https://upload.wikimedia.org https://*.supabase.co https://*.mzstatic.com https://i.ytimg.com https://i.scdn.co https://*.dzcdn.net https://*.musify.club https://*.posthog.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co https://eu.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://vitals.vercel-insights.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+  "connect-src 'self' https://*.supabase.co https://eu.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://vitals.vercel-insights.com",
   "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
   "frame-ancestors 'none'",
   "form-action 'self'",
