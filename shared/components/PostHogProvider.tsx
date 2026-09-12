@@ -25,6 +25,21 @@ import { readConsent } from "./CookieBanner";
  */
 type PostHogClient = typeof posthogJsType;
 
+// Rough device-capability tier from the two hints Chrome exposes:
+//   • ≤4 logical cores — weak SoCs (most current phones report 8);
+//   • navigator.deviceMemory ≤ 2 — the API rounds to powers of two and caps
+//     at 8, so this means "2 GB or less" (Chrome-only; Safari/iPhones never
+//     report it and are fast anyway).
+// Used to keep session replay off the devices that decide p75 INP, and
+// registered as a super property so web vitals can be split by tier.
+function deviceTier(): "low" | "ok" {
+  if (typeof navigator === "undefined") return "ok";
+  const cores = navigator.hardwareConcurrency ?? 0;
+  const mem = (navigator as unknown as { deviceMemory?: number }).deviceMemory ?? 0;
+  if ((cores > 0 && cores <= 4) || (mem > 0 && mem <= 2)) return "low";
+  return "ok";
+}
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [ph, setPh] = useState<PostHogClient | null>(null);
 
@@ -105,6 +120,20 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             },
           });
           setPh(posthog);
+
+          // Device tier rides on every event as a super property, so
+          // $web_vitals (INP in particular) can be split by it in PostHog.
+          const tier = deviceTier();
+          posthog.register({ device_tier: tier });
+
+          // Low-end devices never start session replay. p75 INP is decided
+          // by the weakest quarter of devices, and the recorder's DOM
+          // serialization on every route change is the largest main-thread
+          // cost we add on top of React exactly there — field INP sat at
+          // 234 ms (CWV «не пройдено», PSI 12.09.2026) while every control
+          // measured fast on its own. Server-side sampling (50%) still applies
+          // to the devices that do record.
+          if (tier === "low") return;
 
           // Defer the session-recorder download until the user actually
           // engages or a few seconds pass — whichever comes first — so
