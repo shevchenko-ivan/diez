@@ -46,6 +46,15 @@ export function Navbar() {
     let disposed = false;
     let unsubscribe: (() => void) | null = null;
 
+    // Guests never need supabase-js at all. @supabase/ssr keeps the session
+    // in (non-httpOnly) `sb-<ref>-auth-token[.N]` cookies, so their absence
+    // is a reliable "signed out" signal — skip the ~60 KB chunk and its
+    // startup task entirely. It used to download and execute on every guest
+    // pageview with 81% of it unused (PSI 12.09.2026: the largest first-party
+    // unused-JS entry). Signed-in visitors take the path below unchanged; a
+    // login started in this tab ends in a redirect, which re-runs this effect.
+    if (!/(?:^|;\s*)sb-[^=;]*-auth-token(?:\.\d+)?=/.test(document.cookie)) return;
+
     function fallbackName(email: string) {
       return email ? email.split("@")[0] : "";
     }
