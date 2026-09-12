@@ -47,6 +47,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   experimental: {
+    // NOT enabling `inlineCss` — tried 12.09.2026 to kill the one
+    // render-blocking request (PSI: 270 ms). Measured A/B (3×3 Lighthouse,
+    // same machine): FCP unchanged, LCP +130 ms, because Next ships the
+    // inlined CSS twice — in <style> AND again inside the RSC payload — and
+    // the HTML grew 158 → 364 KB, eating far more than the saved round trip.
     serverActions: {
       // Artist photo uploads go through a server action as multipart form
       // data; the action-level validator allows up to 5 MB, so the transport
