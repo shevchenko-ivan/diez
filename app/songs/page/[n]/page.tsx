@@ -34,6 +34,13 @@ const PER_PAGE = 100;
 // catalogue itself does — safe to cache for an hour.
 export const revalidate = 3600;
 
+// Required for the cache above to apply at all: a dynamic segment without
+// generateStaticParams is rendered per request, `revalidate` or not (verified
+// locally). Empty → every page is built on its first visit, then cached.
+export function generateStaticParams(): { n: string }[] {
+  return [];
+}
+
 function parsePageNumber(raw: string): number | null {
   if (!/^[1-9]\d{0,3}$/.test(raw)) return null;
   return Number.parseInt(raw, 10);
