@@ -6,17 +6,28 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Allowlist, not "everything except assets". The proxy runs as its own
+  // function invocation on every matched request — with the old catch-all it
+  // ran (and refreshed the Supabase session) for every static page, chord
+  // cover, sitemap hit and bot crawl: a second invocation per pageview, most
+  // of them for guests who have no session at all. It now covers only the
+  // routes that read the session on the server or need the login redirect:
+  //   • /songs/:slug        — still rendered per request (UA-based lyric
+  //                           wrap); reads the viewer's saved state.
+  //   • /lists/*, /add      — server-side session reads.
+  //   • /admin, /profile,
+  //     /ui-kit, /api/revalidate — the protected areas (redirect to login).
+  //   • /auth/*             — sign-in flow.
+  // Public API routes (/api/search, /api/songs/view) and every static or ISR
+  // page bypass it entirely; their personalization is client-side.
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - static assets by extension — images AND fonts. woff2 was missing
-     *   here originally, so /fonts/*.woff2 307'd anonymous visitors to
-     *   /auth/login and guests NEVER received the brand fonts — every
-     *   logged-out visit rendered in the fallback stack.
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|otf)$).*)",
+    "/songs/:slug",
+    "/lists/:path*",
+    "/add",
+    "/auth/:path*",
+    "/admin/:path*",
+    "/profile/:path*",
+    "/ui-kit/:path*",
+    "/api/revalidate/:path*",
   ],
 };
