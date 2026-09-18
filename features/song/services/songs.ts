@@ -322,68 +322,83 @@ async function resolveTopicSlugs(topic: Topic): Promise<string[] | null> {
   return null;
 }
 
-export const getSongsPage = unstable_cache(
-  async (args: SongsPageArgs = {}): Promise<{ songs: Song[]; total: number }> => {
-    if (!hasEnvVars) return { songs: [], total: 0 };
-    const { q = "", difficulty, sortBy = "views", offset = 0, limit = 50, topic } = args;
-    // songs_search = published-only view with owner rights: under the anon RLS
-    // policy the ILIKE search patterns can't use the trigram indexes (ILIKE is
-    // not leakproof) and every uncached search seq-scans the catalogue.
-    let qry = getClient()
-      .from("songs_search")
-      .select(SONG_LIST_COLUMNS, { count: "exact" });
-    if (topic) {
-      const t = getTopicBySlug(topic);
-      if (!t) return { songs: [], total: 0 };
-      const slugs = await resolveTopicSlugs(t);
-      if (!slugs || slugs.length === 0) return { songs: [], total: 0 };
-      qry = qry.in("slug", slugs);
-    }
-    if (difficulty) qry = qry.eq("difficulty", difficulty);
-    if (q) {
-      // Token-AND search: split on whitespace and require EACH token to match
-      // somewhere (title OR artist OR lyrics_text). Natural multi-word queries
-      // like "Скрябін Мам" then work — token1 matches artist, token2 matches
-      // title — even though the full phrase isn't in any single column.
-      // Aliases are still resolved against the full query (e.g. "DZIDZIO" →
-      // canonical "Дзідзьо") and OR'd into the FIRST token's clause so a
-      // matching artist still appears regardless of other tokens.
-      const canonicalNames = await resolveArtistNamesByAlias(q);
-      const tokens = q.trim().split(/\s+/).filter((t) => t.length >= 2);
-      const usedTokens = tokens.length ? tokens : [q]; // fallback for 1-char queries
-      usedTokens.forEach((token, i) => {
-        const escaped = token.replace(/[%,()]/g, "\\$&");
-        const clauses = [
-          `title.ilike.%${escaped}%`,
-          `artist.ilike.%${escaped}%`,
-        ];
-        // Lyrics search activates for tokens of 3+ chars (avoids matching every
-        // "a"/"і" in the catalogue and keeps trigram index efficient).
-        if (token.length >= 3) clauses.push(`lyrics_text.ilike.%${escaped}%`);
-        // Alias-resolved canonical artist names attach to the first token's
-        // OR group — that's enough to surface alias-matched songs without
-        // having to repeat them across every token.
-        if (i === 0) {
-          clauses.push(
-            ...canonicalNames.map((n) => `artist.eq.${n.replace(/[,()]/g, "\\$&")}`),
-          );
-        }
-        qry = qry.or(clauses.join(","));
-      });
-    }
-    if (sortBy === "created_at_desc") qry = qry.order("created_at", { ascending: false });
-    else if (sortBy === "created_at_asc") qry = qry.order("created_at", { ascending: true });
-    else if (sortBy === "source_popularity") qry = qry.order("source_popularity", { ascending: false, nullsFirst: false });
-    else if (sortBy === "source_views") qry = qry.order("source_views", { ascending: false, nullsFirst: false });
-    else if (sortBy === "title_asc") qry = qry.order("title_sort", { ascending: true });
-    else qry = qry.order("views", { ascending: false });
-    const { data, count, error } = await qry.range(offset, offset + limit - 1);
-    if (error || !data) return { songs: [], total: 0 };
-    return { songs: data.map(mapRow), total: count ?? data.length };
-  },
-  ["songs-page"],
-  { revalidate: 600, tags: ["songs"] },
-);
+async function fetchSongsPage(args: SongsPageArgs = {}): Promise<{ songs: Song[]; total: number }> {
+  if (!hasEnvVars) return { songs: [], total: 0 };
+  const { q = "", difficulty, sortBy = "views", offset = 0, limit = 50, topic } = args;
+  // songs_search = published-only view with owner rights: under the anon RLS
+  // policy the ILIKE search patterns can't use the trigram indexes (ILIKE is
+  // not leakproof) and every uncached search seq-scans the catalogue.
+  let qry = getClient()
+    .from("songs_search")
+    .select(SONG_LIST_COLUMNS, { count: "exact" });
+  if (topic) {
+    const t = getTopicBySlug(topic);
+    if (!t) return { songs: [], total: 0 };
+    const slugs = await resolveTopicSlugs(t);
+    if (!slugs || slugs.length === 0) return { songs: [], total: 0 };
+    qry = qry.in("slug", slugs);
+  }
+  if (difficulty) qry = qry.eq("difficulty", difficulty);
+  if (q) {
+    // Token-AND search: split on whitespace and require EACH token to match
+    // somewhere (title OR artist OR lyrics_text). Natural multi-word queries
+    // like "Скрябін Мам" then work — token1 matches artist, token2 matches
+    // title — even though the full phrase isn't in any single column.
+    // Aliases are still resolved against the full query (e.g. "DZIDZIO" →
+    // canonical "Дзідзьо") and OR'd into the FIRST token's clause so a
+    // matching artist still appears regardless of other tokens.
+    const canonicalNames = await resolveArtistNamesByAlias(q);
+    const tokens = q.trim().split(/\s+/).filter((t) => t.length >= 2);
+    const usedTokens = tokens.length ? tokens : [q]; // fallback for 1-char queries
+    usedTokens.forEach((token, i) => {
+      const escaped = token.replace(/[%,()]/g, "\\$&");
+      const clauses = [
+        `title.ilike.%${escaped}%`,
+        `artist.ilike.%${escaped}%`,
+      ];
+      // Lyrics search activates for tokens of 3+ chars (avoids matching every
+      // "a"/"і" in the catalogue and keeps trigram index efficient).
+      if (token.length >= 3) clauses.push(`lyrics_text.ilike.%${escaped}%`);
+      // Alias-resolved canonical artist names attach to the first token's
+      // OR group — that's enough to surface alias-matched songs without
+      // having to repeat them across every token.
+      if (i === 0) {
+        clauses.push(
+          ...canonicalNames.map((n) => `artist.eq.${n.replace(/[,()]/g, "\\$&")}`),
+        );
+      }
+      qry = qry.or(clauses.join(","));
+    });
+  }
+  if (sortBy === "created_at_desc") qry = qry.order("created_at", { ascending: false });
+  else if (sortBy === "created_at_asc") qry = qry.order("created_at", { ascending: true });
+  else if (sortBy === "source_popularity") qry = qry.order("source_popularity", { ascending: false, nullsFirst: false });
+  else if (sortBy === "source_views") qry = qry.order("source_views", { ascending: false, nullsFirst: false });
+  else if (sortBy === "title_asc") qry = qry.order("title_sort", { ascending: true });
+  else qry = qry.order("views", { ascending: false });
+  const { data, count, error } = await qry.range(offset, offset + limit - 1);
+  if (error || !data) return { songs: [], total: 0 };
+  return { songs: data.map(mapRow), total: count ?? data.length };
+}
+
+// Cached only for the FINITE key space (sort × difficulty × topic × offset).
+// unstable_cache keys on every argument, so caching free-text searches too
+// minted one durable cache entry per distinct query string users typed —
+// and each entry was rewritten every 10 minutes. That was the bulk of the
+// 289K ISR writes (limit 200K) behind the 17.09.2026 Hobby fair-use block.
+// Searches now hit the database directly (trigram-indexed, ~100 ms); the
+// shared listings keep an hour-long cache — admin saves still call
+// revalidateTag("songs"), so new songs appear immediately regardless.
+const getSongsPageCached = unstable_cache(fetchSongsPage, ["songs-page"], {
+  revalidate: 3600,
+  tags: ["songs"],
+});
+
+export async function getSongsPage(
+  args: SongsPageArgs = {},
+): Promise<{ songs: Song[]; total: number }> {
+  return args.q ? fetchSongsPage(args) : getSongsPageCached(args);
+}
 
 export const getFreshSongs = unstable_cache(
   async (limit = 4): Promise<Song[]> => {
