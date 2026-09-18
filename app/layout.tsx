@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
 import "./globals.css";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
 import { CookieBanner } from "@/shared/components/CookieBanner";
@@ -61,11 +60,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // `Save-Data: on` — Chrome / Edge / Opera send this when the user enables
-  // data-saver in browser settings. Read it server-side so the first render
-  // already skips cover images (preload links etc. never even ship).
-  const h = await headers();
-  const initialLite = h.get("save-data")?.toLowerCase() === "on";
+  // Lite mode is decided on the client only (LiteModeProvider reads
+  // navigator.connection.saveData / effectiveType). It used to ALSO read the
+  // `Save-Data` request header here — but `headers()` in the root layout opts
+  // EVERY route into dynamic rendering, so the whole site (learn articles,
+  // legal pages, the tuner, the chord dictionary…) was re-rendered on each
+  // request and never cached at the edge. That was the bulk of the Fluid CPU
+  // that tripped Vercel's Hobby fair-use block on 17.09.2026. The price of
+  // dropping the header: a Save-Data visitor downloads the three eager
+  // homepage covers (~35 KB) before the client flips to lite.
+  const initialLite = false;
 
   // PostHog ships from two origins: a separate `-assets` CDN that serves the
   // heavy SDK bundles (array config + recorder + surveys, ~370 KB) and the
