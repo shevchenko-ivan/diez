@@ -1,4 +1,20 @@
-export const dynamic = "force-dynamic";
+// Static + hourly ISR (invalidated on admin saves via revalidateTag/Path).
+// This used to be force-dynamic because the page read the viewer's saved
+// state, the admin flag and a `?sort=` query on the server — so every visit,
+// bot or human, was a full render (a big contributor to the Fluid CPU that
+// tripped the 17.09.2026 Hobby fair-use block). Those three now live on the
+// client: SavedArtistsProvider, <AdminOnly>, and ArtistSongsList's own sort.
+export const revalidate = 3600;
+
+// On-demand ISR only works when generateStaticParams exists — a dynamic
+// segment without it is rendered per request, `revalidate` or not (verified
+// locally: the route stayed `private, no-cache` until this was added). Empty
+// on purpose: prerendering ~150 artist pages on every deploy would just move
+// the render cost into builds; each page is built on its first visit instead
+// and served from the cache for an hour after that.
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
 
 import { type Metadata } from "next";
 import { PageShell } from "@/shared/components/PageShell";
@@ -6,17 +22,15 @@ import { getSongsByArtist } from "@/features/song/services/songs";
 import { getArtistBySlug } from "@/features/artist/services/artists";
 import { LEGACY_ARTIST_SLUGS } from "@/features/artist/lib/legacy-slugs";
 import { permanentRedirect, notFound } from "next/navigation";
-import { getSavedSlugs } from "@/features/playlist/actions/playlists";
-import { getSavedArtistSlugs } from "@/features/playlist/actions/artist-playlists";
 import { SaveArtistButton } from "@/features/artist/components/SaveArtistButton";
+import { SavedArtistsProvider } from "@/features/artist/components/SavedArtistsProvider";
+import { AdminOnly } from "@/shared/components/AdminOnly";
 import { Pencil } from "lucide-react";
 import Image from "next/image";
 import { ArtistSongsList } from "./ArtistSongsList";
 import { TeButton } from "@/shared/components/TeButton";
 import { BackButton } from "@/shared/components/BackButton";
-import { siteUrl, hasEnvVars, jsonLdScript, coverThumb } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { siteUrl, jsonLdScript, coverThumb } from "@/lib/utils";
 export async function generateMetadata({
   params,
 }: {
@@ -65,13 +79,10 @@ export async function generateMetadata({
 
 export default async function ArtistPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string }>;
 }) {
   const { slug } = await params;
-  const { sort = "" } = await searchParams;
   const artist = await getArtistBySlug(slug);
   // Renamed slug: the DB lookup missed but we know the successor — send
   // bookmarks and external links to the new address permanently.
@@ -84,32 +95,9 @@ export default async function ArtistPage({
   // index (a prime feeder of «Проскановано — наразі не проіндексовано»).
   if (!artist) notFound();
   const artistName = artist.name;
-  const sortMap: Record<string, "views" | "created_at_desc" | "created_at_asc" | "source_views" | "title_asc"> = {
-    new: "created_at_desc",
-    old: "created_at_asc",
-    popular: "source_views",
-    az: "title_asc",
-    views: "views",
-  };
-  const songs = await getSongsByArtist(artistName, { sortBy: sortMap[sort] ?? "source_views" });
-  const savedSlugs = await getSavedSlugs();
-  const savedArtistSlugs = await getSavedArtistSlugs();
-  const artistSaved = savedArtistSlugs.has(slug);
-
-  // Admin check for edit button
-  let isAdmin = false;
-  if (hasEnvVars && artist?.id) {
-    try {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const admin = createAdminClient();
-        const { data: profile } = await admin
-          .from("profiles").select("is_admin").eq("id", user.id).single();
-        isAdmin = profile?.is_admin ?? false;
-      }
-    } catch { /* not logged in */ }
-  }
+  // Default order only — the list re-sorts on the client (ArtistSongsList),
+  // so a `?sort=` query no longer needs a per-request render.
+  const songs = await getSongsByArtist(artistName, { sortBy: "source_views" });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -148,29 +136,32 @@ export default async function ArtistPage({
       />
       <div className="mb-6 flex items-center justify-between gap-3">
         <BackButton fallback="/artists" label="Виконавці" />
-        {isAdmin && artist?.id && (
-          <TeButton
-            shape="pill"
-            href={`/admin/artists/edit?id=${artist.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold"
-            style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
-          >
-            <Pencil size={12} />
-            Редагувати
-          </TeButton>
+        {artist?.id && (
+          <AdminOnly>
+            <TeButton
+              shape="pill"
+              href={`/admin/artists/edit?id=${artist.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold"
+              style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
+            >
+              <Pencil size={12} />
+              Редагувати
+            </TeButton>
+          </AdminOnly>
         )}
       </div>
 
         <div className="te-surface p-4 md:p-5 mb-8 relative" style={{ borderRadius: "1.5rem" }}>
           <div className="absolute top-3 right-3 md:top-4 md:right-4">
-            <SaveArtistButton
-              artistSlug={slug}
-              artistName={artistName}
-              songsCount={songs.length}
-              initialSaved={artistSaved}
-              variant="bare"
-              size={16}
-            />
+            <SavedArtistsProvider>
+              <SaveArtistButton
+                artistSlug={slug}
+                artistName={artistName}
+                songsCount={songs.length}
+                variant="bare"
+                size={16}
+              />
+            </SavedArtistsProvider>
           </div>
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden te-inset flex-shrink-0 flex items-center justify-center">
@@ -218,8 +209,7 @@ export default async function ArtistPage({
 
         <ArtistSongsList
           showSearch={songs.length >= 5}
-          sort={songs.length >= 5 ? sort : undefined}
-          sortBasePath={`/artists/${slug}`}
+          sortable={songs.length >= 5}
           songs={songs.map(s => ({
             slug: s.slug,
             title: s.title,
@@ -228,8 +218,10 @@ export default async function ArtistPage({
             coverImage: s.coverImage,
             coverColor: s.coverColor,
             youtubeId: s.youtubeId,
+            views: s.views,
+            sourceViews: s.sourceViews,
+            createdAt: s.createdAt,
           }))}
-          savedSlugs={Array.from(savedSlugs)}
         />
     </PageShell>
   );

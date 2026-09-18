@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, X, Music } from "lucide-react";
+import { Search, X, Music, ArrowUpDown } from "lucide-react";
 import { SongCover } from "@/shared/components/SongCover";
 import { SaveHeartButton } from "@/features/song/components/SaveHeartButton";
 import { EmptyState } from "@/shared/components/EmptyState";
-import { SortSelect } from "@/app/songs/SortSelect";
 
 interface Song {
   slug: string;
@@ -16,31 +15,82 @@ interface Song {
   coverImage?: string | null;
   coverColor?: string | null;
   youtubeId?: string | null;
+  views?: number;
+  sourceViews?: number;
+  createdAt?: string;
 }
 
 interface Props {
+  /** In the server's default order (source popularity, desc). */
   songs: Song[];
-  savedSlugs: string[];
   /** Hide the search input for short lists (< 5 songs). */
   showSearch?: boolean;
-  /** Current sort key; when defined, renders SortSelect alongside the search input. */
-  sort?: string;
-  sortBasePath?: string;
+  /** Show the sort control (the list re-sorts on the client). */
+  sortable?: boolean;
 }
+
+// Same two options the shared SortSelect offers; the extra keys below are
+// accepted from a `?sort=` deep link for backward compatibility.
+const SORT_OPTIONS = [
+  { value: "", label: "За популярністю" },
+  { value: "az", label: "За алфавітом" },
+];
+type SortKey = "" | "az" | "new" | "old" | "views" | "popular";
+const SORT_KEYS: SortKey[] = ["", "az", "new", "old", "views", "popular"];
 
 function norm(s: string) {
   return s.toLowerCase().replace(/[`'’ʼ"«»„"]/g, "").trim();
 }
 
-export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, sortBasePath }: Props) {
+function sortSongs(songs: Song[], sort: SortKey): Song[] {
+  switch (sort) {
+    case "az":
+      return [...songs].sort((a, b) => a.title.localeCompare(b.title, "uk"));
+    case "new":
+      return [...songs].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    case "old":
+      return [...songs].sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+    case "views":
+      return [...songs].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+    default:
+      // "" / "popular" — the server's own order (source_views desc).
+      return songs;
+  }
+}
+
+// Sorting lives on the client on purpose. The artist page is static (cached at
+// the edge), so a `?sort=` query can no longer change what the server renders;
+// reading it through `useSearchParams` here would also force this whole list —
+// the page's SEO content — to render client-side only. Instead: the HTML
+// always carries the default order, the control re-sorts in place, and the
+// URL is kept in sync with history.replaceState so links stay shareable. A
+// visitor arriving on a `?sort=` deep link sees the default order for one
+// frame before the effect below applies the requested sort.
+export function ArtistSongsList({ songs, showSearch = true, sortable = false }: Props) {
   const [q, setQ] = useState("");
-  const saved = useMemo(() => new Set(savedSlugs), [savedSlugs]);
+  const [sort, setSort] = useState<SortKey>("");
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("sort") ?? "";
+    if (requested && SORT_KEYS.includes(requested as SortKey)) setSort(requested as SortKey);
+  }, []);
+
+  const changeSort = (next: string) => {
+    const key = (SORT_KEYS.includes(next as SortKey) ? next : "") as SortKey;
+    setSort(key);
+    const url = new URL(window.location.href);
+    if (key) url.searchParams.set("sort", key);
+    else url.searchParams.delete("sort");
+    window.history.replaceState(window.history.state, "", url.toString());
+  };
+
+  const sorted = useMemo(() => sortSongs(songs, sort), [songs, sort]);
 
   const filtered = useMemo(() => {
     const query = norm(q);
-    if (!query) return songs;
-    return songs.filter((s) => norm(s.title).includes(query));
-  }, [songs, q]);
+    if (!query) return sorted;
+    return sorted.filter((s) => norm(s.title).includes(query));
+  }, [sorted, q]);
 
   return (
     <>
@@ -74,8 +124,29 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
             </button>
           )}
         </div>
-        {sort !== undefined && sortBasePath && (
-          <SortSelect value={sort} basePath={sortBasePath} />
+        {sortable && (
+          <div className="flex items-center">
+            <ArrowUpDown size={14} aria-hidden="true" style={{ color: "var(--text-muted)", marginRight: 8, flexShrink: 0 }} />
+            <select
+              value={SORT_OPTIONS.some((o) => o.value === sort) ? sort : ""}
+              onChange={(e) => changeSort(e.target.value)}
+              aria-label="Сортування пісень"
+              className="te-inset pl-3 py-2 text-xs font-bold outline-none bg-transparent appearance-none"
+              style={{
+                borderRadius: "0.75rem",
+                color: "var(--text)",
+                paddingRight: "2rem",
+                backgroundImage:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 0.75rem center",
+              }}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
       )}
@@ -130,9 +201,10 @@ export function ArtistSongsList({ songs, savedSlugs, showSearch = true, sort, so
                 >
                   <Music size={18} strokeWidth={2} />
                 </span>
+                {/* Saved state arrives from SavedSlugsProvider (root layout)
+                    for signed-in viewers — the static HTML can't know it. */}
                 <SaveHeartButton
                   slug={song.slug}
-                  initialSaved={saved.has(song.slug)}
                   variant="bare"
                   size={14}
                 />

@@ -118,6 +118,7 @@ function mapRow(row: Record<string, unknown>): Song {
     difficulty: row.difficulty as Difficulty,
     chords: resolved.chords,
     views: row.views as number,
+    sourceViews: typeof row.source_views === "number" ? row.source_views : undefined,
     sections: resolved.sections,
     coverImage: (row.cover_image as string | null) ?? undefined,
     coverColor: (row.cover_color as string | null) ?? undefined,
@@ -422,9 +423,11 @@ export const getSongsByArtist = unstable_cache(
     options?: { excludeSlug?: string; limit?: number; sortBy?: SortBy },
   ): Promise<Song[]> => {
     if (!hasEnvVars) return [];
+    // created_at + source_views ride along so the (static) artist page can
+    // re-sort the list on the client — see app/artists/[slug]/ArtistSongsList.
     let q = getClient()
       .from("songs")
-      .select(SONG_LIST_COLUMNS)
+      .select(`${SONG_LIST_COLUMNS}, created_at, source_views`)
       .eq("status", "published")
       .eq("artist", artist);
     const s = options?.sortBy ?? "views";

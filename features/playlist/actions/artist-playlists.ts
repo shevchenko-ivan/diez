@@ -98,6 +98,19 @@ export async function getArtistsWithSavedSongs(): Promise<Set<string>> {
 }
 
 /**
+ * Both personal artist sets in one round trip, as arrays (a Set can't cross
+ * the server-action boundary). Called from SavedArtistsProvider on the static
+ * artist pages — signed-in viewers only, gated by the auth cookie on the client.
+ */
+export async function getSavedArtistSets(): Promise<{
+  savedArtists: string[];
+  artistsWithSavedSongs: string[];
+}> {
+  const [artists, withSongs] = await Promise.all([getSavedArtistSlugs(), getArtistsWithSavedSongs()]);
+  return { savedArtists: Array.from(artists), artistsWithSavedSongs: Array.from(withSongs) };
+}
+
+/**
  * Creates a playlist named after the artist and adds every published song by
  * that artist. If a playlist with the same name already exists, we just top it
  * up with any missing songs (idempotent).

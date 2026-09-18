@@ -3,10 +3,18 @@ import { PageShell } from "@/shared/components/PageShell";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { getArtistSongCounts, getArtistPopularity } from "@/features/song/services/songs";
 import { getAllArtists } from "@/features/artist/services/artists";
-import { ArtistCard } from "@/features/artist/components/ArtistCard";
+import { ArtistsGrid } from "@/features/artist/components/ArtistsGrid";
+import { SavedArtistsProvider } from "@/features/artist/components/SavedArtistsProvider";
 import { BackButton } from "@/shared/components/BackButton";
-import { getSavedArtistSlugs, getArtistsWithSavedSongs } from "@/features/playlist/actions/artist-playlists";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
+
+// Static + hourly ISR. The page used to read the viewer's saved artists from
+// the auth cookie, which made it dynamic: ~565 KB of HTML rendered from
+// scratch on every visit (bots included) — one of the heaviest routes behind
+// the 17.09.2026 Hobby fair-use block. Personalization (filled hearts, liked
+// artists floated to the top) now happens on the client via
+// SavedArtistsProvider for signed-in viewers only.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",
@@ -35,12 +43,10 @@ function stringToColor(str: string) {
 }
 
 export default async function ArtistsPage() {
-  const [songCount, popularity, dbArtists, savedArtistSlugs, savedArtistNames] = await Promise.all([
+  const [songCount, popularity, dbArtists] = await Promise.all([
     getArtistSongCounts(),
     getArtistPopularity(),
     getAllArtists(),
-    getSavedArtistSlugs(),
-    getArtistsWithSavedSongs(),
   ]);
 
   // Build from artists table — all artists, not just those with songs
@@ -56,13 +62,11 @@ export default async function ArtistsPage() {
         color: stringToColor(a.name),
         image: a.photo_url ?? undefined,
         slug: a.slug,
-        hasSavedSong: savedArtistNames.has(key),
       };
     })
-    // Float any artist with a saved song to the top; within each group sort by
-    // total source_views desc (same metric as the home strip), tie-break by name.
+    // Total source_views desc (same metric as the home strip), tie-break by
+    // name. Artists with a saved song float to the top on the client.
     .sort((a, b) => {
-      if (a.hasSavedSong !== b.hasSavedSong) return a.hasSavedSong ? -1 : 1;
       if (b.totalViews !== a.totalViews) return b.totalViews - a.totalViews;
       return a.name.localeCompare(b.name, "uk");
     });
@@ -108,11 +112,9 @@ export default async function ArtistsPage() {
       {artists.length === 0 ? (
         <EmptyState message="Виконавців ще немає в каталозі." />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-          {artists.map(({ hasSavedSong: _unused, ...artist }) => (
-            <ArtistCard key={artist.slug} {...artist} saved={savedArtistSlugs.has(artist.slug)} />
-          ))}
-        </div>
+        <SavedArtistsProvider>
+          <ArtistsGrid artists={artists} />
+        </SavedArtistsProvider>
       )}
     </PageShell>
   );

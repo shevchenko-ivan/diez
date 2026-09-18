@@ -95,6 +95,9 @@ export interface Song {
   /** Row creation timestamp (Postgres `timestamptz` → ISO string). Used by
    *  the song page to emit a valid `VideoObject.uploadDate` for Google. */
   createdAt?: string;
+  /** Source-catalogue popularity counter — only populated by getSongsByArtist
+      (the artist page sorts its list on the client). */
+  sourceViews?: number;
   variants?: SongVariant[];
   primaryVariantId?: string;
   activeVariantId?: string;

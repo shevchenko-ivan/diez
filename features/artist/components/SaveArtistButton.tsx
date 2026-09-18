@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { SavedArtistsContext } from "./SavedArtistsProvider";
 import { Heart } from "lucide-react";
 import { TeButton } from "@/shared/components/TeButton";
 import { BottomSheet } from "@/shared/components/BottomSheet";
@@ -38,6 +39,14 @@ export function SaveArtistButton({
   const { trigger } = useHaptics();
 
   useEffect(() => setSaved(initialSaved), [initialSaved]);
+
+  // Static artist pages can't know the viewer's saves at render time —
+  // SavedArtistsProvider fetches them client-side and this upgrades the heart.
+  // Upgrade only: never force a fresh user toggle back to false.
+  const savedCtx = useContext(SavedArtistsContext);
+  useEffect(() => {
+    if (savedCtx?.artists.has(artistSlug)) setSaved(true);
+  }, [savedCtx, artistSlug]);
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
