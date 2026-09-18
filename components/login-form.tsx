@@ -2,7 +2,7 @@
 
 import { getClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TeButton } from "@/shared/components/TeButton";
 import { GoogleAuthButton } from "@/shared/components/GoogleAuthButton";
@@ -13,13 +13,17 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  // Return to ?next= after login (only same-origin relative paths) — used by
-  // the "Додати пісню" flow. Falls back to /profile.
-  const nextParam = useSearchParams().get("next");
-  const dest = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/profile";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Return to ?next= after login (only same-origin relative paths) — used by
+    // the "Додати пісню" flow. Falls back to /profile. Read from the URL at
+    // submit time rather than via useSearchParams(): the login page is
+    // statically prerendered now, and useSearchParams would push this form
+    // into a client-only Suspense bailout (no form in the SSR HTML — and a
+    // build error without the boundary).
+    const nextParam = new URLSearchParams(window.location.search).get("next");
+    const dest = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/profile";
     const supabase = await getClient();
     setIsLoading(true);
     setError(null);
