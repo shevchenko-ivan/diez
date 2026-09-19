@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { slugify, dedupeSlug } from "@/lib/slugify";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,6 +17,25 @@ function sanitizeUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!value.startsWith("https://") && !value.startsWith("http://")) return null;
   return value;
+}
+
+// Song pages are ISR-cached for a day and render the artist's link, breadcrumb
+// and composer.url only when the artist row is approved and live. Any
+// moderation change must drop those cached pages, plus the footer's ranked
+// artists list (tag "artists"). Artist actions are rare, so the fan-out is fine.
+async function revalidateArtistSongPages(artistIds: string[]): Promise<void> {
+  if (artistIds.length === 0) return;
+  const admin = createAdminClient();
+  const names: string[] = [];
+  for (let i = 0; i < artistIds.length; i += 200) {
+    const { data } = await admin.from("artists").select("name").in("id", artistIds.slice(i, i + 200));
+    for (const r of data ?? []) if (typeof r.name === "string") names.push(r.name);
+  }
+  for (let i = 0; i < names.length; i += 100) {
+    const { data } = await admin.from("songs").select("slug").in("artist", names.slice(i, i + 100));
+    for (const r of data ?? []) if (typeof r.slug === "string") revalidatePath(`/songs/${r.slug}`);
+  }
+  revalidateTag("artists", "max");
 }
 
 async function requireAdmin(): Promise<void> {
@@ -104,6 +123,7 @@ export async function updateArtist(formData: FormData) {
 
   if (error) throw new Error(`Помилка збереження: ${error.message}`);
 
+  await revalidateArtistSongPages([artistId]);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
   redirect("/admin/artists");
@@ -121,6 +141,7 @@ export async function approveArtist(formData: FormData) {
     .eq("id", artistId);
   if (error) throw new Error(`Помилка схвалення: ${error.message}`);
 
+  await revalidateArtistSongPages([artistId]);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
 }
@@ -153,6 +174,7 @@ export async function archiveArtist(formData: FormData) {
     .eq("id", artistId);
   if (error) throw new Error(`Помилка архівування: ${error.message}`);
 
+  await revalidateArtistSongPages([artistId]);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
 }
@@ -169,6 +191,7 @@ export async function restoreArtist(formData: FormData) {
     .eq("id", artistId);
   if (error) throw new Error(`Помилка відновлення: ${error.message}`);
 
+  await revalidateArtistSongPages([artistId]);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
 }
@@ -183,6 +206,8 @@ export async function deleteArtist(formData: FormData) {
   const { data: artist } = await admin.from("artists").select("archived_at").eq("id", artistId).single();
   if (!artist?.archived_at) throw new Error("Спочатку заархівуйте артиста");
 
+  // Read the song pages to purge before the artist row disappears.
+  await revalidateArtistSongPages([artistId]);
   const { error } = await admin.from("artists").delete().eq("id", artistId);
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
 
@@ -203,6 +228,7 @@ export async function bulkApproveArtists(formData: FormData) {
     .in("id", ids);
   if (error) throw new Error(`Помилка: ${error.message}`);
 
+  await revalidateArtistSongPages(ids);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
 }
@@ -220,6 +246,7 @@ export async function bulkArchiveArtists(formData: FormData) {
     .in("id", ids);
   if (error) throw new Error(`Помилка: ${error.message}`);
 
+  await revalidateArtistSongPages(ids);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
 }
@@ -237,6 +264,7 @@ export async function bulkRestoreArtists(formData: FormData) {
     .in("id", ids);
   if (error) throw new Error(`Помилка: ${error.message}`);
 
+  await revalidateArtistSongPages(ids);
   revalidatePath("/artists");
   revalidatePath("/admin/artists");
 }
@@ -249,6 +277,7 @@ export async function bulkDeleteArtists(formData: FormData) {
 
   const admin = createAdminClient();
   // Only delete artists that are archived
+  await revalidateArtistSongPages(ids);
   const { error } = await admin
     .from("artists")
     .delete()

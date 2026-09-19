@@ -12,16 +12,17 @@ export const config = {
   // cover, sitemap hit and bot crawl: a second invocation per pageview, most
   // of them for guests who have no session at all. It now covers only the
   // routes that read the session on the server or need the login redirect:
-  //   • /songs/:slug        — still rendered per request (UA-based lyric
-  //                           wrap); reads the viewer's saved state.
   //   • /lists/*, /add      — server-side session reads.
   //   • /admin, /profile,
   //     /ui-kit, /api/revalidate — the protected areas (redirect to login).
   //   • /auth/*             — sign-in flow.
   // Public API routes (/api/search, /api/songs/view) and every static or ISR
-  // page bypass it entirely; their personalization is client-side.
+  // page bypass it entirely; their personalization is client-side. That now
+  // includes /songs/:slug (ISR since 19.09.2026): it was ~730K invocations a
+  // month whose only job was a Supabase `getClaims()` for guests and bots
+  // with no session at all. Signed-in users' tokens are refreshed by the
+  // browser client and by the server actions they call.
   matcher: [
-    "/songs/:slug",
     "/lists/:path*",
     "/add",
     "/auth/:path*",

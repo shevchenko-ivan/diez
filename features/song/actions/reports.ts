@@ -106,4 +106,9 @@ export async function resolveReport(formData: FormData) {
   revalidatePath("/admin/reports");
   revalidatePath("/songs");
   revalidatePath("/");
+  // hide/block flip the song to draft — the ISR-cached song page must go too.
+  if (action !== "dismiss" && songId) {
+    const { data: hidden } = await admin.from("songs").select("slug").eq("id", songId).single();
+    if (hidden?.slug) revalidatePath(`/songs/${hidden.slug}`);
+  }
 }

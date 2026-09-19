@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import type { Stroke, NoteLength } from "../types";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,7 +83,10 @@ async function revalidateForSong(admin: ReturnType<typeof createAdminClient>, so
   // so we log the actual cause server-side for diagnosability.
   try {
     const { data } = await admin.from("songs").select("slug").eq("id", songId).single();
-    try { revalidateTag("songs", "max"); } catch (e) { console.error("[strumming] revalidateTag failed:", e); }
+    // No revalidateTag("songs") here: patterns live on this song's page only,
+    // and the tag is inherited by every ISR page that reads a songs-tagged
+    // cache (the footer's ranked-artists list puts it on ALL pages) — so a
+    // tag purge marks the whole site stale for one strumming edit.
     if (data?.slug) {
       try { revalidatePath(`/songs/${data.slug}`); } catch (e) { console.error("[strumming] revalidatePath failed:", e); }
     }

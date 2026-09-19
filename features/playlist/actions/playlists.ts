@@ -340,7 +340,13 @@ export async function setSongPlaylists(
     if (error) return { ok: false, reason: "error", message: error.message };
   }
 
-  revalidatePath("/", "layout");
+  // Only the pages that render playlist membership on the server. This used
+  // to be revalidatePath("/", "layout") — a purge of EVERY cached page on the
+  // site (2.6k song pages, artists, catalogue, home) on each heart tap, back
+  // when hearts were server-rendered. They are client-side everywhere now
+  // (SavedSlugsProvider / SongPageProvider), so nothing static needs it.
+  revalidatePath("/profile/lists");
+  for (const id of new Set([...toAdd, ...toRemove, ...toKeep])) revalidatePath(`/profile/lists/${id}`);
   return { ok: true, data: { saved: desired.size > 0 } };
 }
 

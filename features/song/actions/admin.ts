@@ -197,6 +197,24 @@ async function getSongSlug(songId: string): Promise<string | null> {
   return (data?.slug as string | undefined) ?? null;
 }
 
+async function getSongSlugs(songIds: string[]): Promise<string[]> {
+  const admin = createAdminClient();
+  const out: string[] = [];
+  for (let i = 0; i < songIds.length; i += 200) {
+    const { data } = await admin.from("songs").select("slug").in("id", songIds.slice(i, i + 200));
+    for (const row of data ?? []) if (typeof row.slug === "string") out.push(row.slug);
+  }
+  return out;
+}
+
+// /songs/[slug] is served from the ISR cache (daily revalidate), so every
+// action that changes what a song URL serves must invalidate that path —
+// otherwise the edit shows up tomorrow. Tag invalidation alone is not enough:
+// the page's data isn't behind a tagged unstable_cache.
+function revalidateSongPages(slugs: (string | null | undefined)[]) {
+  for (const slug of slugs) if (slug) revalidatePath(`/songs/${slug}`);
+}
+
 export async function createVariant(formData: FormData) {
   const adminId = await requireAdmin();
 
@@ -238,7 +256,10 @@ export async function createVariant(formData: FormData) {
   }
 
   const slug = await getSongSlug(songId);
-  revalidateTag("songs", "max");
+  // Variant edits change only this song's page (songs.chords and the list
+  // caches are not touched), so no revalidateTag("songs") — that tag is
+  // inherited by every ISR page via the footer's ranked-artists cache and
+  // would mark the whole site stale per keystroke of an editing session.
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
   if (slug) redirect(`/songs/${slug}?v=${variant.id}`);
@@ -306,7 +327,10 @@ export async function updateVariant(formData: FormData) {
   }
 
   const slug = await getSongSlug(songId);
-  revalidateTag("songs", "max");
+  // Variant edits change only this song's page (songs.chords and the list
+  // caches are not touched), so no revalidateTag("songs") — that tag is
+  // inherited by every ISR page via the footer's ranked-artists cache and
+  // would mark the whole site stale per keystroke of an editing session.
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
 
@@ -338,7 +362,10 @@ export async function setPrimaryVariant(formData: FormData) {
   if (error) throw new Error(`Помилка: ${error.message}`);
 
   const slug = await getSongSlug(songId);
-  revalidateTag("songs", "max");
+  // Variant edits change only this song's page (songs.chords and the list
+  // caches are not touched), so no revalidateTag("songs") — that tag is
+  // inherited by every ISR page via the footer's ranked-artists cache and
+  // would mark the whole site stale per keystroke of an editing session.
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
 }
@@ -375,7 +402,10 @@ export async function deleteVariant(formData: FormData) {
   if (error) throw new Error(`Помилка: ${error.message}`);
 
   const slug = await getSongSlug(variant.song_id as string);
-  revalidateTag("songs", "max");
+  // Variant edits change only this song's page (songs.chords and the list
+  // caches are not touched), so no revalidateTag("songs") — that tag is
+  // inherited by every ISR page via the footer's ranked-artists cache and
+  // would mark the whole site stale per keystroke of an editing session.
   if (slug) revalidatePath(`/songs/${slug}`);
   revalidatePath("/admin");
 }
@@ -412,8 +442,9 @@ export async function updateSongStatus(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/");
   // Any status flip changes what the URL serves (published → live page,
-  // archived/draft → 404) — either way IndexNow should trigger a recrawl.
+  // archived/draft → 404) — drop the cached page and have IndexNow recrawl.
   const changedSlug = await getSongSlug(songId);
+  revalidateSongPages([changedSlug]);
   if (changedSlug) after(() => pingIndexNow([`/songs/${changedSlug}`, "/songs"]));
 }
 
@@ -482,6 +513,7 @@ export async function updateSong(formData: FormData) {
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidateSongPages([await getSongSlug(songId)]);
 
   const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
   const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
@@ -602,7 +634,7 @@ export async function deleteSong(formData: FormData) {
 
   const admin = createAdminClient();
   // Only allow deleting archived songs
-  const { data: song } = await admin.from("songs").select("status").eq("id", songId).single();
+  const { data: song } = await admin.from("songs").select("status, slug").eq("id", songId).single();
   if (song?.status !== "archived") throw new Error("Спочатку заархівуйте пісню");
 
   const { error } = await admin.from("songs").delete().eq("id", songId);
@@ -614,6 +646,7 @@ export async function deleteSong(formData: FormData) {
   revalidatePath("/artists");
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidateSongPages([song.slug as string | undefined]);
 }
 
 // ─── Bulk song operations ─────────────────────────────────────────────────────
@@ -643,6 +676,7 @@ export async function bulkUpdateSongStatus(formData: FormData) {
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidateSongPages(await getSongSlugs(ids));
 }
 
 export async function bulkDeleteSongs(formData: FormData) {
@@ -652,6 +686,7 @@ export async function bulkDeleteSongs(formData: FormData) {
   if (!ids?.length) return;
 
   const admin = createAdminClient();
+  const slugs = await getSongSlugs(ids);
   // Only delete archived songs
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200);
@@ -668,4 +703,5 @@ export async function bulkDeleteSongs(formData: FormData) {
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidateSongPages(slugs);
 }

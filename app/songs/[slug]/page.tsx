@@ -1,32 +1,45 @@
 import { type Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
-// Song pages are admin-editable — force fresh fetch on every request so
-// edits to tempo/strumming/variants appear immediately without fighting
-// Next.js's route-level and fetch-level caches.
-export const dynamic = "force-dynamic";
+// Served from the ISR cache — one render per song per day at most, plus
+// on-demand invalidation from every admin/submission action that touches a
+// song (revalidatePath(`/songs/${slug}`)), so edits still show up at once.
+//
+// This route used to be `force-dynamic`: it read the User-Agent (phone-width
+// lyric wrapping), `?v=`/`?t=`, the viewer's saved state and the admin flag on
+// the server, so every visit — crawler or human — was a full render. Song
+// pages were ~90 % of all function invocations after the rest of the site
+// went static (measured 19.09.2026: ~730K requests / 30 days) and the reason
+// the 17.09 Hobby fair-use block was still not survivable. All four now
+// resolve on the client — see SongPageClient.tsx and SongViewer's
+// pre-measure dual render.
+export const revalidate = 86400;
+
+// On-demand ISR only applies when generateStaticParams exists — a dynamic
+// segment without it is rendered per request, `revalidate` or not (verified
+// on /artists/[slug]). Empty on purpose: 2.6k songs are built on first visit,
+// not on every deploy.
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
 import Link from "next/link";
-import { getSongBySlug, getSongSlugRedirect, getSongsByArtist, getSongsSharingChords, applyVariant } from "@/features/song/services/songs";
+import { getSongBySlug, getSongSlugRedirect, getSongsByArtist, getSongsSharingChords } from "@/features/song/services/songs";
+import { applyVariant } from "@/features/song/lib/variants";
 import { chordPageFor, type ChordPage } from "@/features/song/data/chord-pages";
-import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
-import { SongActions } from "@/features/song/components/SongActions";
-import { FocusModeToggle } from "@/features/song/components/FocusModeToggle";
-import { TabsToggleButton } from "@/features/song/components/TabsToggleButton";
-import { SongViewer } from "@/features/song/components/SongViewer";
+import {
+  SongPageProvider,
+  SongHeaderActions,
+  MobileVariantRow,
+  ActiveSongViewer,
+} from "@/features/song/components/SongPageClient";
 import { SongCard } from "@/features/song/components/SongCard";
-import { Pencil } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
 import { Navbar } from "@/shared/components/Navbar";
 import { ReportButton } from "@/features/song/components/ReportButton";
 import { TeButton } from "@/shared/components/TeButton";
-import { siteUrl, hasEnvVars, jsonLdScript } from "@/lib/utils";
+import { siteUrl, jsonLdScript } from "@/lib/utils";
 import { getArtistSeoByName } from "@/features/artist/services/artists";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { headers } from "next/headers";
-import { userAgent } from "next/server";
 import { SiteFooter } from "@/shared/components/SiteFooter";
-import { VariantSwitcher } from "@/features/song/components/VariantSwitcher";
 import { Suspense, cache } from "react";
 import { SavedToast } from "@/shared/components/SavedToast";
 
@@ -44,6 +57,13 @@ import { SavedToast } from "@/shared/components/SavedToast";
 const getSong = cache(getSongBySlug);
 const getArtistSeo = cache(getArtistSeoByName);
 
+// Zero-cost gate before any database round trip. Every real slug — and every
+// legacy slug in slug_redirects — is lowercase [a-z0-9-] (slugify's charset;
+// verified against the whole table, longest is 53 chars). Anything else is a
+// scraper or a mangled link, and under ISR each unique one would otherwise
+// cost two Supabase queries plus a cache entry to answer 404.
+const isSlugShaped = (slug: string) => /^[a-z0-9-]{1,80}$/.test(slug);
+
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({
@@ -52,6 +72,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  if (!isSlugShaped(slug)) return {};
   const metaSong = await getSong(slug);
   if (!metaSong) return {};
 
@@ -123,36 +144,22 @@ export async function generateMetadata({
 
 export default async function SongPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string; t?: string }>;
 }) {
   const { slug } = await params;
-  const { v: variantId, t: transposeParam } = await searchParams;
+  if (!isSlugShaped(slug)) notFound();
 
-  // UA-detect mobile so SongViewer can wrap lyrics to a phone-width estimate in
-  // the SSR/first paint (prevents the post-measure re-wrap CLS on phones).
-  const { device } = userAgent({ headers: await headers() });
-  const isMobile = device.type === "mobile";
-
-  // Run song fetch + save-state in parallel — they only need `slug`.
-  // (Previously song was awaited first, then a 2-call parallel batch ran;
-  // this collapses one round-trip on mobile networks.)
-  const [baseSong, saveState] = await Promise.all([
-    getSong(slug),
-    getSongSaveStateForSlug(slug),
-  ]);
+  // No `searchParams` here on purpose: reading them would opt the route out
+  // of the cache. `?v=` / `?t=` are applied in the browser (SongPageClient).
+  const baseSong = await getSong(slug);
   if (!baseSong) {
     // Migration 030 renamed timestamp slugs; keep the old URLs alive with a
-    // 308 (bookmarks, GSC, external links). Preserve ?v/?t across the hop.
+    // 308 (bookmarks, GSC, external links). The query string is not carried
+    // over — the page can't see it without going dynamic, and `?v=` on a
+    // pre-rename URL is a bookmark shape we have never observed.
     const target = await getSongSlugRedirect(slug);
-    if (target) {
-      const qs = new URLSearchParams();
-      if (variantId) qs.set("v", variantId);
-      if (transposeParam) qs.set("t", transposeParam);
-      permanentRedirect(`/songs/${target}${qs.size ? `?${qs}` : ""}`);
-    }
+    if (target) permanentRedirect(`/songs/${target}`);
     return notFound();
   }
 
@@ -164,17 +171,10 @@ export default async function SongPage({
   const artistSlug = artistSeo.slug ?? null;
   const artistAliases = artistSeo.aliases.filter((a) => a && a !== baseSong.artist);
 
-  // ?v= takes priority; then the variant the user previously saved; then primary.
-  const effectiveVariantId = variantId ?? saveState.variantId ?? undefined;
-  const song = applyVariant(baseSong, effectiveVariantId);
-
-  // Saved key: ?t= URL param (playlist links, sharing) wins over the value
-  // stored with the user's own playlist save. Clamped to ±11 semitones.
-  const parsedT = transposeParam !== undefined ? parseInt(transposeParam, 10) : NaN;
-  const initialTranspose = Math.max(
-    -11,
-    Math.min(11, Number.isFinite(parsedT) ? parsedT : saveState.transpose),
-  );
+  // The cached HTML always carries the primary variant — it is what every
+  // crawler and the vast majority of visitors want. A `?v=`, or the variant a
+  // signed-in user saved, is applied on the client (SongPageProvider).
+  const song = applyVariant(baseSong, undefined);
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -327,6 +327,7 @@ export default async function SongPage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }}
       />
       <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1400px] mx-auto w-full px-4 lg:px-8 pt-1 pb-20">
+       <SongPageProvider baseSong={baseSong}>
 
         {/* ── Header (single row, centered title, no surface) ─────────── */}
         <div className="mb-4 grid items-center" style={{ padding: "0.4rem 0", gridTemplateColumns: "1fr auto 1fr" }}>
@@ -361,46 +362,17 @@ export default async function SongPage({
             </h1>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 justify-end">
-            {song.variants && song.variants.length > 0 && (
-              <span className="hidden md:inline-flex">
-                <VariantSwitcher
-                  variants={song.variants}
-                  activeVariantId={song.activeVariantId}
-                />
-              </span>
-            )}
-            <Suspense>
-              <AdminEditButton slug={slug} variantId={song.activeVariantId} />
-            </Suspense>
-            <span className="hidden lg:inline-flex"><FocusModeToggle /></span>
-            {song.sections.some((s) => s.tab) && <TabsToggleButton />}
-            <SongActions slug={song.slug} isSaved={saveState.isSaved} variantId={song.activeVariantId} />
-          </div>
+          {/* Right: Actions — variant switcher, admin edit, focus, tabs,
+              save + share. Client-side: they follow the active variant and
+              the viewer's saved state, which the cached page can't know. */}
+          <SongHeaderActions />
         </div>
 
         {/* Mobile-only variant switcher row (avoids overlap with stacked title) */}
-        {song.variants && song.variants.length > 0 && (
-          <div className="md:hidden flex justify-center mb-4">
-            <VariantSwitcher
-              variants={song.variants}
-              activeVariantId={song.activeVariantId}
-            />
-          </div>
-        )}
+        <MobileVariantRow />
 
-        {/* ── Dynamic Song Viewer (Chords, Lyrics, Controls) ── */}
-        <SongViewer
-          song={song}
-          initialMobile={isMobile}
-          initialTranspose={initialTranspose}
-          editSlot={
-            <Suspense fallback={null}>
-              <AdminEditSheetButton slug={slug} variantId={song.activeVariantId} />
-            </Suspense>
-          }
-        />
+        {/* ── Song Viewer (Chords, Lyrics, Controls) ── */}
+        <ActiveSongViewer />
 
         {/* Instrument caption — honest (every song is playable on all three
             instruments via the toggle inside SongViewer) and a real on-page
@@ -445,6 +417,7 @@ export default async function SongPage({
           <SongsWithSameChords chords={song.chords ?? []} excludeSlug={slug} />
         </Suspense>
 
+       </SongPageProvider>
       </main>
       <SiteFooter />
     </div>
@@ -452,64 +425,6 @@ export default async function SongPage({
 }
 
 // ─── Streamed sections ───────────────────────────────────────────────────────
-
-// React.cache dedupes per-request — admin check + ID lookup runs once even
-// when both <AdminEditButton /> and <SongViewerWithEditHref /> consume it.
-const lookupAdminSongId = cache(async (slug: string): Promise<string | null> => {
-  if (!hasEnvVars) return null;
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    const admin = createAdminClient();
-    const { data: profile } = await admin
-      .from("profiles").select("is_admin").eq("id", user.id).single();
-    if (!profile?.is_admin) return null;
-    const { data } = await admin.from("songs").select("id").eq("slug", slug).single();
-    return data?.id ?? null;
-  } catch {
-    return null;
-  }
-});
-
-async function AdminEditButton({ slug, variantId }: { slug: string; variantId?: string }) {
-  const songId = await lookupAdminSongId(slug);
-  if (!songId) return null;
-  const href = `/admin/songs/edit?id=${songId}&from=song${variantId ? `&variant=${variantId}` : ""}`;
-  return (
-    <span className="hidden lg:inline-flex">
-      <TeButton
-        href={href}
-        title="Редагувати"
-        style={{ width: 36, height: 36, color: "var(--orange)" }}
-      >
-        <Pencil size={14} />
-      </TeButton>
-    </span>
-  );
-}
-
-// Mobile/tablet: full-width edit button at the bottom of the tools sheet.
-// `lookupAdminSongId` is React.cache'd so this shares the same DB roundtrip
-// as the desktop <AdminEditButton/> in the header.
-async function AdminEditSheetButton({ slug, variantId }: { slug: string; variantId?: string }) {
-  const songId = await lookupAdminSongId(slug);
-  if (!songId) return null;
-  const href = `/admin/songs/edit?id=${songId}&from=song${variantId ? `&variant=${variantId}` : ""}`;
-  // Server → Client: can't pass `icon={Pencil}` (function reference) across
-  // the boundary — render the icon inline as children instead.
-  return (
-    <TeButton
-      shape="pill"
-      href={href}
-      className="w-full py-2 text-xs font-bold justify-center gap-2"
-      style={{ borderRadius: "1rem", color: "var(--orange)" }}
-    >
-      <Pencil size={14} />
-      Редагувати
-    </TeButton>
-  );
-}
 
 // Inline chord-dictionary strip under the lyrics: the song's chords that
 // have a /chords/<slug> landing page, deduped (flat spellings collapse into

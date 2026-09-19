@@ -444,7 +444,7 @@ export const getSongsByArtist = unstable_cache(
     return data.map(mapRow);
   },
   ["songs-by-artist"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 86400, tags: ["songs"] },  // 24 h — read on ISR pages; tag-invalidated on every mutation
 );
 
 /**
@@ -468,7 +468,7 @@ export const getSongsWithChord = unstable_cache(
     return data.map(mapRow);
   },
   ["songs-with-chord"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 86400, tags: ["songs"] },  // 24 h — read on ISR pages; tag-invalidated on every mutation
 );
 
 /**
@@ -517,7 +517,7 @@ export const getSongsSharingChords = unstable_cache(
       .map((x) => x.song);
   },
   ["songs-sharing-chords"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 86400, tags: ["songs"] },  // 24 h — read on ISR pages; tag-invalidated on every mutation
 );
 
 // Song + all of its published variants. The viewer decides which variant to
@@ -535,16 +535,16 @@ export const getSongsSharingChords = unstable_cache(
  */
 export async function getSongSlugRedirect(slug: string): Promise<string | null> {
   if (!hasEnvVars) return null;
-  try {
-    const { data } = await getClient()
-      .from("slug_redirects")
-      .select("new_slug")
-      .eq("old_slug", slug)
-      .maybeSingle();
-    return (data?.new_slug as string | undefined) ?? null;
-  } catch {
-    return null;
-  }
+  const { data, error } = await getClient()
+    .from("slug_redirects")
+    .select("new_slug")
+    .eq("old_slug", slug)
+    .maybeSingle();
+  // Throw rather than return null on a DB error: this runs inside the ISR
+  // render of an unknown slug, and null here means notFound() → a cached 404
+  // for a day where a 308 belonged.
+  if (error) throw new Error(`getSongSlugRedirect(${slug}) failed: ${error.message}`);
+  return (data?.new_slug as string | undefined) ?? null;
 }
 
 export async function getSongBySlug(slug: string): Promise<Song | undefined> {
@@ -576,12 +576,24 @@ export async function getSongBySlug(slug: string): Promise<Song | undefined> {
     data = retry.data;
     error = retry.error;
   }
-  if (error || !data) return undefined;
+  // PGRST116 = "no rows" — the only error that means "this song does not
+  // exist". Anything else (timeout, 5xx, RLS hiccup) is thrown: the caller is
+  // an ISR render, and `undefined` there becomes a notFound() that Next
+  // caches for a day — a sticky 404 on a live, sitemap-listed URL. A thrown
+  // error fails just this render instead (Next keeps any previous copy).
+  if (error && error.code !== "PGRST116") {
+    throw new Error(`getSongBySlug(${slug}) failed: ${error.message ?? error.code}`);
+  }
+  if (!data) return undefined;
   const song = mapRow(data as Record<string, unknown>);
 
   // Fetch rich strumming patterns separately (the table is small, the join
   // would bloat the row payload, and missing patterns are not an error).
   const songId = (data as Record<string, unknown>).id as string | undefined;
+  // The row id rides along only on the single-song fetch: the song page's
+  // admin "Редагувати" link is built on the client now (the page is ISR and
+  // can't check the viewer's role at render time), and it needs the id.
+  if (songId) song.id = songId;
   if (songId) {
     const { data: patternRows } = await client
       .from("song_strumming_patterns")
@@ -617,27 +629,6 @@ export function mapPatternRow(row: Record<string, unknown>): StrumPattern {
   };
 }
 
-// Apply an active variant on top of the base song fields — swaps sections,
-// chords, key, capo. (Tempo/strumming live in song_strumming_patterns, which
-// are per-song; the viewer hides them for chord-less variants.)
-export function applyVariant(song: Song, variantId: string | undefined): Song {
-  if (!song.variants || song.variants.length === 0) return song;
-  const target =
-    (variantId && song.variants.find((v) => v.id === variantId)) ||
-    song.variants.find((v) => v.isPrimary) ||
-    song.variants[0];
-  if (!target) return song;
-  return {
-    ...song,
-    sections: target.sections,
-    // The variant's own chords, even when empty — a fingerstyle/tab variant
-    // has none, and borrowing the strummed variant's list would render a
-    // misleading chord sidebar next to a tab-only arrangement.
-    chords: target.chords,
-    key: target.key,
-    capo: target.capo ?? song.capo,
-    activeVariantId: target.id,
-    chordVoicings: target.chordVoicings ?? song.chordVoicings,
-    customVoicings: target.customVoicings ?? song.customVoicings,
-  };
-}
+// `applyVariant` moved to ../lib/variants (pure, client-safe); re-exported so
+// existing server-side imports keep working.
+export { applyVariant } from "../lib/variants";

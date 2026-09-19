@@ -77,6 +77,9 @@ export interface SongVariant {
 }
 
 export interface Song {
+  /** DB row id. Populated by getSongBySlug only (admin edit link on the song
+   *  page); list queries leave it undefined. */
+  id?: string;
   slug: string;
   title: string;
   artist: string;

@@ -181,20 +181,21 @@ export function SongViewer({
   song,
   editHref,
   editSlot,
-  initialMobile = false,
   initialTranspose = 0,
+  trackView = true,
 }: {
   song: Song;
   editHref?: string;
-  /** Server-streamed admin "Edit" button rendered at the bottom of the mobile tools sheet. */
+  /** Admin "Edit" button rendered at the bottom of the mobile tools sheet. */
   editSlot?: ReactNode;
-  /** UA-detected mobile (server-side). Lets the SSR/first paint already wrap
-   *  lyrics to a phone-width estimate so the post-measure re-wrap doesn't shift
-   *  layout (CLS). Final wrapping always uses the measured width. */
-  initialMobile?: boolean;
   /** Saved transpose from the user's playlist (or ?t= URL param) — the song
-   *  opens already shifted to the key it was saved in. */
+   *  opens already shifted to the key it was saved in. The song page resolves
+   *  this on the client after mount, so the prop can change once; we follow it. */
   initialTranspose?: number;
+  /** Count a view for the active variant. The song page passes false until
+   *  ?v= / the saved variant are resolved, so a shared `?v=` link doesn't also
+   *  credit the primary arrangement it briefly mounted with. */
+  trackView?: boolean;
 }) {
   const [transpose, setTranspose] = useState(initialTranspose);
   // Header save button stores this value into playlist_songs.transpose.
@@ -209,6 +210,17 @@ export function SongViewer({
   useEffect(() => { pageScrollableRef.current = pageScrollable; }, [pageScrollable]);
   const [noBarreMode, setNoBarreMode] = useState(false);
   const [beginnerMode, setBeginnerMode] = useState(false);
+  // Follow a late `initialTranspose` (the song page resolves ?t= / the saved
+  // key on the client, after mount) — but only while the user hasn't moved
+  // the key themselves in the meantime; a saved +2 must not undo a manual +1
+  // or unlight beginner mode. State adjusted during render, per the React
+  // docs, so the new key commits in the same pass.
+  const [seenInitialTranspose, setSeenInitialTranspose] = useState(initialTranspose);
+  if (initialTranspose !== seenInitialTranspose) {
+    const untouched = transpose === seenInitialTranspose && !beginnerMode;
+    setSeenInitialTranspose(initialTranspose);
+    if (untouched) setTranspose(initialTranspose);
+  }
   const [focusMode, , toggleFocusMode] = useFocusMode();
   const [showTabs] = useShowTabs();
   const [tabsFsOpen, setTabsFsOpen] = useState(false);
@@ -247,21 +259,24 @@ export function SongViewer({
 
   // Available columns per row. Once the container is measured, use the exact
   // width (this is the canonical, final wrapping — identical for everyone).
-  // Before measurement (SSR + first client render):
-  //   • mobile (UA-detected) → wrap to a phone-width estimate, so the server
-  //     HTML is already wrapped ≈ like the measured result. Without this the
-  //     server renders unwrapped and the post-measure re-wrap shifts the whole
-  //     lyric block down (~0.2 CLS on phones).
-  //   • desktop → no wrap (Infinity); lyric lines rarely exceed the wide
-  //     column, so there's nothing to shift — keeps desktop's existing 0 CLS.
+  //
+  // Before measurement (SSR + first client render) the page doesn't know the
+  // device: it is served from the ISR cache, identical for phones and
+  // desktops (it used to sniff the User-Agent, which forced a server render
+  // per visit). So the pre-measure markup carries BOTH wrappings and lets CSS
+  // pick — `md:hidden` shows the phone-width estimate below 768px, the
+  // unwrapped copy above. Each viewport paints its own correct layout first,
+  // then the measured re-wrap replaces both with the exact one (in a layout
+  // effect, before the post-hydration paint). Without the phone copy the
+  // server HTML is unwrapped and the re-wrap shifts the whole lyric block
+  // down (~0.2 CLS on phones). Costs ~15–30 KB of raw HTML per song (the
+  // lyric block is 9–13 % of the page), ~2–3 KB after Brotli.
   const effChWidth = chWidth || fontSize * 0.62;
   // ~360px phone minus the page's horizontal padding (px-4 = 16px each side).
   const SSR_MOBILE_LYRIC_WIDTH = 326;
-  const charsPerRow = containerWidth
-    ? Math.max(12, Math.floor(containerWidth / effChWidth) - 1)
-    : initialMobile
-      ? Math.max(12, Math.floor(SSR_MOBILE_LYRIC_WIDTH / effChWidth) - 1)
-      : Infinity;
+  const colsFor = (width: number) => Math.max(12, Math.floor(width / effChWidth) - 1);
+  const measuredCols = containerWidth ? colsFor(containerWidth) : null;
+  const ssrMobileCols = colsFor(SSR_MOBILE_LYRIC_WIDTH);
 
   // Placeholder height for a content-visibility section, from data we already
   // have at render time: line count, which lines carry a chord row, and how
@@ -270,7 +285,7 @@ export function SongViewer({
   // scrolls near the viewport, then snaps to the real one; every pixel of
   // error is a layout shift on slower devices (the old flat 500px was off by
   // up to ~430px per section and put long songs at field CLS 0.6–0.8).
-  const estimateSectionHeight = (section: SongSection): number => {
+  const estimateSectionHeight = (section: SongSection, charsPerRow: number): number => {
     const rowUnit = fontSize * 1.4;
     let h = section.label ? 28 : 0;
     for (const line of section.lines) {
@@ -313,7 +328,7 @@ export function SongViewer({
   // Fire-and-forget view increment — once per variant per browser session.
   const activeVariantId = song.activeVariantId;
   useEffect(() => {
-    if (!activeVariantId) return;
+    if (!trackView || !activeVariantId) return;
     const key = `diez:viewed:${activeVariantId}`;
     try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
     fetch("/api/songs/view", {
@@ -321,8 +336,7 @@ export function SongViewer({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ variantId: activeVariantId }),
     }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeVariantId]);
+  }, [activeVariantId, trackView]);
 
   // Auto-scroll loop. Stops when the bottom of the last lyrics block reaches
   // the viewport bottom — so the footer never enters the fold during auto-play.
@@ -919,7 +933,8 @@ export function SongViewer({
             >
               абвгдеєжзи
             </span>
-            {song.sections.map((section: SongSection, sIdx: number) => (
+            {(() => {
+              const renderSections = (charsPerRow: number) => song.sections.map((section: SongSection, sIdx: number) => (
               <div
                 key={sIdx}
                 className={sIdx > 0 ? "mt-5" : ""}
@@ -942,7 +957,7 @@ export function SongViewer({
                         contentVisibility: "auto",
                         // header (~28px) + per line: chord row + lyric row at
                         // fontSize 16 × 1.4 line-height + the space-y-1 gap.
-                        containIntrinsicSize: `auto ${estimateSectionHeight(section)}px`,
+                        containIntrinsicSize: `auto ${estimateSectionHeight(section, charsPerRow)}px`,
                       }
                     : undefined
                 }
@@ -1195,7 +1210,20 @@ export function SongViewer({
                   })()}
                 </div>
               </div>
-            ))}
+              ));
+              // Arrays of keyed wrappers in both branches: after measurement
+              // the copy that was visible keeps its key, so React patches its
+              // rows in place and only unmounts the hidden twin — instead of
+              // tearing both copies down and mounting a third tree.
+              if (measuredCols !== null) {
+                const narrow = typeof window !== "undefined" && window.matchMedia("(max-width: 767.98px)").matches;
+                return [<div key={narrow ? "m" : "d"}>{renderSections(measuredCols)}</div>];
+              }
+              return [
+                <div key="m" className="md:hidden">{renderSections(ssrMobileCols)}</div>,
+                <div key="d" className="hidden md:block">{renderSections(Infinity)}</div>,
+              ];
+            })()}
           </div>
         </div>
 
