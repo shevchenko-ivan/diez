@@ -106,6 +106,18 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
                 const type = typeof first?.type === "string" ? first.type : "";
                 const value = typeof first?.value === "string" ? first.value : "";
                 if (type === "AbortError" && value.includes("skipTransition")) return null;
+                // Two React errors in production could not be placed from the
+                // minified stack alone. Hydration mismatches (#418) are most
+                // often caused by a translator or an extension rewriting text
+                // before React hydrates, so record whether the page had been
+                // translated and which route it was — a cheap way to confirm
+                // or kill that hypothesis on the next occurrence.
+                event.properties = {
+                  ...event.properties,
+                  page_translated: /translated-(ltr|rtl)/.test(document.documentElement.className),
+                  html_lang: document.documentElement.lang,
+                  route: location.pathname,
+                };
               }
               return event;
             },

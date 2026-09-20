@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useActionState } from "react";
 import Link from "next/link";
 import { useRouter, unstable_isUnrecognizedActionError } from "next/navigation";
 import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2, ImagePlus, Youtube, RotateCcw, Crop, XCircle as XCircleIcon } from "lucide-react";
-import { submitSong, updateMySubmission, deleteMySubmission, type SubmitResult } from "@/features/song/actions/submit";
+import { deleteMySubmission, type SubmitResult } from "@/features/song/actions/submit";
 import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES, formatMb } from "@/lib/upload-limits";
 import { russianLevel } from "@/features/song/lib/detectLang";
 import { slugify } from "@/lib/slugify";
@@ -39,6 +39,9 @@ export interface InitialSong {
 // is cheap compared to re-typing the lyrics.
 // v2 adds the strumming patterns; v1 drafts (title/artist/lyrics/youtube) are
 // still read so a draft written before this deploy isn't thrown away.
+/** Stable across deploys, unlike a Server Action id — that is the whole point. */
+const SUBMIT_ENDPOINT = "/api/songs/submit";
+
 const DRAFT_KEY_PREFIX = "diez:song-form:v2:";
 const LEGACY_DRAFT_KEY_PREFIX = "diez:song-form:v1:";
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -111,56 +114,99 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   const router = useRouter();
   const isEdit = mode === "edit" && !!initial;
 
-  // In edit mode the action is bound to the song id; otherwise it inserts.
-  const serverAction = isEdit ? updateMySubmission.bind(null, initial!.songId) : submitSong;
+  // Submission goes to a plain endpoint, not a Server Action. An action is
+  // addressed by a build-time hash and only the build that is running accepts
+  // it, so a tab opened before a deploy could never submit at all (see the
+  // stale-deploy branch below). A URL survives deploys, which is exactly what
+  // a form somebody fills for half an hour needs. `deleteMySubmission` stays
+  // an action: it is one click, and losing it to a deploy costs nothing.
+  const postSubmission = async (formData: FormData): Promise<SubmitResult> => {
+    if (isEdit) formData.set("songId", initial!.songId);
+    const res = await fetch(SUBMIT_ENDPOINT, { method: "POST", body: formData });
+    return (await res.json()) as SubmitResult;
+  };
+
+  /**
+   * Did a submission that failed mid-flight actually reach the server? A fetch
+   * TypeError cannot tell "never left the browser" from "arrived, reply lost",
+   * and retrying the second case would file the same song twice.
+   */
+  const alreadyLanded = async (formData: FormData): Promise<SubmitResult | null> => {
+    try {
+      const params = new URLSearchParams({
+        title: String(formData.get("title") ?? ""),
+        artist: String(formData.get("artist") ?? ""),
+      });
+      const res = await fetch(`${SUBMIT_ENDPOINT}?${params}`, { cache: "no-store" });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { exists?: boolean; result?: SubmitResult };
+      return body.exists && body.result ? body.result : null;
+    } catch {
+      return null;    // still offline — the caller falls through to the retry
+    }
+  };
 
   // Set when the submit failed because this tab is running code from an older
   // deployment — see the catch below. Drives the reload banner.
   const [staleDeploy, setStaleDeploy] = useState(false);
   const saveDraftRef = useRef<(fd?: FormData) => void>(() => {});
 
-  // A Server Action reaches the server over fetch(). Two very different
-  // failures land here, and telling them apart is the whole point:
+  // Submitting can only fail at the network layer now that it posts to a URL:
+  // «TypeError: Failed to fetch» (Chrome), «network error» (Firefox), «Load
+  // failed» (Safari) — all the same event, all in PostHog on 14.09 from one
+  // person on a flaky link. So retry once, having first made sure the song
+  // didn't already land. The UnrecognizedActionError branch below is a
+  // leftover safety net: it cannot fire for this endpoint, only if something
+  // here ever goes back to calling a Server Action.
   //
-  //  • The action id is unknown to the server (UnrecognizedActionError). Every
-  //    build hashes action ids afresh, so a tab opened before a deploy posts an
-  //    id the new server has never heard of. Retrying can NEVER work — only a
-  //    reload can — and the old copy told the user to shrink their cover image,
-  //    so they pressed «Надіслати» again and again and eventually gave up. This
-  //    is what people filling the form for 20-40 minutes were hitting.
-  //  • The request genuinely didn't reach us (offline, dead mobile link): a
-  //    plain «TypeError: Failed to fetch», where retrying is exactly right.
-  //
-  // Either way React would escalate an uncaught rejection to the nearest error
-  // boundary, replacing the page with a bare "Error!" and unmounting the form
-  // with everything typed into it. Catching keeps the user in the form.
+  // Catching at all still matters: an uncaught rejection escalates to the
+  // nearest error boundary, which replaced the page with a bare "Error!" and
+  // unmounted the form along with everything the user had typed.
   const action = async (prev: SubmitResult | null, formData: FormData): Promise<SubmitResult> => {
     try {
-      return await serverAction(prev, formData);
-    } catch (e) {
-      // Persist what was actually submitted before anything else — this runs
-      // right before the page reloads itself in the stale-deploy case.
-      saveDraftRef.current(formData);
-      if (unstable_isUnrecognizedActionError(e)) {
-        console.error("[AddSongForm] stale deployment — action id unknown to the server", e);
-        setStaleDeploy(true);
-        return {
-          ok: false,
-          reason: "error",
-          message: "Сайт оновився, поки ви заповнювали форму. Усе введене збережено — зараз сторінка перезавантажиться, і можна буде надіслати ще раз.",
-        };
+      return await postSubmission(formData);
+    } catch (firstError) {
+      // Network-level failure. Retry once — mobile links drop a request and
+      // then work fine a second later — but only after checking the song
+      // didn't already land, and never while the device is plainly offline.
+      const offlineNow = typeof navigator !== "undefined" && navigator.onLine === false;
+      if (!offlineNow && !unstable_isUnrecognizedActionError(firstError)) {
+        const landed = await alreadyLanded(formData);
+        if (landed) return landed;
+        await new Promise((r) => setTimeout(r, 1200));
+        try {
+          return await postSubmission(formData);
+        } catch (retryError) {
+          return handleSubmitFailure(retryError, formData);
+        }
       }
-      console.error("[AddSongForm] submit transport failure", e);
-      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      return handleSubmitFailure(firstError, formData);
+    }
+  };
+
+  const handleSubmitFailure = (e: unknown, formData: FormData): SubmitResult => {
+    // Persist what was actually submitted before anything else — in the
+    // stale-deploy case this runs right before the page reloads itself.
+    saveDraftRef.current(formData);
+    if (unstable_isUnrecognizedActionError(e)) {
+      console.error("[AddSongForm] stale deployment — action id unknown to the server", e);
+      setStaleDeploy(true);
       return {
         ok: false,
         reason: "error",
-        message: offline
-          ? "Немає зʼєднання з інтернетом. Текст залишився у формі — увімкніть мережу та натисніть «Надіслати» ще раз."
-          : `Не вдалося надіслати пісню на сервер — запит не дійшов. Текст залишився у формі: спробуйте ще раз. `
-            + `Найчастіша причина — завелика обкладинка (максимум ${MAX_IMAGE_LABEL}), тож спробуйте легше зображення.`,
+        message: "Сайт оновився, поки ви заповнювали форму. Усе введене збережено — зараз сторінка перезавантажиться, і можна буде надіслати ще раз.",
       };
     }
+    console.error("[AddSongForm] submit transport failure", e);
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    return {
+      ok: false,
+      reason: "error",
+      message: offline
+        ? "Немає зʼєднання з інтернетом. Текст залишився у формі — увімкніть мережу та натисніть «Надіслати» ще раз."
+        : "Не вдалося надіслати пісню на сервер: запит не дійшов, і повторна спроба теж. "
+          + "Текст залишився у формі — перевірте звʼязок і натисніть «Надіслати» ще раз.",
+    };
   };
 
   const [result, formAction, pending] = useActionState(action, null);
