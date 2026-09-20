@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useActionState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, unstable_isUnrecognizedActionError } from "next/navigation";
 import { Save, CheckCircle2, Clock, XCircle, UserPlus, FileText, AlertTriangle, Loader2, Trash2, ImagePlus, Youtube, RotateCcw, Crop, XCircle as XCircleIcon } from "lucide-react";
 import { submitSong, updateMySubmission, deleteMySubmission, type SubmitResult } from "@/features/song/actions/submit";
 import { MAX_IMAGE_BYTES, MAX_IMAGE_LABEL, ALLOWED_IMAGE_TYPES, formatMb } from "@/lib/upload-limits";
@@ -37,19 +37,41 @@ export interface InitialSong {
 // localStorage as the user types and offer them back on the next visit.
 // Never stores the cover file: a File can't be serialized, and re-picking one
 // is cheap compared to re-typing the lyrics.
-const DRAFT_KEY_PREFIX = "diez:song-form:v1:";
+// v2 adds the strumming patterns; v1 drafts (title/artist/lyrics/youtube) are
+// still read so a draft written before this deploy isn't thrown away.
+const DRAFT_KEY_PREFIX = "diez:song-form:v2:";
+const LEGACY_DRAFT_KEY_PREFIX = "diez:song-form:v1:";
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-type StoredDraft = { title: string; artist: string; lyrics: string; youtube: string; savedAt: number };
+type StoredDraft = {
+  title: string;
+  artist: string;
+  lyrics: string;
+  youtube: string;
+  /** Serialized `strumming_patterns` payload, exactly as the hidden input
+   *  carries it — the pattern editors own that shape, we only pass it back. */
+  patterns: string;
+  savedAt: number;
+};
 
 function draftKey(songId?: string) {
   return `${DRAFT_KEY_PREFIX}${songId ?? "new"}`;
 }
 
+function legacyDraftKey(songId?: string) {
+  return `${LEGACY_DRAFT_KEY_PREFIX}${songId ?? "new"}`;
+}
+
+/** Current value of the hidden field the two pattern editors write into. */
+function readPatternsField(form: HTMLFormElement | null): string {
+  const el = form?.querySelector('input[name="strumming_patterns"]');
+  return el instanceof HTMLInputElement ? el.value : "";
+}
+
 /** Best-effort read — localStorage throws in private mode / with cookies off. */
-function readDraft(key: string): StoredDraft | null {
+function readDraft(key: string, legacyKey?: string): StoredDraft | null {
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = window.localStorage.getItem(key) ?? (legacyKey ? window.localStorage.getItem(legacyKey) : null);
     if (!raw) return null;
     const d = JSON.parse(raw) as Partial<StoredDraft>;
     if (typeof d?.title !== "string" || typeof d?.lyrics !== "string") return null;
@@ -59,6 +81,7 @@ function readDraft(key: string): StoredDraft | null {
       artist: typeof d.artist === "string" ? d.artist : "",
       lyrics: d.lyrics,
       youtube: typeof d.youtube === "string" ? d.youtube : "",
+      patterns: typeof d.patterns === "string" ? d.patterns : "",
       savedAt: d.savedAt ?? 0,
     };
   } catch {
@@ -66,9 +89,10 @@ function readDraft(key: string): StoredDraft | null {
   }
 }
 
-function clearDraft(key: string) {
+function clearDraft(key: string, legacyKey?: string) {
   try {
     window.localStorage.removeItem(key);
+    if (legacyKey) window.localStorage.removeItem(legacyKey);
   } catch {
     /* nothing we can do, and nothing worth breaking the form over */
   }
@@ -90,17 +114,42 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   // In edit mode the action is bound to the song id; otherwise it inserts.
   const serverAction = isEdit ? updateMySubmission.bind(null, initial!.songId) : submitSong;
 
-  // A Server Action reaches the server over fetch(). When that fetch itself
-  // fails — offline, request body rejected before it reaches our code, a deploy
-  // mid-session — the promise rejects with «TypeError: Failed to fetch». React
-  // escalates an uncaught rejection to the nearest error boundary, which
-  // replaced the entire page with a bare "Error!" and unmounted the form along
-  // with everything the user had typed. Catching it here keeps the user in the
-  // form and turns the crash into a readable banner.
+  // Set when the submit failed because this tab is running code from an older
+  // deployment — see the catch below. Drives the reload banner.
+  const [staleDeploy, setStaleDeploy] = useState(false);
+  const saveDraftRef = useRef<(fd?: FormData) => void>(() => {});
+
+  // A Server Action reaches the server over fetch(). Two very different
+  // failures land here, and telling them apart is the whole point:
+  //
+  //  • The action id is unknown to the server (UnrecognizedActionError). Every
+  //    build hashes action ids afresh, so a tab opened before a deploy posts an
+  //    id the new server has never heard of. Retrying can NEVER work — only a
+  //    reload can — and the old copy told the user to shrink their cover image,
+  //    so they pressed «Надіслати» again and again and eventually gave up. This
+  //    is what people filling the form for 20-40 minutes were hitting.
+  //  • The request genuinely didn't reach us (offline, dead mobile link): a
+  //    plain «TypeError: Failed to fetch», where retrying is exactly right.
+  //
+  // Either way React would escalate an uncaught rejection to the nearest error
+  // boundary, replacing the page with a bare "Error!" and unmounting the form
+  // with everything typed into it. Catching keeps the user in the form.
   const action = async (prev: SubmitResult | null, formData: FormData): Promise<SubmitResult> => {
     try {
       return await serverAction(prev, formData);
     } catch (e) {
+      // Persist what was actually submitted before anything else — this runs
+      // right before the page reloads itself in the stale-deploy case.
+      saveDraftRef.current(formData);
+      if (unstable_isUnrecognizedActionError(e)) {
+        console.error("[AddSongForm] stale deployment — action id unknown to the server", e);
+        setStaleDeploy(true);
+        return {
+          ok: false,
+          reason: "error",
+          message: "Сайт оновився, поки ви заповнювали форму. Усе введене збережено — зараз сторінка перезавантажиться, і можна буде надіслати ще раз.",
+        };
+      }
       console.error("[AddSongForm] submit transport failure", e);
       const offline = typeof navigator !== "undefined" && navigator.onLine === false;
       return {
@@ -281,6 +330,12 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   // Nothing here talks to the server: it's a safety net for the cases the
   // server can't help with (browser crash, accidental reload, closed tab).
   const storageKey = draftKey(initial?.songId);
+  const legacyKey = legacyDraftKey(initial?.songId);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Patterns restored from a draft. Changing it remounts the pattern editor
+  // (see the `key` below) — the editors read `initial` once, on mount.
+  const [patternsSeed, setPatternsSeed] = useState<StrumPattern[] | null>(null);
+  const [patternsSeedNonce, setPatternsSeedNonce] = useState(0);
   // A draft found on mount is *offered*, never applied silently — in edit mode
   // it would otherwise clobber the version the server just sent us.
   const [recovered, setRecovered] = useState<StoredDraft | null>(null);
@@ -288,7 +343,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   const [localSavedAt, setLocalSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
-    const d = readDraft(storageKey);
+    const d = readDraft(storageKey, legacyKey);
     if (!d) return;
     if (!d.title.trim() && !d.lyrics.trim()) return;
     // Identical to what's already in the form (a plain revisit of an edit
@@ -297,6 +352,45 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
     setRecovered(d);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Write the draft right now, bypassing the debounce below. Called before a
+  // reload and from the submit-failure path, where a 600 ms timer would never
+  // get to fire. `fd` is the FormData that was actually submitted, which is
+  // the most faithful copy of what the user had on screen.
+  const saveDraftNow = (fd?: FormData) => {
+    const patterns = typeof fd?.get("strumming_patterns") === "string"
+      ? (fd.get("strumming_patterns") as string)
+      : readPatternsField(formRef.current);
+    const draft: StoredDraft = {
+      title: typeof fd?.get("title") === "string" ? (fd.get("title") as string) : title,
+      artist: typeof fd?.get("artist") === "string" ? (fd.get("artist") as string) : finalArtist,
+      lyrics: typeof fd?.get("lyrics_with_chords") === "string" ? (fd.get("lyrics_with_chords") as string) : lyrics,
+      youtube: typeof fd?.get("youtube") === "string" ? (fd.get("youtube") as string) : youtube,
+      patterns,
+      savedAt: Date.now(),
+    };
+    if (!draft.title.trim() && !draft.lyrics.trim()) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(draft));
+      setLocalSavedAt(draft.savedAt);
+    } catch {
+      // Private mode or quota exceeded — autosave is best-effort.
+    }
+  };
+  // Kept in a ref because the action wrapper above is created before this
+  // function exists. Assigned in an effect, not during render: the action only
+  // runs on a user submit, long after the first commit.
+  useEffect(() => {
+    saveDraftRef.current = saveDraftNow;
+  });
+
+  // Stale deployment: the draft is already on disk, so reload into the fresh
+  // build and offer it back. Short delay so the banner is actually readable.
+  useEffect(() => {
+    if (!staleDeploy) return;
+    const id = setTimeout(() => window.location.reload(), 2500);
+    return () => clearTimeout(id);
+  }, [staleDeploy]);
 
   useEffect(() => {
     if (result?.ok) return;        // already on the server — nothing to keep
@@ -312,7 +406,14 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
       try {
         window.localStorage.setItem(
           storageKey,
-          JSON.stringify({ title, artist: finalArtist, lyrics, youtube, savedAt } satisfies StoredDraft),
+          JSON.stringify({
+            title,
+            artist: finalArtist,
+            lyrics,
+            youtube,
+            patterns: readPatternsField(formRef.current),
+            savedAt,
+          } satisfies StoredDraft),
         );
         setLocalSavedAt(savedAt);
       } catch {
@@ -324,8 +425,8 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
 
   // Saved for real — the local copy has served its purpose.
   useEffect(() => {
-    if (result?.ok) clearDraft(storageKey);
-  }, [result?.ok, storageKey]);
+    if (result?.ok) clearDraft(storageKey, legacyKey);
+  }, [result?.ok, storageKey, legacyKey]);
 
   function applyRecovered(d: StoredDraft) {
     setTitle(d.title);
@@ -338,12 +439,23 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
       // otherwise the user goes through the usual pick-or-create gate.
       setSelected(matchArtist(artists, d.artist)?.name ?? "");
     }
+    if (d.patterns) {
+      try {
+        const parsed = JSON.parse(d.patterns);
+        if (Array.isArray(parsed)) {
+          setPatternsSeed(parsed as StrumPattern[]);
+          setPatternsSeedNonce((n) => n + 1);
+        }
+      } catch {
+        // A malformed payload just means no patterns to restore.
+      }
+    }
     setRecovered(null);
     setRestoredNotice(true);
   }
 
   function discardRecovered() {
-    clearDraft(storageKey);
+    clearDraft(storageKey, legacyKey);
     setRecovered(null);
   }
 
@@ -449,7 +561,17 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
   }
 
   return (
-    <form action={formAction} onSubmit={() => setRuDismissed(false)} className="space-y-8">
+    <form
+      ref={formRef}
+      action={formAction}
+      onSubmit={(e) => {
+        setRuDismissed(false);
+        // Snapshot before the request leaves: if it fails (stale deployment,
+        // dead network) the draft is already on disk, whatever happens next.
+        saveDraftNow(new FormData(e.currentTarget));
+      }}
+      className="space-y-8"
+    >
       {/* Default button for implicit (Enter-key) submission — first submit
           button in tree order wins, so Enter means «Надіслати», not draft. */}
       <button type="submit" name="intent" value="submit" className="hidden" tabIndex={-1} aria-hidden="true" />
@@ -501,8 +623,34 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
         </p>
       )}
 
+      {/* Stale deployment — retrying can't help, the page reloads itself. */}
+      {staleDeploy && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-start gap-3 p-4"
+          style={{ borderRadius: "1rem", background: "rgba(255,140,60,0.10)", border: "1px solid rgba(255,140,60,0.35)" }}
+        >
+          <Loader2 size={18} className="animate-spin" style={{ color: "var(--orange)", flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p className="text-sm font-bold" style={{ color: "var(--text)" }}>Сайт оновився під час заповнення</p>
+            <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
+              Усе введене збережено. Перезавантажуємо сторінку — після цього натисніть «Надіслати» ще раз.
+              {coverFile ? " Обкладинку доведеться вибрати заново." : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="te-pill-btn px-4 py-2 text-xs font-bold mt-3"
+            >
+              Перезавантажити зараз
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Error / rejection banner */}
-      {result && !result.ok && (
+      {!staleDeploy && result && !result.ok && (
         <div className="flex items-start gap-3 p-4" style={{ borderRadius: "1rem", background: "rgba(220,60,60,0.08)", border: "1px solid rgba(220,60,60,0.25)" }}>
           <XCircle size={18} style={{ color: "#dc3c3c", flexShrink: 0, marginTop: 1 }} />
           <p className="text-sm" style={{ color: "var(--text)" }}>{result.message}</p>
@@ -719,9 +867,11 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
           get the simplified picker. In edit mode both are seeded with the
           song's existing patterns so saving doesn't wipe them. */}
       <div className="te-inset p-5" style={{ borderRadius: "1.5rem" }}>
+        {/* `key` remounts the editor when a draft is restored: both read
+            `initial` once, on mount. */}
         {isAdmin
-          ? <StrumPatternsEditor initial={initial?.patterns ?? []} allowTemplates />
-          : <SimpleStrumPicker initial={initial?.patterns} />}
+          ? <StrumPatternsEditor key={patternsSeedNonce} initial={patternsSeed ?? initial?.patterns ?? []} allowTemplates />
+          : <SimpleStrumPicker key={patternsSeedNonce} initial={patternsSeed ?? initial?.patterns} />}
       </div>
 
       <div className="space-y-2">

@@ -87,6 +87,28 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             // surfacing them in PostHog's Error Tracking view. Zero perf cost
             // — only fires when an error actually throws.
             capture_exceptions: true,
+            // Drop known-benign noise before it leaves the browser.
+            //
+            // `@view-transition { navigation: auto }` (globals.css) hands
+            // navigations to the browser's cross-document View Transitions. The
+            // browser skips the animation whenever a navigation is superseded —
+            // a fast second tap, back/forward, a link clicked while the page is
+            // still settling — and rejects the transition promise with
+            // «AbortError: Skipping view transition because skipTransition() was
+            // called». Nothing of ours throws it, the user sees a normal instant
+            // navigation, and it is not actionable; it was simply crowding out
+            // real errors in Error Tracking.
+            before_send: (event) => {
+              if (!event) return null;
+              if (event.event === "$exception") {
+                const list = event.properties?.$exception_list;
+                const first = Array.isArray(list) ? list[0] : undefined;
+                const type = typeof first?.type === "string" ? first.type : "";
+                const value = typeof first?.value === "string" ? first.value : "";
+                if (type === "AbortError" && value.includes("skipTransition")) return null;
+              }
+              return event;
+            },
             // Core Web Vitals. Google ranks on LCP/INP/CLS and this site lives
             // on organic search, yet `$web_vitals` had never once been sent —
             // performance was the one thing we had no data on at all.
