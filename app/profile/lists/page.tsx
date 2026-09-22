@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getMyPlaylists } from "@/features/playlist/actions/playlists";
 import { PlaylistCard } from "@/features/playlist/components/PlaylistCard";
 import { CreatePlaylistButton } from "@/features/playlist/components/CreatePlaylistButton";
+import { RandomSavedSongButton } from "@/features/playlist/components/RandomSavedSongButton";
 
 export const metadata = {
   title: "Мої списки — Diez",
@@ -29,8 +30,10 @@ async function ListsContent() {
         title="Мої списки"
         subtitle="Керуйте збереженими піснями та діліться ними з друзями"
       />
-      <div className="-mt-6 mb-10">
+      <div className="-mt-6 mb-10 flex flex-wrap items-center gap-3">
         <CreatePlaylistButton />
+        {/* Only worth offering once something is saved. */}
+        {playlists.length > 0 && <RandomSavedSongButton />}
       </div>
 
       {playlists.length === 0 ? (
