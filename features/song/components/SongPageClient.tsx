@@ -61,6 +61,16 @@ function useSongPage(): SongPageState {
 
 const clampTranspose = (n: number) => Math.max(-11, Math.min(11, n));
 
+// Same fallback as applyVariant: unknown/missing id → primary → first.
+function resolveVariantId(song: Song, variantId: string | undefined): string | undefined {
+  const variants = song.variants;
+  if (!variants || variants.length === 0) return undefined;
+  return (
+    (variantId && variants.find((v) => v.id === variantId)?.id) ||
+    (variants.find((v) => v.isPrimary) ?? variants[0]).id
+  );
+}
+
 // Reads ?v / ?t. `useSearchParams` on a statically rendered route has to sit
 // under a Suspense boundary, and everything inside that boundary is
 // client-rendered — so it lives in this null-rendering leaf, and the lyrics
@@ -126,7 +136,11 @@ export function SongPageProvider({ baseSong, children }: { baseSong: Song; child
   // keeps its identity (and the viewer skips a render) when nothing changed.
   const song = useMemo(() => applyVariant(baseSong, variantId), [baseSong, variantId]);
   // ?t= (playlist links, sharing) wins over the key stored with the save.
-  const transpose = url.t ?? (saved ? clampTranspose(saved.transpose) : 0);
+  // The saved key belongs to the saved variant: another arrangement usually
+  // sits in a different key, so switching to it opens at 0, not at +2.
+  const savedKeyApplies =
+    !!saved && resolveVariantId(baseSong, saved.variantId ?? undefined) === song.activeVariantId;
+  const transpose = url.t ?? (savedKeyApplies ? clampTranspose(saved.transpose) : 0);
   const ready = urlReady && savedReady;
   const value = useMemo<SongPageState>(() => ({ song, transpose, ready }), [song, transpose, ready]);
 
@@ -204,8 +218,9 @@ export function MobileVariantRow() {
 }
 
 /** The viewer. Deliberately NOT keyed by variant: on main a variant switch
- *  was a same-route navigation, which React reconciles in place — transpose,
- *  font size, an open tuner or a playing video all survived. SongViewer
+ *  was a same-route navigation, which React reconciles in place — font size,
+ *  an open tuner or a playing video all survive. (Transpose does not: the
+ *  viewer resets it on a variant switch, see SongViewer.) SongViewer
  *  follows `song`/`initialTranspose` prop changes, and useVoicings re-seeds on
  *  a new chordVoicings object, so the same holds here. */
 export function ActiveSongViewer() {

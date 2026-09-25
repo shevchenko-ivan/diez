@@ -215,11 +215,23 @@ export function SongViewer({
   // the key themselves in the meantime; a saved +2 must not undo a manual +1
   // or unlight beginner mode. State adjusted during render, per the React
   // docs, so the new key commits in the same pass.
+  //
+  // A variant switch resets the key outright: arrangements are often written
+  // in different keys, so +3 picked for one is rarely right for another. The
+  // new variant opens in its own key (`initialTranspose` — ?t= or the key
+  // saved with it, else 0); beginner mode stays on and re-picks the easiest
+  // key for the new chords.
   const [seenInitialTranspose, setSeenInitialTranspose] = useState(initialTranspose);
-  if (initialTranspose !== seenInitialTranspose) {
-    const untouched = transpose === seenInitialTranspose && !beginnerMode;
+  const [seenVariantId, setSeenVariantId] = useState(song.activeVariantId);
+  const variantChanged = song.activeVariantId !== seenVariantId;
+  if (variantChanged || initialTranspose !== seenInitialTranspose) {
+    if (variantChanged) {
+      setSeenVariantId(song.activeVariantId);
+      setTranspose(beginnerMode ? bestBeginnerTranspose(song.chords) : initialTranspose);
+    } else if (transpose === seenInitialTranspose && !beginnerMode) {
+      setTranspose(initialTranspose);
+    }
     setSeenInitialTranspose(initialTranspose);
-    if (untouched) setTranspose(initialTranspose);
   }
   const [focusMode, , toggleFocusMode] = useFocusMode();
   const [showTabs] = useShowTabs();
