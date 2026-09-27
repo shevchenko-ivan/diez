@@ -8,8 +8,8 @@
 //                                    canonical artist names (alias-resolved
 //                                    by import; if multiple variants exist,
 //                                    list each name explicitly)
-//   • { kind: "no-barre" }         — runtime filter: no barre/sharp chords
-//                                    in the song's chord array
+//   • { kind: "no-barre" }         — runtime filter: every chord in the
+//                                    song is an open (no-barre) shape
 //
 // When growing a curated slug list, prefer slugs that actually exist in the
 // catalogue (verify against the songs table). Stale slugs are filtered out
@@ -44,25 +44,7 @@ export interface Topic {
   match: TopicMatch;
 }
 
-// Chord names treated as "barre / hard for beginners" — used to gate the
-// `no-barre` topic. F and B are barre on standard tuning; sharps/flats almost
-// always require a barre or partial-barre shape on a beginner's instrument.
-const BARRE_CHORDS = new Set([
-  "F", "B", "Bb", "F#", "C#", "G#", "D#", "Eb", "Ab", "Db",
-  "Bm", "F#m", "C#m", "G#m", "D#m", "A#m", "Ebm", "Bbm",
-]);
-
-export function isBarreChord(c: string): boolean {
-  // Match the root chord even when it has a quality suffix (m7, sus4, etc.).
-  // Strip everything after the first non-letter/sharp/flat.
-  const root = c.replace(/^([A-G][#b]?m?).*$/, "$1");
-  return BARRE_CHORDS.has(root) || BARRE_CHORDS.has(c);
-}
-
-export function isNoBarreSong(chords: string[] | null | undefined): boolean {
-  if (!chords || chords.length === 0) return false;
-  return !chords.some(isBarreChord);
-}
+export { isOpenChord, isNoBarreSong } from "../lib/barre";
 
 export const TOPICS: Topic[] = [
   {

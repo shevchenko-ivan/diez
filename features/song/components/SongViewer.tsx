@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { isNoBarreSong } from "../lib/barre";
 import dynamic from "next/dynamic";
 import { Song, SongSection } from "@/features/song/types";
 import { useHaptics } from "@/shared/hooks/useHaptics";
@@ -183,6 +184,7 @@ export function SongViewer({
   editSlot,
   initialTranspose = 0,
   trackView = true,
+  autoBeginner = false,
 }: {
   song: Song;
   editHref?: string;
@@ -196,6 +198,9 @@ export function SongViewer({
    *  ?v= / the saved variant are resolved, so a shared `?v=` link doesn't also
    *  credit the primary arrangement it briefly mounted with. */
   trackView?: boolean;
+  /** Turn the beginner toggle on once (the song was opened from
+   *  «Для початківців»). Arrives after mount, like `initialTranspose`. */
+  autoBeginner?: boolean;
 }) {
   const [transpose, setTranspose] = useState(initialTranspose);
   // Header save button stores this value into playlist_songs.transpose.
@@ -232,6 +237,17 @@ export function SongViewer({
       setTranspose(initialTranspose);
     }
     setSeenInitialTranspose(initialTranspose);
+  }
+  const [autoBeginnerDone, setAutoBeginnerDone] = useState(false);
+  if (autoBeginner && !autoBeginnerDone) {
+    setAutoBeginnerDone(true);
+    // Only when there is something to fix: a song that is already all open
+    // chords stays as written, toggle off.
+    if (!beginnerMode && !isNoBarreSong(song.chords)) {
+      setBeginnerMode(true);
+      setNoBarreMode(true);
+      setTranspose(bestBeginnerTranspose(song.chords));
+    }
   }
   const [focusMode, , toggleFocusMode] = useFocusMode();
   const [showTabs] = useShowTabs();

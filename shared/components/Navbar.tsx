@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Menu, X, ChevronDown, User, LogOut, Shield, Plus, Moon, Sun, Palette, ListMusic } from "lucide-react";
 import { getClient } from "@/lib/supabase/client";
 import { useTheme } from "@/shared/components/ThemeProvider";
@@ -27,10 +27,56 @@ interface NavUser {
   avatarUrl: string | null;
 }
 
+// The header is rendered by every page, so it remounts on each navigation.
+// Without a memory of who was signed in it showed a skeleton, then (via the
+// auth listener) an orange initial, then the photo — a blink on every page.
+// `lastNavUser` carries the profile across client-side navigations (module
+// scope lives as long as the tab); localStorage carries it across full loads.
+const NAV_USER_KEY = "diez:nav-user";
+let lastNavUser: NavUser | null | undefined;
+
+function readCachedNavUser(): NavUser | null {
+  try {
+    const raw = localStorage.getItem(NAV_USER_KEY);
+    return raw ? (JSON.parse(raw) as NavUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberNavUser(user: NavUser | null) {
+  lastNavUser = user;
+  try {
+    if (user) localStorage.setItem(NAV_USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(NAV_USER_KEY);
+  } catch {}
+}
+
+const hasAuthCookie = () => /(?:^|;\s*)sb-[^=;]*-auth-token(?:\.\d+)?=/.test(document.cookie);
+
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [navUser, setNavUser] = useState<NavUser | null | "loading">("loading");
+  // Client-side navigation: start from the known user, no skeleton. First
+  // load (hydration) must match the server HTML, so it starts at "loading"
+  // and the layout effect below swaps in the cached user before paint.
+  const [navUser, setNavUserState] = useState<NavUser | null | "loading">(
+    () => (lastNavUser === undefined ? "loading" : lastNavUser),
+  );
+  const setNavUser = (user: NavUser | null) => {
+    rememberNavUser(user);
+    setNavUserState(user);
+  };
+
+  useLayoutEffect(() => {
+    if (lastNavUser !== undefined) return;
+    const cached = hasAuthCookie() ? readCachedNavUser() : null;
+    lastNavUser = cached;
+    // Reading storage has to happen after hydration; a layout effect applies
+    // it before the first paint, so the swap is never visible.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNavUserState(cached);
+  }, []);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { trigger } = useHaptics();
   const pathname = usePathname();
@@ -53,7 +99,10 @@ export function Navbar() {
     // pageview with 81% of it unused (PSI 12.09.2026: the largest first-party
     // unused-JS entry). Signed-in visitors take the path below unchanged; a
     // login started in this tab ends in a redirect, which re-runs this effect.
-    if (!/(?:^|;\s*)sb-[^=;]*-auth-token(?:\.\d+)?=/.test(document.cookie)) return;
+    if (!hasAuthCookie()) {
+      if (lastNavUser) rememberNavUser(null);
+      return;
+    }
 
     function fallbackName(email: string) {
       return email ? email.split("@")[0] : "";
@@ -89,10 +138,17 @@ export function Navbar() {
 
       load(sb);
 
-      const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
+      const { data: listener } = sb.auth.onAuthStateChange((event, session) => {
         if (!session) { setNavUser(null); return; }
+        // load() above already covers the session we started with; token
+        // refreshes don't change the profile.
+        if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") return;
         const email = session.user.email ?? "";
-        setNavUser({ email, isAdmin: false, displayName: fallbackName(email), avatarUrl: null });
+        // Keep the known avatar/name for the same account instead of flashing
+        // the initial while the profile row loads.
+        if (lastNavUser?.email !== email) {
+          setNavUser({ email, isAdmin: false, displayName: fallbackName(email), avatarUrl: null });
+        }
         sb.from("profiles").select("is_admin, username, avatar_url").eq("id", session.user.id).single()
           .then(({ data }) => setNavUser({
             email,
@@ -224,7 +280,7 @@ export function Navbar() {
                 {/* Avatar */}
                 <div
                   className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 overflow-hidden"
-                  style={{ background: userAvatarUrl ? "transparent" : "var(--orange)" }}
+                  style={{ background: userAvatarUrl ? "var(--surface-dk)" : "var(--orange)" }}
                 >
                   {userAvatarUrl ? (
                     // Raw <img> (не next/image) бо аватарка з 3rd-party

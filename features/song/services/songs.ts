@@ -5,7 +5,8 @@ import { hasEnvVars } from "@/lib/utils";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { normalizeForSearch } from "../lib/translit";
 import type { ChordDef } from "../data/chord-templates";
-import { getTopicBySlug, isNoBarreSong, type Topic } from "../data/topics";
+import { getTopicBySlug, type Topic } from "../data/topics";
+import { noBarreShift } from "../lib/barre";
 
 // Public read-only client — no auth needed for published song reads.
 function getClient() {
@@ -179,6 +180,24 @@ export const getAllSongCovers = unstable_cache(
 // Paginate through all published-song rows for a given column set.
 // Supabase caps a single select at 1000 rows — without this helper, aggregates
 // over the full songs table silently truncate (any artist past row 1000 shows 0).
+async function fetchAllRows<T>(table: string, columns: string): Promise<T[]> {
+  const pageSize = 1000;
+  const out: T[] = [];
+  const client = getClient();
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    out.push(...(data as unknown as T[]));
+    if (data.length < pageSize) break;
+  }
+  return out;
+}
+
 async function fetchAllPublishedSongs<T>(columns: string): Promise<T[]> {
   const pageSize = 1000;
   const out: T[] = [];
@@ -270,20 +289,64 @@ async function resolveArtistNamesByAlias(q: string): Promise<string[]> {
   return out;
 }
 
-// Slug list for songs whose chord array contains no barre/sharp chords.
-// Computed once and cached — used by the "beginner" (no-barre) topic filter
-// so the SQL side can stay a simple `slug IN (...)` query.
-const getNoBarreSlugs = unstable_cache(
-  async (): Promise<string[]> => {
+// «Для початківців»: every song that a beginner can play without barre —
+// as written, or after the beginner mode's transposition — judged on its
+// EASIEST variant, not only the primary one. Many hits are stored in an
+// awkward key (Відпусти: Gm A# Cm) while a community variant plays them in
+// Am/Em; that variant is what the list should open.
+// Picks prefer: barre-free as written > needs transposing; then the primary
+// variant; then the most-viewed one.
+export type BeginnerPick = { slug: string; variantId: string | null };
+
+const getBeginnerPicks = unstable_cache(
+  async (): Promise<BeginnerPick[]> => {
     if (!hasEnvVars) return [];
-    const rows = await fetchAllPublishedSongs<{ slug: string; chords: string[] | null }>(
-      "slug, chords",
-    );
-    return rows.filter((r) => isNoBarreSong(r.chords)).map((r) => r.slug);
+    const songs = await fetchAllPublishedSongs<{
+      id: string; slug: string; chords: string[] | null; primary_variant_id: string | null;
+    }>("id, slug, chords, primary_variant_id");
+    const variants = await fetchAllRows<{
+      id: string; song_id: string; chords: string[] | null; views: number | null;
+    }>("song_variants", "id, song_id, chords, views");
+    const bySong = new Map<string, typeof variants>();
+    for (const v of variants) {
+      const list = bySong.get(v.song_id);
+      if (list) list.push(v);
+      else bySong.set(v.song_id, [v]);
+    }
+    const picks: BeginnerPick[] = [];
+    for (const song of songs) {
+      const list = bySong.get(song.id);
+      if (!list || list.length === 0) {
+        if (noBarreShift(song.chords) !== null) picks.push({ slug: song.slug, variantId: null });
+        continue;
+      }
+      const primaryId = song.primary_variant_id ?? list[0].id;
+      let best: { rank: [number, number, number]; id: string } | null = null;
+      for (const v of list) {
+        const shift = noBarreShift(v.chords);
+        if (shift === null) continue;
+        const rank: [number, number, number] = [shift === 0 ? 0 : 1, v.id === primaryId ? 0 : 1, -(v.views ?? 0)];
+        if (!best || rank[0] < best.rank[0] || (rank[0] === best.rank[0] && (rank[1] < best.rank[1] || (rank[1] === best.rank[1] && rank[2] < best.rank[2])))) {
+          best = { rank, id: v.id };
+        }
+      }
+      if (best) picks.push({ slug: song.slug, variantId: best.id === primaryId ? null : best.id });
+    }
+    return picks;
   },
-  ["no-barre-slugs"],
-  { revalidate: 1800, tags: ["songs"] },
+  ["beginner-picks"],
+  { revalidate: 3600, tags: ["songs"] },
 );
+
+const getNoBarreSlugs = async (): Promise<string[]> =>
+  (await getBeginnerPicks()).map((p) => p.slug);
+
+/** slug → variant to open, for picks whose easiest variant isn't primary. */
+export async function getBeginnerVariantMap(): Promise<Record<string, string>> {
+  const map: Record<string, string> = {};
+  for (const p of await getBeginnerPicks()) if (p.variantId) map[p.slug] = p.variantId;
+  return map;
+}
 
 // Slug list for songs playable with at most `max` unique chords — the
 // «Пісні на 3 акорди» topic. Same shape as getNoBarreSlugs above; the arg is
@@ -329,17 +392,24 @@ async function fetchSongsPage(args: SongsPageArgs = {}): Promise<{ songs: Song[]
   // songs_search = published-only view with owner rights: under the anon RLS
   // policy the ILIKE search patterns can't use the trigram indexes (ILIKE is
   // not leakproof) and every uncached search seq-scans the catalogue.
-  let qry = getClient()
-    .from("songs_search")
-    .select(SONG_LIST_COLUMNS, { count: "exact" });
+  let topicSlugs: string[] | null = null;
   if (topic) {
     const t = getTopicBySlug(topic);
     if (!t) return { songs: [], total: 0 };
-    const slugs = await resolveTopicSlugs(t);
-    if (!slugs || slugs.length === 0) return { songs: [], total: 0 };
-    qry = qry.in("slug", slugs);
+    topicSlugs = await resolveTopicSlugs(t);
+    if (!topicSlugs || topicSlugs.length === 0) return { songs: [], total: 0 };
   }
-  if (difficulty) qry = qry.eq("difficulty", difficulty);
+  // A topic of a few hundred songs filters in SQL (`slug IN (...)`). A bigger
+  // one (the beginner list is ~1000) would overflow the request URL, so it
+  // walks the sorted slug column instead and fetches only the visible page.
+  const bigTopic = topicSlugs !== null && topicSlugs.length > MAX_IN_SLUGS;
+  const canonicalNames = q ? await resolveArtistNamesByAlias(q) : [];
+
+  const applyFilters = (base: SongsQuery): SongsQuery => {
+    type Q = SongsQuery;
+    let qry = base;
+    if (topicSlugs && !bigTopic) qry = qry.in("slug", topicSlugs) as Q;
+    if (difficulty) qry = qry.eq("difficulty", difficulty) as Q;
   if (q) {
     // Token-AND search: split on whitespace and require EACH token to match
     // somewhere (title OR artist OR lyrics_text). Natural multi-word queries
@@ -348,7 +418,6 @@ async function fetchSongsPage(args: SongsPageArgs = {}): Promise<{ songs: Song[]
     // Aliases are still resolved against the full query (e.g. "DZIDZIO" →
     // canonical "Дзідзьо") and OR'd into the FIRST token's clause so a
     // matching artist still appears regardless of other tokens.
-    const canonicalNames = await resolveArtistNamesByAlias(q);
     const tokens = q.trim().split(/\s+/).filter((t) => t.length >= 2);
     const usedTokens = tokens.length ? tokens : [q]; // fallback for 1-char queries
     usedTokens.forEach((token, i) => {
@@ -368,19 +437,52 @@ async function fetchSongsPage(args: SongsPageArgs = {}): Promise<{ songs: Song[]
           ...canonicalNames.map((n) => `artist.eq.${n.replace(/[,()]/g, "\\$&")}`),
         );
       }
-      qry = qry.or(clauses.join(","));
+      qry = qry.or(clauses.join(",")) as Q;
     });
   }
-  if (sortBy === "created_at_desc") qry = qry.order("created_at", { ascending: false });
-  else if (sortBy === "created_at_asc") qry = qry.order("created_at", { ascending: true });
-  else if (sortBy === "source_popularity") qry = qry.order("source_popularity", { ascending: false, nullsFirst: false });
-  else if (sortBy === "source_views") qry = qry.order("source_views", { ascending: false, nullsFirst: false });
-  else if (sortBy === "title_asc") qry = qry.order("title_sort", { ascending: true });
-  else qry = qry.order("views", { ascending: false });
-  const { data, count, error } = await qry.range(offset, offset + limit - 1);
+  if (sortBy === "created_at_desc") qry = qry.order("created_at", { ascending: false }) as Q;
+  else if (sortBy === "created_at_asc") qry = qry.order("created_at", { ascending: true }) as Q;
+  else if (sortBy === "source_popularity") qry = qry.order("source_popularity", { ascending: false, nullsFirst: false }) as Q;
+  else if (sortBy === "source_views") qry = qry.order("source_views", { ascending: false, nullsFirst: false }) as Q;
+  else if (sortBy === "title_asc") qry = qry.order("title_sort", { ascending: true }) as Q;
+  else qry = qry.order("views", { ascending: false }) as Q;
+  // Tie-breaker: without it equal sort keys page nondeterministically.
+  return qry.order("slug", { ascending: true }) as Q;
+  };
+
+  if (bigTopic) {
+    const wanted = new Set(topicSlugs);
+    const ordered: string[] = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await applyFilters(getClient().from("songs_search").select("slug") as SongsQuery)
+        .range(from, from + pageSize - 1);
+      if (error || !data) return { songs: [], total: 0 };
+      for (const r of data as { slug: string }[]) if (wanted.has(r.slug)) ordered.push(r.slug);
+      if (data.length < pageSize) break;
+    }
+    const page = ordered.slice(offset, offset + limit);
+    if (page.length === 0) return { songs: [], total: ordered.length };
+    const { data, error } = await getClient().from("songs_search").select(SONG_LIST_COLUMNS).in("slug", page);
+    if (error || !data) return { songs: [], total: 0 };
+    const pos = new Map(page.map((slug, i) => [slug, i]));
+    const rows = (data as unknown as Record<string, unknown>[])
+      .slice()
+      .sort((a, b) => (pos.get(a.slug as string) ?? 0) - (pos.get(b.slug as string) ?? 0));
+    return { songs: rows.map(mapRow), total: ordered.length };
+  }
+
+  const { data, count, error } = await applyFilters(
+    getClient().from("songs_search").select(SONG_LIST_COLUMNS, { count: "exact" }) as SongsQuery,
+  ).range(offset, offset + limit - 1);
   if (error || !data) return { songs: [], total: 0 };
-  return { songs: data.map(mapRow), total: count ?? data.length };
+  return { songs: (data as unknown as Record<string, unknown>[]).map(mapRow), total: count ?? data.length };
 }
+
+// PostgREST puts `slug IN (...)` in the URL; a few hundred slugs is safe.
+const MAX_IN_SLUGS = 300;
+
+type SongsQuery = ReturnType<ReturnType<ReturnType<typeof getClient>["from"]>["select"]>;
 
 // Cached only for the FINITE key space (sort × difficulty × topic × offset).
 // unstable_cache keys on every argument, so caching free-text searches too

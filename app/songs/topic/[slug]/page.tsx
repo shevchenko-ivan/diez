@@ -2,13 +2,14 @@ import { Suspense } from "react";
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSongsPage, type SongsPageArgs } from "@/features/song/services/songs";
+import { getSongsPage, getBeginnerVariantMap, type SongsPageArgs } from "@/features/song/services/songs";
 import { getSavedSlugs } from "@/features/playlist/actions/playlists";
 import { getTopicBySlug, TOPICS } from "@/features/song/data/topics";
 import { PageShell } from "@/shared/components/PageShell";
 import { LoadingState } from "@/shared/components/LoadingState";
 import { SortSelect } from "../../SortSelect";
 import { SongsInfiniteList } from "../../SongsInfiniteList";
+import { BeginnerEntryZone } from "@/features/song/components/BeginnerEntryZone";
 import { SearchSubmitButton } from "../../SearchSubmitButton";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
 
@@ -74,9 +75,10 @@ async function TopicContent({ params, searchParams }: RouteProps) {
     sortBy: sortMap[sort] ?? "source_views",
     topic: topic.slug,
   };
-  const [{ songs, total }, savedSet] = await Promise.all([
+  const [{ songs, total }, savedSet, beginnerVariants] = await Promise.all([
     getSongsPage({ ...queryArgs, offset: 0, limit: 50 }),
     getSavedSlugs(),
+    topic.match.kind === "no-barre" ? getBeginnerVariantMap() : Promise.resolve({}),
   ]);
   const savedSlugs = Array.from(savedSet);
 
@@ -168,12 +170,23 @@ async function TopicContent({ params, searchParams }: RouteProps) {
         </div>
       </div>
 
-      <SongsInfiniteList
-        initialSongs={songs}
-        initialTotal={total}
-        savedSlugs={savedSlugs}
-        query={queryArgs}
-      />
+      {topic.match.kind === "no-barre" ? (
+        <BeginnerEntryZone variants={beginnerVariants}>
+          <SongsInfiniteList
+            initialSongs={songs}
+            initialTotal={total}
+            savedSlugs={savedSlugs}
+            query={queryArgs}
+          />
+        </BeginnerEntryZone>
+      ) : (
+        <SongsInfiniteList
+          initialSongs={songs}
+          initialTotal={total}
+          savedSlugs={savedSlugs}
+          query={queryArgs}
+        />
+      )}
 
       {/* SEO body text — after the list, visually unobtrusive */}
       {!q && (

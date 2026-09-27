@@ -14,6 +14,7 @@ import { useSearchParams } from "next/navigation";
 import { Pencil } from "lucide-react";
 import type { Song } from "../types";
 import { applyVariant } from "../lib/variants";
+import { takeBeginnerEntry } from "../lib/beginner-entry";
 import { getSongSaveStateForSlug } from "@/features/playlist/actions/playlists";
 import { SongViewer } from "./SongViewer";
 import { SongActions } from "./SongActions";
@@ -49,6 +50,8 @@ interface SongPageState {
   /** True once ?v= and (for signed-in users) the saved state are resolved —
    *  the viewer waits for it before counting a view. */
   ready: boolean;
+  /** Opened from «Для початківців» — start with the beginner toggle on. */
+  autoBeginner: boolean;
 }
 
 const SongPageContext = createContext<SongPageState | null>(null);
@@ -91,6 +94,20 @@ export function SongPageProvider({ baseSong, children }: { baseSong: Song; child
   const [urlReady, setUrlReady] = useState(false);
   const [saved, setSaved] = useState<SavedState | null>(null);
   const [savedReady, setSavedReady] = useState(false);
+  const [autoBeginner, setAutoBeginner] = useState(false);
+  const [entryVariantId, setEntryVariantId] = useState<string | null>(null);
+
+  // Came here from the «Для початківців» list? (sessionStorage, read once —
+  // a reload or the next visit opens the song normally.) The list may point
+  // at an easier variant than the primary one.
+  useEffect(() => {
+    const entry = takeBeginnerEntry(baseSong.slug);
+    if (!entry) return;
+    queueMicrotask(() => {
+      if (entry.variantId) setEntryVariantId(entry.variantId);
+      setAutoBeginner(true);
+    });
+  }, [baseSong.slug]);
 
   // Same-value updates keep the previous object, so a plain visit (no ?v/?t)
   // doesn't re-render the whole lyric tree once more after hydration.
@@ -130,8 +147,9 @@ export function SongPageProvider({ baseSong, children }: { baseSong: Song; child
     };
   }, [baseSong.slug]);
 
-  // ?v= takes priority; then the variant the user previously saved; then primary.
-  const variantId = url.v ?? saved?.variantId ?? undefined;
+  // ?v= takes priority; then the easier variant «Для початківців» sent us to;
+  // then the variant the user previously saved; then primary.
+  const variantId = url.v ?? entryVariantId ?? saved?.variantId ?? undefined;
   // Memoized on the resolved id, not on the url/saved objects, so `song`
   // keeps its identity (and the viewer skips a render) when nothing changed.
   const song = useMemo(() => applyVariant(baseSong, variantId), [baseSong, variantId]);
@@ -142,7 +160,10 @@ export function SongPageProvider({ baseSong, children }: { baseSong: Song; child
     !!saved && resolveVariantId(baseSong, saved.variantId ?? undefined) === song.activeVariantId;
   const transpose = url.t ?? (savedKeyApplies ? clampTranspose(saved.transpose) : 0);
   const ready = urlReady && savedReady;
-  const value = useMemo<SongPageState>(() => ({ song, transpose, ready }), [song, transpose, ready]);
+  const value = useMemo<SongPageState>(
+    () => ({ song, transpose, ready, autoBeginner }),
+    [song, transpose, ready, autoBeginner],
+  );
 
   return (
     <SongPageContext.Provider value={value}>
@@ -224,11 +245,12 @@ export function MobileVariantRow() {
  *  follows `song`/`initialTranspose` prop changes, and useVoicings re-seeds on
  *  a new chordVoicings object, so the same holds here. */
 export function ActiveSongViewer() {
-  const { song, transpose, ready } = useSongPage();
+  const { song, transpose, ready, autoBeginner } = useSongPage();
   return (
     <SongViewer
       song={song}
       initialTranspose={transpose}
+      autoBeginner={autoBeginner}
       trackView={ready}
       editSlot={<AdminSongEditButton placement="sheet" />}
     />
