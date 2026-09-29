@@ -123,6 +123,28 @@ export default async function AdminSongsPage({
     }
   }
 
+  // Пропозиція завжди стає ОКРЕМОЮ піснею з власною адресою — схвалення не
+  // замінює існуючу й не додає варіант. Тож на модерації показуємо, якщо
+  // така пісня вже опублікована: інакше схвалення непомітно створює дубль.
+  const existing: Record<string, { slug: string; title: string }> = {};
+  if (tab === "pending" && list.length > 0) {
+    const norm = (t: string) =>
+      t.toLowerCase().replace(/i/g, "і").replace(/[’'`ʼ.,!?«»"()\-–—]/g, "").replace(/\s+/g, " ").trim();
+    const artists = [...new Set(list.map((s) => s.artist))];
+    const { data: published } = await admin
+      .from("songs")
+      .select("slug, title, artist")
+      .eq("status", "published")
+      .in("artist", artists)
+      .range(0, 9999);
+    for (const s of list) {
+      const match = (published ?? []).find(
+        (p) => norm(p.artist) === norm(s.artist) && norm(p.title) === norm(s.title),
+      );
+      if (match) existing[s.id] = { slug: match.slug, title: match.title };
+    }
+  }
+
   const total = count ?? list.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.min(pageNum, totalPages);
@@ -195,7 +217,16 @@ export default async function AdminSongsPage({
 
       <AdminSongsSearch initialQ={q} />
 
-      <SongsAdminTable songs={list} tab={tab === "archived" ? "archived" : "active"} sort={sortKey} dir={sortDir} tabParam={tab} submitters={submitters} />
+      {tab === "pending" && (
+        <p className="mb-4 text-sm" style={{ color: "var(--text-muted)", lineHeight: 1.55 }}>
+          Схвалення публікує пропозицію як <b style={{ color: "var(--text)" }}>окрему нову пісню</b> з власною
+          сторінкою. Воно не замінює існуючу пісню і не додає до неї варіант. Якщо така пісня вже є на сайті,
+          біля назви буде попередження і помаранчева кнопка «Додати як варіант»: вона переносить
+          пропозицію у варіант існуючої пісні (автором лишається той, хто запропонував) і видаляє дубль.
+        </p>
+      )}
+
+      <SongsAdminTable songs={list} tab={tab === "archived" ? "archived" : "active"} sort={sortKey} dir={sortDir} tabParam={tab} submitters={submitters} existing={existing} />
 
       <AdminSongsPagination currentPage={currentPage} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} />
     </PageShell>

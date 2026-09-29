@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Pencil, Eye, Archive, Trash2, RotateCcw, ArrowUp, ArrowDown } from "lucide-react";
+import { Pencil, Eye, Archive, Trash2, RotateCcw, ArrowUp, ArrowDown, Layers } from "lucide-react";
 import { AdminTable, AdminTh, AdminTr } from "@/shared/components/AdminTable";
 import { TeButton } from "@/shared/components/TeButton";
-import { updateSongStatus, deleteSong, bulkUpdateSongStatus, bulkDeleteSongs } from "@/features/song/actions/admin";
+import { updateSongStatus, deleteSong, bulkUpdateSongStatus, bulkDeleteSongs, mergeSubmissionAsVariant } from "@/features/song/actions/admin";
 
 interface AdminSong {
   id: string;
@@ -59,6 +59,8 @@ interface Props {
   dir: "asc" | "desc";
   tabParam: "published" | "pending" | "draft" | "archived";
   submitters?: Record<string, SubmitterInfo>;
+  /** Pending song id → the already-published song with the same title. */
+  existing?: Record<string, { slug: string; title: string }>;
 }
 
 function SortLink({
@@ -81,7 +83,7 @@ function SortLink({
   );
 }
 
-export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = {} }: Props) {
+export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = {}, existing = {} }: Props) {
   const showSubmitter = tabParam === "pending";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -213,10 +215,19 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
                 className="accent-orange-500"
               />
             </td>
-            <td className="px-4 py-3 font-bold whitespace-nowrap max-w-[200px] truncate">
-              <Link href={`/songs/${song.slug}`} className="hover:underline">
+            <td className="px-4 py-3 font-bold max-w-[240px]">
+              <Link href={`/songs/${song.slug}`} className="hover:underline block truncate whitespace-nowrap">
                 {song.title}
               </Link>
+              {existing[song.id] && (
+                <div className="mt-1 text-[11px] font-medium whitespace-normal" style={{ color: "var(--orange-text)" }}>
+                  ⚠ Вже є на сайті:{" "}
+                  <Link href={`/songs/${existing[song.id].slug}`} target="_blank" className="underline">
+                    {existing[song.id].title}
+                  </Link>
+                  . Схвалення створить дубль — краще додати як варіант (помаранчева кнопка праворуч).
+                </div>
+              )}
             </td>
             <td className="px-4 py-3 opacity-80 whitespace-nowrap">{song.artist}</td>
             {showSubmitter && (() => {
@@ -251,6 +262,27 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
                   className="p-2 rounded-lg opacity-50 hover:opacity-100"
                 />
 
+                {song.status === "pending" && existing[song.id] && (
+                  <form
+                    action={mergeSubmissionAsVariant}
+                    onSubmit={(e) => {
+                      if (!confirm(`Додати цю пропозицію як новий варіант до «${existing[song.id].title}»? Окрема пісня-дубль буде видалена.`)) e.preventDefault();
+                    }}
+                  >
+                    <input type="hidden" name="songId" value={song.id} />
+                    <input type="hidden" name="targetSlug" value={existing[song.id].slug} />
+                    <TeButton
+                      shape="pill"
+                      type="submit"
+                      icon={Layers}
+                      iconSize={14}
+                      title={`Додати як варіант до «${existing[song.id].title}»`}
+                      className="p-2 rounded-lg hover:opacity-100"
+                      style={{ color: "var(--orange)" }}
+                    />
+                  </form>
+                )}
+
                 {tab === "active" ? (
                   <form action={updateSongStatus}>
                     <input type="hidden" name="songId" value={song.id} />
@@ -260,7 +292,13 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
                       type="submit"
                       icon={song.status === "published" ? Archive : Eye}
                       iconSize={14}
-                      title={song.status === "published" ? "В архів" : "Опублікувати"}
+                      title={
+                        song.status === "published"
+                          ? "В архів"
+                          : existing[song.id]
+                            ? "Опублікувати як окрему пісню (буде дубль існуючої)"
+                            : "Опублікувати як нову пісню"
+                      }
                       className="p-2 rounded-lg opacity-50 hover:opacity-100"
                     />
                   </form>

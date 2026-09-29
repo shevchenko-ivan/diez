@@ -627,6 +627,73 @@ export async function updateSongFull(formData: FormData) {
 
 // ─── Delete song (only from archive) ─────────────────────────────────────────
 
+// A submission always arrives as a separate pending song. When that song is
+// already on the site, the admin can fold the submission into it instead:
+// its primary variant becomes a new variant of the published song (credited
+// to the submitter), and the pending duplicate is deleted.
+export async function mergeSubmissionAsVariant(formData: FormData) {
+  await requireAdmin();
+
+  const pendingId = assertUuid(formData.get("songId") as string, "ID пропозиції");
+  const targetSlug = (formData.get("targetSlug") as string | null)?.trim();
+  if (!targetSlug) throw new Error("Не вказано, до якої пісні додати варіант");
+
+  const admin = createAdminClient();
+  const { data: pending } = await admin
+    .from("songs")
+    .select("id, status, submitted_by, primary_variant_id")
+    .eq("id", pendingId)
+    .single();
+  if (!pending || pending.status !== "pending") throw new Error("Це вже не пропозиція на модерації");
+
+  const { data: target } = await admin
+    .from("songs")
+    .select("id, slug")
+    .eq("slug", targetSlug)
+    .eq("status", "published")
+    .single();
+  if (!target) throw new Error("Опубліковану пісню не знайдено");
+
+  const { data: source } = await admin
+    .from("song_variants")
+    .select("sections, chords, key, capo, chord_voicings, custom_voicings, author_id")
+    .eq("id", pending.primary_variant_id)
+    .single();
+  if (!source) throw new Error("У пропозиції немає тексту з акордами");
+
+  const { count } = await admin
+    .from("song_variants")
+    .select("id", { count: "exact", head: true })
+    .eq("song_id", target.id);
+
+  const { data: variant, error } = await admin
+    .from("song_variants")
+    .insert({
+      song_id: target.id,
+      label: `Варіант ${(count ?? 1) + 1}`,
+      sections: source.sections,
+      chords: source.chords,
+      key: source.key,
+      capo: source.capo,
+      status: "published",
+      author_id: pending.submitted_by ?? source.author_id,
+      ...(source.chord_voicings ? { chord_voicings: source.chord_voicings } : {}),
+      ...(source.custom_voicings ? { custom_voicings: source.custom_voicings } : {}),
+    })
+    .select("id")
+    .single();
+  if (error || !variant) throw new Error(`Помилка: ${error?.message}`);
+
+  // The content now lives on the published song; the pending copy goes.
+  const { error: delErr } = await admin.from("songs").delete().eq("id", pending.id);
+  if (delErr) throw new Error(`Варіант додано, але дубль не видалено: ${delErr.message}`);
+
+  revalidatePath(`/songs/${target.slug}`);
+  revalidatePath("/admin");
+  revalidatePath("/admin/songs");
+  redirect(`/songs/${target.slug}?v=${variant.id}`);
+}
+
 export async function deleteSong(formData: FormData) {
   await requireAdmin();
 
