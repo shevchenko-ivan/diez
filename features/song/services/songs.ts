@@ -7,6 +7,7 @@ import { normalizeForSearch } from "../lib/translit";
 import type { ChordDef } from "../data/chord-templates";
 import { getTopicBySlug, type Topic } from "../data/topics";
 import { noBarreShift } from "../lib/barre";
+import { getPublicAuthors } from "@/features/profile/services/public-profile";
 
 // Public read-only client — no auth needed for published song reads.
 function getClient() {
@@ -29,7 +30,7 @@ const SONG_LIST_COLUMNS =
 // it yet — `getSongBySlug` retries with this fallback list on column-missing
 // errors so the public viewer keeps working until the migration is applied.
 const VARIANT_COLUMNS_BASE =
-  "id, label, sections, chords, key, capo, views, created_at";
+  "id, label, sections, chords, key, capo, views, created_at, author_id";
 const VARIANT_COLUMNS =
   `${VARIANT_COLUMNS_BASE}, chord_voicings, custom_voicings`;
 
@@ -696,6 +697,18 @@ export async function getSongBySlug(slug: string): Promise<Song | undefined> {
   // admin "Редагувати" link is built on the client now (the page is ISR and
   // can't check the viewer's role at render time), and it needs the id.
   if (songId) song.id = songId;
+
+  // «Додав(ла)» in the variant switcher — only for contributions by users.
+  const rawVariants = ((data as Record<string, unknown>).song_variants as Record<string, unknown>[] | undefined) ?? [];
+  const authorOf = new Map(rawVariants.map((v) => [v.id as string, v.author_id as string | null]));
+  if (song.variants && song.variants.length > 0) {
+    const authors = await getPublicAuthors([...authorOf.values()].filter((a): a is string => !!a));
+    for (const v of song.variants) {
+      const a = authorOf.get(v.id);
+      if (a && authors[a]) v.author = authors[a];
+    }
+  }
+
   if (songId) {
     const { data: patternRows } = await client
       .from("song_strumming_patterns")

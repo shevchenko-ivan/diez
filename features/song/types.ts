@@ -70,6 +70,9 @@ export interface SongVariant {
   views: number;
   createdAt: string;
   isPrimary: boolean;
+  /** The user who contributed this variant (regular users only — catalogue
+   *  and admin-made variants carry no author). Links to /u/<id>. */
+  author?: { id: string; name: string };
   /** Admin-picked default voicing index per chord name (e.g. {"Bb6": 0, "A7": 2}). */
   chordVoicings?: Record<string, number>;
   /** Admin-drawn custom shapes per chord name. Appended to that chord's voicing list. */

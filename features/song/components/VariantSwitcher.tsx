@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { ChevronDown, Check, Eye, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronDown, Check, Eye, Plus, User } from "lucide-react";
 import type { SongVariant } from "@/features/song/types";
 import Link from "next/link";
 import { useHaptics } from "@/shared/hooks/useHaptics";
@@ -27,6 +27,7 @@ function formatDate(iso: string): string {
 
 export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { trigger } = useHaptics();
@@ -115,6 +116,31 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
                           <Eye size={11} /> {v.views.toLocaleString("uk-UA")}
                         </span>
                       </div>
+                      {v.author && (
+                        // Not an <a>: the whole row is already a link to the
+                        // variant, and anchors can't nest.
+                        <span
+                          role="link"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpen(false);
+                            router.push(`/u/${v.author!.id}`);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter") return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpen(false);
+                            router.push(`/u/${v.author!.id}`);
+                          }}
+                          className="inline-flex items-center gap-1 mt-1 text-[11px] font-medium hover:underline cursor-pointer"
+                          style={{ color: "var(--orange-text)" }}
+                        >
+                          <User size={11} /> Додав(ла): {v.author.name}
+                        </span>
+                      )}
                     </div>
                     {isActive && (
                       <Check size={14} style={{ color: "var(--orange)", marginTop: 3 }} />
