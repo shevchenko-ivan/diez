@@ -9,6 +9,7 @@ import { getTopicBySlug, type Topic } from "../data/topics";
 import { noBarreShift } from "../lib/barre";
 import { artistSongsTag, SONG_LINKS_TAG } from "../lib/cache-tags";
 import { getPublicAuthors } from "@/features/profile/services/public-profile";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Public read-only client — no auth needed for published song reads.
 function getClient() {
@@ -734,6 +735,33 @@ export async function getSongBySlug(slug: string): Promise<Song | undefined> {
     }
   }
   return song;
+}
+
+/** Admin moderation preview: a song by id in ANY status (pending/draft are
+ *  invisible to the public read above). Service-role — call only after an
+ *  admin check. Never cached: it shows the submission as it is right now. */
+export async function getSongForReview(id: string): Promise<
+  { song: Song; status: string; submittedBy: string | null } | undefined
+> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("songs")
+    .select(`${SONG_COLUMNS}, status, submitted_by, song_variants!song_variants_song_id_fkey(${VARIANT_COLUMNS})`)
+    .eq("id", id)
+    .single();
+  if (!data) return undefined;
+  const row = data as Record<string, unknown>;
+  const song = mapRow(row);
+  song.id = id;
+
+  const { data: patternRows } = await admin
+    .from("song_strumming_patterns")
+    .select("id, position, name, tempo, note_length, strokes")
+    .eq("song_id", id)
+    .order("position", { ascending: true });
+  if (patternRows && patternRows.length > 0) song.strumPatterns = patternRows.map(mapPatternRow);
+
+  return { song, status: row.status as string, submittedBy: (row.submitted_by as string | null) ?? null };
 }
 
 export function mapPatternRow(row: Record<string, unknown>): StrumPattern {

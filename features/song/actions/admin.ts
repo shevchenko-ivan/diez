@@ -447,6 +447,10 @@ export async function updateSongStatus(formData: FormData) {
   const changedSlug = changed?.slug ?? null;
   revalidateCatalog(changed ? [changed] : [], status);
   if (changedSlug) after(() => pingIndexNow([`/songs/${changedSlug}`, "/songs"]));
+
+  // The moderation preview publishes from its own page — land on the result.
+  const returnTo = formData.get("returnTo") as string | null;
+  if (returnTo === "song" && changedSlug && status === "published") redirect(`/songs/${changedSlug}`);
 }
 
 // ─── Update song ──────────────────────────────────────────────────────────────
