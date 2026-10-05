@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { PageShell } from "@/shared/components/PageShell";
 import { FormField } from "@/shared/components/FormField";
-import { Save, Star, Trash2, Plus } from "lucide-react";
+import { Save, Star, Trash2, Plus, Eye } from "lucide-react";
 import { BackButton } from "@/shared/components/BackButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +20,7 @@ import { Suspense } from "react";
 import { SavedToast } from "@/shared/components/SavedToast";
 import { VoicingsSection } from "./VoicingsSection";
 import type { ChordDef } from "@/features/song/components/ChordDiagram";
+import { statusLabel } from "@/features/song/components/SongStatusBadge";
 
 export const metadata = { title: "Редагувати пісню — Diez" };
 
@@ -205,6 +206,16 @@ export default async function EditSongPage({
 
   const isActivePrimary = activeVariant ? activeVariant.id === primaryVariantId : false;
 
+  // A submission is «pending». The select used to lack that option, so the
+  // browser fell back to the first one («Опубліковано») and a plain «Зберегти»
+  // published the submission as a separate song. Keep whatever status the
+  // song has selectable, so saving never changes it unless the admin does.
+  const currentStatus = (song.status as string | null) ?? "draft";
+  const isSubmission = currentStatus === "pending";
+  const statusOptions = STATUSES.some((s) => s.value === currentStatus)
+    ? STATUSES
+    : [{ value: currentStatus, label: statusLabel(currentStatus) }, ...STATUSES];
+
   // Rich strumming patterns (per-song, not per-variant — see migration 019).
   const { data: patternRows } = await admin
     .from("song_strumming_patterns")
@@ -228,6 +239,26 @@ export default async function EditSongPage({
       <p className="text-xs font-mono opacity-40 mb-6 px-2" style={{ color: "var(--text-muted)" }}>
         slug: {song.slug}
       </p>
+
+      {isSubmission && (
+        <div
+          className="mb-6 mx-1 px-4 py-3 text-sm flex flex-wrap items-center gap-x-3 gap-y-2"
+          style={{ borderRadius: "1rem", background: "rgba(255,140,60,0.10)", color: "var(--text)" }}
+        >
+          <span className="flex-1 min-w-[220px]">
+            Це пропозиція користувача на перевірці. «Зберегти» лише збереже ваші правки — пісня
+            лишиться на перевірці й нікуди не опублікується.
+          </span>
+          <Link
+            href={`/admin/songs/review?id=${song.id}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold whitespace-nowrap hover:underline"
+            style={{ color: "var(--orange)" }}
+          >
+            <Eye size={14} />
+            Переглянути й вирішити
+          </Link>
+        </div>
+      )}
 
       {/* Mini-forms for variant-level side-actions (set primary / delete).
           Kept separate so the main form's inputs don't get submitted with them. */}
@@ -253,7 +284,9 @@ export default async function EditSongPage({
             value={
               from === "song"
                 ? `/songs/${song.slug}`
-                : `/admin/songs/edit?id=${song.id}&variant=${activeVariant.id}`
+                : isSubmission
+                  ? `/admin/songs/review?id=${song.id}`
+                  : `/admin/songs/edit?id=${song.id}&variant=${activeVariant.id}`
             }
           />
 
@@ -288,8 +321,8 @@ export default async function EditSongPage({
                 </FormField>
                 <input type="hidden" name="difficulty" value={song.difficulty ?? "easy"} />
                 <FormField label="Статус">
-                  <select name="status" defaultValue={song.status ?? "draft"} className="field-input" style={{ color: "var(--text)" }}>
-                    {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  <select name="status" defaultValue={currentStatus} className="field-input" style={{ color: "var(--text)" }}>
+                    {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </FormField>
                 {/* Розмір прибрано — час такту визначає сам ритм

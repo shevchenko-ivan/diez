@@ -244,6 +244,13 @@ export function MobileVariantRow() {
  *  viewer resets it on a variant switch, see SongViewer.) SongViewer
  *  follows `song`/`initialTranspose` prop changes, and useVoicings re-seeds on
  *  a new chordVoicings object, so the same holds here. */
+/** Moderation preview (/admin/songs/review): the same viewer, but it doesn't
+ *  count a view and has no «Редагувати» slot — the review page has its own. */
+export function PreviewSongViewer() {
+  const { song, transpose } = useSongPage();
+  return <SongViewer song={song} initialTranspose={transpose} trackView={false} />;
+}
+
 export function ActiveSongViewer() {
   const { song, transpose, ready, autoBeginner } = useSongPage();
   return (

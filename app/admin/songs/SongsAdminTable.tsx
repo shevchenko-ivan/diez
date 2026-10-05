@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Pencil, Eye, Archive, Trash2, RotateCcw, ArrowUp, ArrowDown, Layers } from "lucide-react";
+import { Pencil, Eye, Archive, Trash2, RotateCcw, ArrowUp, ArrowDown, Layers, BookOpen } from "lucide-react";
 import { AdminTable, AdminTh, AdminTr } from "@/shared/components/AdminTable";
 import { TeButton } from "@/shared/components/TeButton";
 import { updateSongStatus, deleteSong, bulkUpdateSongStatus, bulkDeleteSongs, mergeSubmissionAsVariant } from "@/features/song/actions/admin";
@@ -216,7 +216,12 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
               />
             </td>
             <td className="px-4 py-3 font-bold max-w-[240px]">
-              <Link href={`/songs/${song.slug}`} className="hover:underline block truncate whitespace-nowrap">
+              {/* Unpublished songs 404 on the public URL — open the read-only
+                  moderation preview instead. */}
+              <Link
+                href={song.status === "published" ? `/songs/${song.slug}` : `/admin/songs/review?id=${song.id}`}
+                className="hover:underline block truncate whitespace-nowrap"
+              >
                 {song.title}
               </Link>
               {existing[song.id] && (
@@ -253,6 +258,16 @@ export function SongsAdminTable({ songs, tab, sort, dir, tabParam, submitters = 
             <td className="px-4 py-3 text-xs opacity-70 whitespace-nowrap" title={new Date(song.created_at).toLocaleString("uk-UA")}>{formatRelativeUa(song.created_at)}</td>
             <td className="px-4 py-3">
               <div className="flex items-center justify-end gap-1">
+                {song.status !== "published" && (
+                  <TeButton
+                    shape="pill"
+                    href={`/admin/songs/review?id=${song.id}`}
+                    icon={BookOpen}
+                    iconSize={14}
+                    title="Переглянути (нічого не змінює)"
+                    className="p-2 rounded-lg opacity-50 hover:opacity-100"
+                  />
+                )}
                 <TeButton
                   shape="pill"
                   href={`/admin/songs/edit?id=${song.id}`}

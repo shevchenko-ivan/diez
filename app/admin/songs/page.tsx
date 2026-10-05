@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { SongsAdminTable } from "./SongsAdminTable";
 import { AdminSongsSearch } from "./AdminSongsSearch";
 import { AdminSongsPagination } from "./AdminSongsPagination";
+import { isSameSong } from "@/features/song/lib/song-identity";
 
 export const metadata = { title: "Пісні — Адмінка | Diez" };
 
@@ -128,8 +129,6 @@ export default async function AdminSongsPage({
   // така пісня вже опублікована: інакше схвалення непомітно створює дубль.
   const existing: Record<string, { slug: string; title: string }> = {};
   if (tab === "pending" && list.length > 0) {
-    const norm = (t: string) =>
-      t.toLowerCase().replace(/i/g, "і").replace(/[’'`ʼ.,!?«»"()\-–—]/g, "").replace(/\s+/g, " ").trim();
     const artists = [...new Set(list.map((s) => s.artist))];
     const { data: published } = await admin
       .from("songs")
@@ -138,9 +137,7 @@ export default async function AdminSongsPage({
       .in("artist", artists)
       .range(0, 9999);
     for (const s of list) {
-      const match = (published ?? []).find(
-        (p) => norm(p.artist) === norm(s.artist) && norm(p.title) === norm(s.title),
-      );
+      const match = (published ?? []).find((p) => isSameSong(p, s));
       if (match) existing[s.id] = { slug: match.slug, title: match.title };
     }
   }
