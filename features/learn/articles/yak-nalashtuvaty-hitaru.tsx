@@ -57,7 +57,7 @@ export function Body() {
       <p>Щоб запамʼятати: <strong>Е-А-D-G-B-E</strong>.</p>
 
       <Callout>
-        Найпростіший спосіб — наш <Link href="/tuner">онлайн-тюнер</Link>. Дозвольте доступ
+        Найпростіший спосіб — наш <Link prefetch={false} href="/tuner">онлайн-тюнер</Link>. Дозвольте доступ
         до мікрофона, смикайте струну по черзі — він покаже ноту й підкаже, куди крутити
         кілок: підтягнути (вище) чи послабити (нижче).
       </Callout>
@@ -94,8 +94,8 @@ export function Body() {
       </p>
 
       <p>
-        Настроїли? Час грати — почніть із <Link href="/learn/pershi-akordy">перших
-        акордів</Link> або одразу <Link href="/songs/topic/beginner">простих пісень</Link>.
+        Настроїли? Час грати — почніть із <Link prefetch={false} href="/learn/pershi-akordy">перших
+        акордів</Link> або одразу <Link prefetch={false} href="/songs/topic/beginner">простих пісень</Link>.
       </p>
     </>
   );

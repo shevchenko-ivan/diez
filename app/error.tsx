@@ -56,7 +56,7 @@ export default function RouteError({
           <button type="button" onClick={reset} className="te-pill-btn px-6 py-3 text-sm font-bold">
             Спробувати ще раз
           </button>
-          <Link href="/" className="te-pill-btn px-6 py-3 text-sm font-bold">
+          <Link prefetch={false} href="/" className="te-pill-btn px-6 py-3 text-sm font-bold">
             На головну
           </Link>
         </div>

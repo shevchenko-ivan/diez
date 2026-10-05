@@ -27,7 +27,7 @@ export function PlaylistCard({ playlist, publicLink = false }: Props) {
   const fanCount = Math.max(covers.length, 1);
 
   return (
-    <Link
+    <Link prefetch={false}
       href={href}
       className="flex flex-col group cursor-pointer"
     >

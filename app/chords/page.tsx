@@ -87,7 +87,7 @@ export default function ChordsPage() {
         </h2>
         <div className="flex flex-wrap gap-2">
           {CHORD_PAGES.map((p) => (
-            <Link
+            <Link prefetch={false}
               key={p.slug}
               href={`/chords/${p.slug}`}
               className="te-surface px-3 py-1.5 rounded-lg text-sm hover:underline"

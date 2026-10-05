@@ -251,7 +251,7 @@ export default function PrivacyPage() {
             <p>
               Сервіс експлуатується анонімним оператором. Для зв&apos;язку щодо персональних
               даних — <a href="mailto:privacy@diez.net.ua" style={{ color: "var(--orange-text)" }}>privacy@diez.net.ua</a>.
-              Для скарг правовласників — <Link href="/copyright" style={{ color: "var(--orange-text)" }}>сторінка про авторські права</Link>.
+              Для скарг правовласників — <Link prefetch={false} href="/copyright" style={{ color: "var(--orange-text)" }}>сторінка про авторські права</Link>.
             </p>
           </section>
         </div>

@@ -40,7 +40,7 @@ export default async function AddSongPage() {
           <p className="text-xs mb-6 -mt-2" style={{ color: "var(--text-muted)", lineHeight: 1.65 }}>
             Додавайте пісні будь-якою мовою, крім російської. Ви відповідаєте за контент,
             який публікуєте, і підтверджуєте, що маєте право ним ділитися.{" "}
-            <Link href="/terms" target="_blank" className="underline" style={{ color: "var(--text-mid)" }}>
+            <Link prefetch={false} href="/terms" target="_blank" className="underline" style={{ color: "var(--text-mid)" }}>
               Детальніше про правила →
             </Link>
           </p>
@@ -55,7 +55,7 @@ export default async function AddSongPage() {
               Щоб додати пісню до каталогу, увійдіть у свій акаунт. Так ми зможемо
               повʼязати ваш внесок із вами й сповістити, коли пісню опублікують.
             </p>
-            <Link
+            <Link prefetch={false}
               href="/auth/login?next=/add"
               className="inline-flex items-center gap-2 te-pill-btn px-6 py-3 text-sm font-bold"
             >

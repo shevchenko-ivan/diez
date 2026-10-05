@@ -221,6 +221,9 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                // No prefetch: the nav is on every page, so each view fetched
+                // all five sections in the background. They are CDN-cached.
+                prefetch={false}
                 aria-current={isCurrent ? "page" : undefined}
                 className="px-3 py-2 text-sm transition-colors hover:opacity-70"
                 style={{ color: "var(--text-mid)", fontWeight: 400 }}
@@ -315,7 +318,7 @@ export function Navbar() {
 
                   <div className="py-1">
                     {isAdmin && (
-                      <Link href="/add" onClick={closeDropdown}
+                      <Link prefetch={false} href="/add" onClick={closeDropdown}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                         style={{ color: "var(--orange-text)" }}
                       >
@@ -323,14 +326,14 @@ export function Navbar() {
                       </Link>
                     )}
 
-                    <Link href="/profile" onClick={closeDropdown}
+                    <Link prefetch={false} href="/profile" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--text)" }}
                     >
                       <User size={15} style={{ color: "var(--text-muted)" }} /> Профіль
                     </Link>
 
-                    <Link href="/profile/lists" onClick={closeDropdown}
+                    <Link prefetch={false} href="/profile/lists" onClick={closeDropdown}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                       style={{ color: "var(--text)" }}
                     >
@@ -338,7 +341,7 @@ export function Navbar() {
                     </Link>
 
                     {isAdmin && (
-                      <Link href="/admin" onClick={closeDropdown}
+                      <Link prefetch={false} href="/admin" onClick={closeDropdown}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                         style={{ color: "var(--text)" }}
                       >
@@ -348,7 +351,7 @@ export function Navbar() {
                     )}
 
                     {isAdmin && (
-                      <Link href="/ui-kit" onClick={closeDropdown}
+                      <Link prefetch={false} href="/ui-kit" onClick={closeDropdown}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                         style={{ color: "var(--text)" }}
                       >
@@ -399,7 +402,7 @@ export function Navbar() {
           {NAV_LINKS.map((item) => {
             const isCurrent = item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
             return (
-              <Link key={item.href} href={item.href}
+              <Link key={item.href} href={item.href} prefetch={false}
                 aria-current={isCurrent ? "page" : undefined}
                 className="block px-4 py-2.5 rounded-xl text-sm font-medium"
                 style={{ color: "var(--text-mid)" }}

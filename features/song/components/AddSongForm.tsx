@@ -535,7 +535,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
                 Виправити текст
               </button>
             ) : (
-              <Link
+              <Link prefetch={false}
                 href={`/profile/songs/${result.songId}/edit`}
                 className="te-pill-btn w-full text-center px-5 py-3 text-sm font-bold"
               >
@@ -550,7 +550,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             >
               {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />} Видалити чернетку
             </button>
-            <Link href="/profile" className="w-full text-center px-5 py-2 text-xs font-bold" style={{ color: "var(--text-muted)" }}>
+            <Link prefetch={false} href="/profile" className="w-full text-center px-5 py-2 text-xs font-bold" style={{ color: "var(--text-muted)" }}>
               Лишити в чернетках
             </Link>
           </div>
@@ -570,7 +570,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
               {isEdit ? "Зміни збережено й опубліковано!" : "Пісню опубліковано!"}
             </h3>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>Дякуємо за внесок у каталог.</p>
-            <Link href={`/songs/${result.slug}`} className="inline-block te-pill-btn px-6 py-3 text-sm font-bold">
+            <Link prefetch={false} href={`/songs/${result.slug}`} className="inline-block te-pill-btn px-6 py-3 text-sm font-bold">
               Переглянути пісню →
             </Link>
           </>
@@ -582,10 +582,10 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
               Чернетка доступна лише вам. Поверніться до неї будь-коли, щоб доповнити й надіслати на перевірку.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-              <Link href={`/profile/songs/${result.songId}/edit`} className="inline-block te-pill-btn px-6 py-3 text-sm font-bold">
+              <Link prefetch={false} href={`/profile/songs/${result.songId}/edit`} className="inline-block te-pill-btn px-6 py-3 text-sm font-bold">
                 Продовжити редагування
               </Link>
-              <Link href="/profile" className="inline-block px-6 py-3 text-sm font-bold" style={{ color: "var(--text-mid)" }}>
+              <Link prefetch={false} href="/profile" className="inline-block px-6 py-3 text-sm font-bold" style={{ color: "var(--text-mid)" }}>
                 До профілю
               </Link>
             </div>
@@ -597,7 +597,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               Пісня зʼявиться в каталозі після перевірки модератором. Зазвичай це швидко — статус видно у профілі.
             </p>
-            <Link href="/profile" className="inline-block te-pill-btn px-6 py-3 text-sm font-bold">
+            <Link prefetch={false} href="/profile" className="inline-block te-pill-btn px-6 py-3 text-sm font-bold">
               До профілю
             </Link>
           </>
@@ -989,7 +989,7 @@ export function AddSongForm({ artists: initialArtists = [], isAdmin = false, mod
         {!isAdmin && (
           <p className="text-[11px] sm:text-right" style={{ color: "var(--text-muted)", lineHeight: 1.5 }}>
             Пісню перевірить модератор перед публікацією — у каталозі вона зʼявиться після підтвердження.{" "}
-            <Link href="/terms" target="_blank" className="underline" style={{ color: "var(--text-mid)" }}>
+            <Link prefetch={false} href="/terms" target="_blank" className="underline" style={{ color: "var(--text-mid)" }}>
               Правила публікації
             </Link>.
           </p>

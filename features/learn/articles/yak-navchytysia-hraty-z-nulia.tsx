@@ -39,45 +39,45 @@ export function Body() {
       <p>
         Якщо інструмента ще немає — почніть звідси. Для старту зазвичай радять класичну
         гітару з нейлоновими струнами: вони мʼякші й менше ріжуть пальці. Детально про вибір —
-        у статті <Link href="/learn/yaku-hitaru-vybraty">яку гітару вибрати початківцю</Link>.
+        у статті <Link prefetch={false} href="/learn/yaku-hitaru-vybraty">яку гітару вибрати початківцю</Link>.
       </p>
 
       <h2>Крок 2. Налаштуйте її</h2>
       <p>
         Розладнана гітара звучить фальшиво навіть із правильними акордами. Перед кожним
         заняттям перевіряйте стрій — найпростіше нашим{" "}
-        <Link href="/tuner">онлайн-тюнером</Link>. Як це робити — у статті{" "}
-        <Link href="/learn/yak-nalashtuvaty-hitaru">як настроїти гітару</Link>.
+        <Link prefetch={false} href="/tuner">онлайн-тюнером</Link>. Як це робити — у статті{" "}
+        <Link prefetch={false} href="/learn/yak-nalashtuvaty-hitaru">як настроїти гітару</Link>.
       </p>
 
       <h2>Крок 3. Навчіться тримати гітару й розуміти її</h2>
       <p>
         Сядьте рівно, гітара лежить на правому стегні (для правшів), гриф трохи піднятий.
         Ліва рука не тримає вагу інструмента — лише притискає струни. Щоб орієнтуватися в
-        термінах, погляньте на <Link href="/learn/budova-hitary">будову гітари</Link>.
+        термінах, погляньте на <Link prefetch={false} href="/learn/budova-hitary">будову гітари</Link>.
       </p>
 
       <h2>Крок 4. Вивчіть перші акорди</h2>
       <p>
         Основа всього — кілька відкритих акордів. Почніть з Em та Am, потім додайте C, G, D.
         Як їх брати й перемикатися — у статті{" "}
-        <Link href="/learn/pershi-akordy">перші акорди для початківців</Link>. Паралельно
-        корисно розуміти, <Link href="/learn/shcho-take-akordy">що таке акорд</Link> і{" "}
-        <Link href="/learn/yak-chytaty-akordy">як читати схеми</Link>.
+        <Link prefetch={false} href="/learn/pershi-akordy">перші акорди для початківців</Link>. Паралельно
+        корисно розуміти, <Link prefetch={false} href="/learn/shcho-take-akordy">що таке акорд</Link> і{" "}
+        <Link prefetch={false} href="/learn/yak-chytaty-akordy">як читати схеми</Link>.
       </p>
 
       <h2>Крок 5. Додайте ритм</h2>
       <p>
         Акорди оживають, коли зʼявляється ритм правою рукою. Є два підходи:{" "}
-        <Link href="/learn/biy-na-hitari">бій</Link> (ритмічні удари) і{" "}
-        <Link href="/learn/perebir-na-hitari">перебір</Link> (пальці по черзі). Почніть з
+        <Link prefetch={false} href="/learn/biy-na-hitari">бій</Link> (ритмічні удари) і{" "}
+        <Link prefetch={false} href="/learn/perebir-na-hitari">перебір</Link> (пальці по черзі). Почніть з
         простого бою «вісімка».
       </p>
 
       <h2>Крок 6. Зіграйте першу пісню</h2>
       <p>
         Маючи навіть три акорди, ви вже граєте знайомі мелодії. Візьміть щось із добірки{" "}
-        <Link href="/songs/topic/beginner">пісень без баре для початківців</Link> — там
+        <Link prefetch={false} href="/songs/topic/beginner">пісень без баре для початківців</Link> — там
         прості акорди й популярні пісні.
       </p>
 
@@ -104,7 +104,7 @@ export function Body() {
       </ul>
 
       <p>
-        Готові? Почніть із <Link href="/learn/pershi-akordy">перших акордів</Link> — і вже
+        Готові? Почніть із <Link prefetch={false} href="/learn/pershi-akordy">перших акордів</Link> — і вже
         за тиждень зіграєте щось знайоме.
       </p>
     </>

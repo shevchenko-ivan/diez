@@ -187,7 +187,7 @@ export default async function ChordPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }} />
 
       <nav aria-label="Хлібні крихти" className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-        <Link href="/chords" className="hover:underline">Акорди</Link>
+        <Link prefetch={false} href="/chords" className="hover:underline">Акорди</Link>
         <span aria-hidden="true"> › </span>
         <span>{name}</span>
       </nav>
@@ -205,13 +205,13 @@ export default async function ChordPage({
             <>
               Це баре-акорд: якщо прийом ще не дається, скористайтеся варіантом
               без баре нижче або прочитайте розбір у статті{" "}
-              <Link href="/learn/shcho-take-bare">«Що таке баре»</Link>.
+              <Link prefetch={false} href="/learn/shcho-take-bare">«Що таке баре»</Link>.
             </>
           ) : (
             <>
               Акорд береться без баре, тож підходить для перших тижнів гри —
               інші базові форми зібрані в статті{" "}
-              <Link href="/learn/pershi-akordy">«Перші акорди»</Link>.
+              <Link prefetch={false} href="/learn/pershi-akordy">«Перші акорди»</Link>.
             </>
           )}
         </p>
@@ -300,7 +300,7 @@ export default async function ChordPage({
             <ul>
               {songs.map((s) => (
                 <li key={s.slug}>
-                  <Link href={`/songs/${s.slug}`}>{s.title}</Link>
+                  <Link prefetch={false} href={`/songs/${s.slug}`}>{s.title}</Link>
                   <span style={{ color: "var(--text-muted)" }}> — {s.artist}</span>
                 </li>
               ))}
@@ -331,7 +331,7 @@ export default async function ChordPage({
           {sameRoot.map((p, i) => (
             <span key={p.slug}>
               {i > 0 && " · "}
-              <Link href={`/chords/${p.slug}`} className="hover:underline" style={{ color: "var(--orange-text)" }}>
+              <Link prefetch={false} href={`/chords/${p.slug}`} className="hover:underline" style={{ color: "var(--orange-text)" }}>
                 {p.name} ({p.ukr})
               </Link>
             </span>
@@ -350,7 +350,7 @@ export default async function ChordPage({
                 {p.name}
               </span>
             ) : (
-              <Link
+              <Link prefetch={false}
                 key={p.slug}
                 href={`/chords/${p.slug}`}
                 className="te-surface px-2.5 py-1 rounded-lg text-xs hover:underline"
@@ -363,7 +363,7 @@ export default async function ChordPage({
         </div>
         <p className="text-xs mt-4" style={{ color: "var(--text-muted)" }}>
           Не знаєте, що за акорд у вас під пальцями? Скористайтеся{" "}
-          <Link href="/chords" className="hover:underline" style={{ color: "var(--orange-text)" }}>
+          <Link prefetch={false} href="/chords" className="hover:underline" style={{ color: "var(--orange-text)" }}>
             визначником акордів
           </Link>
           .

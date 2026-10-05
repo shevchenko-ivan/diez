@@ -51,7 +51,7 @@ export function Body() {
 
       <Callout>
         Капо й транспонування — рідні брати. Якщо капо під рукою нема, можна просто{" "}
-        <Link href="/learn/yak-transponuvaty-akordy">транспонувати акорди</Link> прямо на
+        <Link prefetch={false} href="/learn/yak-transponuvaty-akordy">транспонувати акорди</Link> прямо на
         сторінці пісні кнопками «+/−».
       </Callout>
 
@@ -74,7 +74,7 @@ export function Body() {
 
       <p>
         Якщо в пісні все одно трапляються баре — загляньте в статтю{" "}
-        <Link href="/learn/shcho-take-bare">що таке баре</Link>: там є способи його обійти.
+        <Link prefetch={false} href="/learn/shcho-take-bare">що таке баре</Link>: там є способи його обійти.
       </p>
     </>
   );

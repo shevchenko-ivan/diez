@@ -257,7 +257,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             У цьому списку поки немає пісень.
           </p>
-          <Link href="/songs" className="inline-block mt-3 font-bold underline" style={{ color: "var(--orange-text)" }}>
+          <Link prefetch={false} href="/songs" className="inline-block mt-3 font-bold underline" style={{ color: "var(--orange-text)" }}>
             Знайдіть пісню →
           </Link>
         </div>
@@ -294,7 +294,7 @@ export function PlaylistManager({ playlist, initialSongs }: Props) {
                   <Image src={coverThumb(song.coverImage, 240) as string} alt={song.title} width={64} height={64} unoptimized className="w-full h-full object-cover" />
                 )}
               </div>
-              <Link
+              <Link prefetch={false}
                 href={(() => {
                   const p = new URLSearchParams();
                   if (song.variantId) p.set("v", song.variantId);

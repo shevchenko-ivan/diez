@@ -76,12 +76,12 @@ export function Body() {
       </ul>
       <p>
         А ще можна просто почати з пісень, де баре немає взагалі — у нас є ціла добірка{" "}
-        <Link href="/songs/topic/beginner">пісень без баре</Link>.
+        <Link prefetch={false} href="/songs/topic/beginner">пісень без баре</Link>.
       </p>
 
       <p>
         Не впевнені, як читати самі схеми? Поверніться до статті{" "}
-        <Link href="/learn/yak-chytaty-akordy">як читати схеми акордів</Link>.
+        <Link prefetch={false} href="/learn/yak-chytaty-akordy">як читати схеми акордів</Link>.
       </p>
     </>
   );

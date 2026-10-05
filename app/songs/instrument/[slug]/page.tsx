@@ -197,7 +197,7 @@ async function InstrumentContent({ params, searchParams }: RouteProps) {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {/* Guitar = the main /songs catalogue */}
-          <Link
+          <Link prefetch={false}
             href="/songs"
             className="te-surface te-pressable p-4 flex flex-col justify-between"
             style={{ borderRadius: "1rem", minHeight: 86 }}
@@ -213,7 +213,7 @@ async function InstrumentContent({ params, searchParams }: RouteProps) {
             </div>
           </Link>
           {otherInstruments.map((i) => (
-            <Link
+            <Link prefetch={false}
               key={i.slug}
               href={`/songs/instrument/${i.slug}`}
               className="te-surface te-pressable p-4 flex flex-col justify-between"

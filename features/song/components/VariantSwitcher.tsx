@@ -85,7 +85,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
               const isActive = v.id === active?.id;
               return (
                 <li key={v.id}>
-                  <Link
+                  <Link prefetch={false}
                     href={hrefFor(v)}
                     onClick={() => { trigger("selection"); setOpen(false); }}
                     className="w-full text-left px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--bg-hover,rgba(255,255,255,0.03))]"
@@ -154,7 +154,7 @@ export function VariantSwitcher({ variants, activeVariantId, addVariantHref }: P
                 className="border-t mt-1 pt-1"
                 style={{ borderColor: "var(--border, rgba(255,255,255,0.06))" }}
               >
-                <Link
+                <Link prefetch={false}
                   href={addVariantHref}
                   className="w-full text-left px-4 py-2.5 flex items-center gap-2 text-xs font-bold"
                   style={{ color: "var(--orange)" }}

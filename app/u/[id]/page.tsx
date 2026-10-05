@@ -93,6 +93,7 @@ export default async function PublicProfilePage({ params }: Props) {
               <li key={s.slug}>
                 <Link
                   href={`/songs/${s.slug}`}
+                  prefetch={false}
                   className="te-surface te-pressable flex items-center gap-3 p-3"
                   style={{ borderRadius: "1rem" }}
                 >
@@ -123,6 +124,7 @@ export default async function PublicProfilePage({ params }: Props) {
               <li key={v.variantId}>
                 <Link
                   href={`/songs/${v.slug}?v=${v.variantId}`}
+                  prefetch={false}
                   className="te-surface te-pressable flex items-center justify-between gap-3 p-3"
                   style={{ borderRadius: "1rem" }}
                 >

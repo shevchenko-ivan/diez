@@ -74,14 +74,14 @@ export function Body() {
       <h2>Що зіграти вже сьогодні</h2>
       <p>
         Маючи навіть три акорди з цієї пʼятірки, ви вже граєте знайомі пісні. Ми зібрали
-        добірку <Link href="/songs/topic/beginner">пісень без баре для початківців</Link> —
+        добірку <Link prefetch={false} href="/songs/topic/beginner">пісень без баре для початківців</Link> —
         там прості акорди й популярні мелодії. А ще не забудьте{" "}
-        <Link href="/tuner">настроїти гітару</Link> перед грою.
+        <Link prefetch={false} href="/tuner">настроїти гітару</Link> перед грою.
       </p>
 
       <p>
         Якщо в якійсь пісні трапиться баре — не лякайтесь, прочитайте,{" "}
-        <Link href="/learn/shcho-take-bare">що це таке і як його обійти</Link>.
+        <Link prefetch={false} href="/learn/shcho-take-bare">що це таке і як його обійти</Link>.
       </p>
     </>
   );

@@ -76,7 +76,7 @@ export function MySongCard({ id, slug, title, artist, status, coverImage, coverC
       }}
     >
       {/* Cover */}
-      <Link href={primaryHref} className="block focus-visible:outline-none">
+      <Link prefetch={false} href={primaryHref} className="block focus-visible:outline-none">
         <div
           className="relative aspect-square overflow-hidden"
           style={{
@@ -116,7 +116,7 @@ export function MySongCard({ id, slug, title, artist, status, coverImage, coverC
           >
             {!confirming ? (
               <>
-                <Link
+                <Link prefetch={false}
                   href={editHref}
                   className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                   style={{ color: "var(--text)" }}
@@ -124,7 +124,7 @@ export function MySongCard({ id, slug, title, artist, status, coverImage, coverC
                   <Pencil size={15} /> Редагувати
                 </Link>
                 {isPublished && (
-                  <Link
+                  <Link prefetch={false}
                     href={`/songs/${slug}`}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
                     style={{ color: "var(--text)" }}
@@ -170,7 +170,7 @@ export function MySongCard({ id, slug, title, artist, status, coverImage, coverC
       </div>
 
       {/* Title + status tag + artist (all below the cover, always legible) */}
-      <Link href={primaryHref} className="block mt-2.5 px-0.5 focus-visible:outline-none">
+      <Link prefetch={false} href={primaryHref} className="block mt-2.5 px-0.5 focus-visible:outline-none">
         <p className="font-semibold text-sm truncate" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
           {title || "Без назви"}
         </p>

@@ -350,6 +350,9 @@ export default async function SongPage({
             {artistSlug ? (
               <Link
                 href={`/artists/${artistSlug}`}
+                // No prefetch: in the header on every song view, it fetched
+                // the artist page six times (one per route segment) per view.
+                prefetch={false}
                 className="hover:underline truncate max-w-full"
                 style={{ fontSize: "1rem", letterSpacing: "-0.02em", fontWeight: 600, color: "var(--text-muted)", lineHeight: 1.45 }}
               >
@@ -453,6 +456,7 @@ function ChordDictionaryLinks({ chords }: { chords: string[] | null }) {
           {i > 0 && ", "}
           <Link
             href={`/chords/${p.slug}`}
+            prefetch={false}
             className="hover:underline"
             style={{ color: "var(--text-mid)" }}
             title={`Акорд ${p.name} (${p.ukr}) — аплікатура`}

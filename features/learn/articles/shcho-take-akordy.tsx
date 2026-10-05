@@ -81,12 +81,12 @@ export function Body() {
         Більшість популярних пісень побудовані на 3–4 акордах, які повторюються по колу.
         Тому навчившись плавно перемикатися між кількома акордами, ви одразу граєте знайомі
         мелодії. Перевірте самі — почніть з добірки{" "}
-        <Link href="/songs/topic/beginner">пісень без баре для початківців</Link>.
+        <Link prefetch={false} href="/songs/topic/beginner">пісень без баре для початківців</Link>.
       </p>
 
       <p>
-        Далі радимо розібратись, <Link href="/learn/yak-chytaty-akordy">як читати схеми
-        акордів</Link>, і вивчити <Link href="/learn/pershi-akordy">перші акорди</Link>.
+        Далі радимо розібратись, <Link prefetch={false} href="/learn/yak-chytaty-akordy">як читати схеми
+        акордів</Link>, і вивчити <Link prefetch={false} href="/learn/pershi-akordy">перші акорди</Link>.
       </p>
     </>
   );

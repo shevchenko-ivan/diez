@@ -57,7 +57,7 @@ export default function NotFound() {
             home page. */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-2xl mb-8">
           {QUICK_LINKS.map((link) => (
-            <Link
+            <Link prefetch={false}
               key={link.href}
               href={link.href}
               className="te-surface te-pressable px-4 py-4 flex flex-col items-center justify-center gap-1.5"

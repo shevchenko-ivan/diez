@@ -370,7 +370,7 @@ export function HeroSearch() {
                 const idx = artistsOffset + i;
                 const isActive = idx === activeIndex;
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={a.slug}
                     href={`/artists/${a.slug}`}
                     onClick={() => setOpen(false)}
@@ -457,7 +457,7 @@ function SongResultGroup({ label, songs, startIndex, activeIndex, onActivate, on
         const idx = startIndex + i;
         const isActive = idx === activeIndex;
         return (
-          <Link
+          <Link prefetch={false}
             key={s.slug}
             href={`/songs/${s.slug}`}
             onClick={onSelect}

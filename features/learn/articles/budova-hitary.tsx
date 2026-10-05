@@ -68,7 +68,7 @@ export function Body() {
 
       <Callout>
         Перш ніж грати — гітару треба настроїти. Скористайся нашим{" "}
-        <Link href="/tuner">онлайн-тюнером</Link>: він почує кожну струну й підкаже, куди
+        <Link prefetch={false} href="/tuner">онлайн-тюнером</Link>: він почує кожну струну й підкаже, куди
         крутити кілок.
       </Callout>
 
@@ -82,8 +82,8 @@ export function Body() {
 
       <p>
         Тепер, коли термінологія зрозуміла, переходьте до головного —{" "}
-        <Link href="/learn/shcho-take-akordy">що таке акорди</Link> і{" "}
-        <Link href="/learn/pershi-akordy">які вивчити першими</Link>.
+        <Link prefetch={false} href="/learn/shcho-take-akordy">що таке акорди</Link> і{" "}
+        <Link prefetch={false} href="/learn/pershi-akordy">які вивчити першими</Link>.
       </p>
     </>
   );

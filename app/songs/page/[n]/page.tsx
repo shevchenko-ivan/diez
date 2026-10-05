@@ -102,7 +102,7 @@ function PageIndex({ current, totalPages }: { current: number; totalPages: numbe
                   {p}
                 </span>
               ) : (
-                <Link
+                <Link prefetch={false}
                   href={`/songs/page/${p}`}
                   className="inline-flex items-center justify-center te-surface text-xs hover:opacity-100 transition-opacity"
                   style={{ minWidth: 34, padding: "0.4rem 0.6rem", borderRadius: "0.75rem", color: "var(--text-muted)", opacity: 0.75 }}
@@ -162,7 +162,7 @@ export default async function SongsPaginatedPage({
 
       <div className="mb-6">
         <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
-          <Link href="/songs" className="hover:underline">
+          <Link prefetch={false} href="/songs" className="hover:underline">
             Каталог пісень
           </Link>
         </p>
@@ -191,7 +191,7 @@ export default async function SongsPaginatedPage({
                 iconSize={22}
               />
             </div>
-            <Link href={`/songs/${song.slug}`} className="flex-1 min-w-0">
+            <Link prefetch={false} href={`/songs/${song.slug}`} className="flex-1 min-w-0">
               <div className="font-medium text-sm truncate" style={{ color: "var(--text)" }}>
                 {song.title}
               </div>
@@ -206,7 +206,7 @@ export default async function SongsPaginatedPage({
       {/* Prev / next — the crawl path a search engine follows step by step. */}
       <div className="flex items-center justify-between gap-3 mt-6">
         {pageNum > 1 ? (
-          <Link
+          <Link prefetch={false}
             href={`/songs/page/${pageNum - 1}`}
             className="te-surface px-4 py-2.5 text-xs font-bold"
             style={{ borderRadius: "999px", color: "var(--text-mid)" }}
@@ -217,7 +217,7 @@ export default async function SongsPaginatedPage({
           <span />
         )}
         {pageNum < totalPages ? (
-          <Link
+          <Link prefetch={false}
             href={`/songs/page/${pageNum + 1}`}
             className="te-surface px-4 py-2.5 text-xs font-bold"
             style={{ borderRadius: "999px", color: "var(--text-mid)" }}

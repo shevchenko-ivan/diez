@@ -24,7 +24,12 @@ export function HapticLink({ children, hapticType = "light", onClick, ...props }
   };
 
   return (
+    // prefetch off by default: these are the cards in every carousel and
+    // grid, and a viewport prefetch fetched each visible card's page (one
+    // request per route segment) — CDN requests nobody clicked. Pages are
+    // CDN-cached, so a click still opens fast. Pass prefetch to override.
     <Link
+      prefetch={false}
       {...props}
       // Haptic fires on click ONLY. An earlier version also fired on
       // pointerdown "for snappier feel" — but pointerdown triggers on every

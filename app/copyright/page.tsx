@@ -48,7 +48,7 @@ export default function CopyrightPage() {
               порушує їх права, і отримати його видалення з сервісу.
             </p>
             <p className="mt-3">
-              Навчальні статті в розділі <Link href="/learn" style={{ color: "var(--orange-text)" }}>«Навчання»</Link>{" "}
+              Навчальні статті в розділі <Link prefetch={false} href="/learn" style={{ color: "var(--orange-text)" }}>«Навчання»</Link>{" "}
               є оригінальним контентом Diez. Якщо в статті використано істотний фрагмент
               зовнішнього джерела, ми зазначаємо його у блоці «Джерела» внизу статті.
             </p>
@@ -180,8 +180,8 @@ export default function CopyrightPage() {
               >
                 copyright@diez.net.ua
               </a>
-              . Інші питання — <Link href="/terms" style={{ color: "var(--orange-text)" }}>Умови використання</Link>{" "}
-              та <Link href="/privacy" style={{ color: "var(--orange-text)" }}>Політика конфіденційності</Link>.
+              . Інші питання — <Link prefetch={false} href="/terms" style={{ color: "var(--orange-text)" }}>Умови використання</Link>{" "}
+              та <Link prefetch={false} href="/privacy" style={{ color: "var(--orange-text)" }}>Політика конфіденційності</Link>.
             </p>
           </section>
         </div>

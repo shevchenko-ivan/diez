@@ -214,7 +214,7 @@ async function TopicContent({ params, searchParams }: RouteProps) {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {otherTopics.map((t) => (
-            <Link
+            <Link prefetch={false}
               key={t.slug}
               href={`/songs/topic/${t.slug}`}
               className="te-surface te-pressable p-4 flex flex-col justify-between"

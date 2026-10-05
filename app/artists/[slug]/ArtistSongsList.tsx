@@ -183,7 +183,7 @@ export function ArtistSongsList({ songs, showSearch = true, sortable = false }: 
                     iconSize={22}
                   />
                 </div>
-                <Link href={`/songs/${song.slug}`} className="flex-1 min-w-0">
+                <Link prefetch={false} href={`/songs/${song.slug}`} className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate" style={{ color: "var(--text)" }}>{song.title}</div>
                   <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{song.artist}</div>
                 </Link>

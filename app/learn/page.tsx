@@ -62,7 +62,7 @@ export default function LearnPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {ARTICLES.map((a) => (
-            <Link
+            <Link prefetch={false}
               key={a.meta.slug}
               href={`/learn/${a.meta.slug}`}
               className="te-card-thick te-pressable flex flex-col"

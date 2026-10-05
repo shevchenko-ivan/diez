@@ -24,7 +24,7 @@ function CatalogueIndex({ total }: { total: number }) {
       <ul className="flex flex-wrap gap-1.5">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
           <li key={p}>
-            <Link
+            <Link prefetch={false}
               href={`/songs/page/${p}`}
               className="inline-flex items-center justify-center te-surface text-xs"
               style={{ minWidth: 34, padding: "0.4rem 0.6rem", borderRadius: "0.75rem", color: "var(--text-muted)", opacity: 0.75 }}

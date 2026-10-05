@@ -92,7 +92,7 @@ const CIRCLE_TONE: Record<Tone, string> = {
  *   tone    — "default" | "red" | "orange"
  *   active  — toggle on/off (visually pressed + orange)
  *   icon    — LucideIcon shorthand (or use `children` for ±, A+, custom)
- *   href    — renders as <Link> instead of <button>
+ *   href    — renders as <Link> (no prefetch) instead of <button>
  *
  * Examples:
  *   <TeButton icon={Heart} title="Save" />                              // round, default
@@ -172,7 +172,7 @@ export const TeButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, TeButt
 
   if ("href" in props && props.href) {
     return (
-      <Link
+      <Link prefetch={false}
         ref={ref as Ref<HTMLAnchorElement>}
         href={props.href}
         onClick={(e) => {

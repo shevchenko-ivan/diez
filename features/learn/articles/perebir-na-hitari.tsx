@@ -82,9 +82,9 @@ export function Body() {
       </ul>
 
       <p>
-        Перебір і <Link href="/learn/biy-na-hitari">бій</Link> доповнюють одне одного: у
+        Перебір і <Link prefetch={false} href="/learn/biy-na-hitari">бій</Link> доповнюють одне одного: у
         куплеті часто грають перебір, а в приспіві переходять на бій. Тренуйтесь на{" "}
-        <Link href="/songs/topic/beginner">простих піснях</Link>.
+        <Link prefetch={false} href="/songs/topic/beginner">простих піснях</Link>.
       </p>
     </>
   );

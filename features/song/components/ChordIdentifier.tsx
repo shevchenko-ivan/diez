@@ -410,7 +410,7 @@ export function ChordIdentifier() {
                   style={{ padding: "12px 16px" }}
                 >
                   {dictPage ? (
-                    <Link
+                    <Link prefetch={false}
                       href={`/chords/${dictPage.slug}`}
                       className="text-lg font-bold mb-1 hover:underline"
                       style={{ color: "var(--orange)" }}

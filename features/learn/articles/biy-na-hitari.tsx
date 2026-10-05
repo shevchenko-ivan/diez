@@ -86,8 +86,8 @@ export function Body() {
 
       <p>
         Хочете спокійніший, ліричніший звук замість ритмічного бою? Спробуйте{" "}
-        <Link href="/learn/perebir-na-hitari">перебір</Link>. А відпрацьовувати бій зручно
-        на <Link href="/songs/topic/beginner">простих піснях</Link>.
+        <Link prefetch={false} href="/learn/perebir-na-hitari">перебір</Link>. А відпрацьовувати бій зручно
+        на <Link prefetch={false} href="/songs/topic/beginner">простих піснях</Link>.
       </p>
     </>
   );

@@ -116,7 +116,7 @@ export default function TermsPage() {
             </p>
             <p>
               Якщо ви правовласник і вважаєте, що матеріал на Diez порушує ваші права —
-              дивіться <Link href="/copyright" style={{ color: "var(--orange-text)" }}>сторінку про авторські права</Link>{" "}
+              дивіться <Link prefetch={false} href="/copyright" style={{ color: "var(--orange-text)" }}>сторінку про авторські права</Link>{" "}
               для процедури повідомлення про порушення.
             </p>
           </section>
@@ -150,7 +150,7 @@ export default function TermsPage() {
             <p>
               Скарги на контент розглядаються впродовж 24 годин. Правовласники можуть подати
               запит на видалення на{" "}
-              <Link href="/copyright" style={{ color: "var(--orange-text)" }}>сторінці про авторські права</Link>.
+              <Link prefetch={false} href="/copyright" style={{ color: "var(--orange-text)" }}>сторінці про авторські права</Link>.
             </p>
           </section>
 
@@ -159,7 +159,7 @@ export default function TermsPage() {
               Навчальні матеріали
             </h2>
             <p className="mb-2">
-              Статті в розділі <Link href="/learn" style={{ color: "var(--orange-text)" }}>«Навчання»</Link>{" "}
+              Статті в розділі <Link prefetch={false} href="/learn" style={{ color: "var(--orange-text)" }}>«Навчання»</Link>{" "}
               є <strong>оригінальним навчальним контентом</strong>, підготовленим редакцією
               Diez. Вони мають інформаційний характер і не претендують на вичерпність чи
               абсолютну точність.
@@ -253,8 +253,8 @@ export default function TermsPage() {
             </h2>
             <p>
               Загальні запитання — <a href="mailto:hello@diez.net.ua" style={{ color: "var(--orange-text)" }}>hello@diez.net.ua</a>.<br />
-              Скарги правовласників — <Link href="/copyright" style={{ color: "var(--orange-text)" }}>сторінка про авторські права</Link>.<br />
-              Питання щодо персональних даних — <Link href="/privacy" style={{ color: "var(--orange-text)" }}>Політика конфіденційності</Link>.
+              Скарги правовласників — <Link prefetch={false} href="/copyright" style={{ color: "var(--orange-text)" }}>сторінка про авторські права</Link>.<br />
+              Питання щодо персональних даних — <Link prefetch={false} href="/privacy" style={{ color: "var(--orange-text)" }}>Політика конфіденційності</Link>.
             </p>
           </section>
         </div>

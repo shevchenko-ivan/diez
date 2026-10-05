@@ -96,7 +96,7 @@ export default async function ArticlePage({
         </div>
 
         <nav aria-label="Хлібні крихти" className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-          <Link href="/learn" className="hover:underline">Навчання</Link>
+          <Link prefetch={false} href="/learn" className="hover:underline">Навчання</Link>
           <span aria-hidden="true"> › </span>
           <span>{meta.title}</span>
         </nav>
@@ -153,7 +153,7 @@ export default async function ArticlePage({
           )}
           <p>
             Матеріал підготовлено редакцією Diez і має навчальний характер. Умови
-            використання — <Link href="/terms" style={{ color: "var(--orange-text)" }}>тут</Link>.
+            використання — <Link prefetch={false} href="/terms" style={{ color: "var(--orange-text)" }}>тут</Link>.
           </p>
         </footer>
 
@@ -164,7 +164,7 @@ export default async function ArticlePage({
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {more.map((a) => (
-              <Link
+              <Link prefetch={false}
                 key={a.meta.slug}
                 href={`/learn/${a.meta.slug}`}
                 className="te-surface te-pressable flex flex-col"

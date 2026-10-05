@@ -88,10 +88,10 @@ export function Body() {
 
       <h2>Що далі</h2>
       <p>
-        Купили гітару? Перший крок — <Link href="/learn/yak-nalashtuvaty-hitaru">настроїти
-        її</Link> (або одразу через <Link href="/tuner">тюнер</Link>), а далі — за нашим{" "}
-        <Link href="/learn/yak-navchytysia-hraty-z-nulia">планом навчання з нуля</Link> до{" "}
-        <Link href="/learn/pershi-akordy">перших акордів</Link>.
+        Купили гітару? Перший крок — <Link prefetch={false} href="/learn/yak-nalashtuvaty-hitaru">настроїти
+        її</Link> (або одразу через <Link prefetch={false} href="/tuner">тюнер</Link>), а далі — за нашим{" "}
+        <Link prefetch={false} href="/learn/yak-navchytysia-hraty-z-nulia">планом навчання з нуля</Link> до{" "}
+        <Link prefetch={false} href="/learn/pershi-akordy">перших акордів</Link>.
       </p>
     </>
   );
