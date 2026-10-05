@@ -16,6 +16,9 @@
 // The footer's artist list is on "artists" (artist admin), not "songs".
 export const SONG_LINKS_TAG = "song-links";
 
+// ASCII only: on Vercel cache tags travel in an HTTP header, and a raw
+// Cyrillic name («скрябін») made every song and artist page answer 500.
+// encodeURIComponent also escapes commas (the header's tag separator).
 export function artistSongsTag(artist: string): string {
-  return `artist-songs:${artist.trim().toLowerCase()}`.slice(0, 250);
+  return `artist-songs:${encodeURIComponent(artist.trim().toLowerCase())}`.slice(0, 250);
 }
