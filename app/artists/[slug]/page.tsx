@@ -1,10 +1,11 @@
-// Static + hourly ISR (invalidated on admin saves via revalidateTag/Path).
+// Static + 30-day ISR backstop; edits invalidate it on demand (artistSongsTag,
+// "artists", revalidatePath) — see features/song/lib/cache-tags.ts.
 // This used to be force-dynamic because the page read the viewer's saved
 // state, the admin flag and a `?sort=` query on the server — so every visit,
 // bot or human, was a full render (a big contributor to the Fluid CPU that
 // tripped the 17.09.2026 Hobby fair-use block). Those three now live on the
 // client: SavedArtistsProvider, <AdminOnly>, and ArtistSongsList's own sort.
-export const revalidate = 3600;
+export const revalidate = 2592000;
 
 // On-demand ISR only works when generateStaticParams exists — a dynamic
 // segment without it is rendered per request, `revalidate` or not (verified

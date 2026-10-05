@@ -4,11 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { pingIndexNow } from "@/lib/indexnow";
 import { slugify, dedupeSlug } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { extractYoutubeId } from "../lib/youtube";
+import { revalidateCatalog, type SongRef } from "../lib/revalidate-catalog";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -177,11 +178,10 @@ export async function createSong(formData: FormData) {
 
   await admin.from("songs").update({ primary_variant_id: variantRow.id }).eq("id", songRow.id);
 
-  revalidateTag("songs", "max");
+  revalidateCatalog([{ slug: finalSlug, artist }], "published");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/");
-  revalidatePath(`/songs/${finalSlug}`);
   // Push the fresh URL to Bing/DDG via IndexNow. `after()` — the ping must
   // not delay the redirect, and a bare un-awaited fetch can be killed when
   // the serverless invocation ends.
@@ -197,15 +197,16 @@ async function getSongSlug(songId: string): Promise<string | null> {
   return (data?.slug as string | undefined) ?? null;
 }
 
-async function getSongSlugs(songIds: string[]): Promise<string[]> {
+async function getSongRefs(songIds: string[]): Promise<SongRef[]> {
   const admin = createAdminClient();
-  const out: string[] = [];
+  const out: SongRef[] = [];
   for (let i = 0; i < songIds.length; i += 200) {
-    const { data } = await admin.from("songs").select("slug").in("id", songIds.slice(i, i + 200));
-    for (const row of data ?? []) if (typeof row.slug === "string") out.push(row.slug);
+    const { data } = await admin.from("songs").select("slug, artist, status").in("id", songIds.slice(i, i + 200));
+    for (const row of data ?? []) out.push({ slug: row.slug as string, artist: row.artist as string, status: row.status as string });
   }
   return out;
 }
+
 
 // /songs/[slug] is served from the ISR cache (daily revalidate), so every
 // action that changes what a song URL serves must invalidate that path —
@@ -424,6 +425,7 @@ export async function updateSongStatus(formData: FormData) {
   }
 
   const admin = createAdminClient();
+  const [changed] = await getSongRefs([songId]); // before the update — see revalidateCatalog
   const { error } = await admin
     .from("songs")
     .update({
@@ -436,15 +438,14 @@ export async function updateSongStatus(formData: FormData) {
 
   if (error) throw new Error(`Помилка оновлення: ${error.message}`);
 
-  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/admin");
   revalidatePath("/");
   // Any status flip changes what the URL serves (published → live page,
   // archived/draft → 404) — drop the cached page and have IndexNow recrawl.
-  const changedSlug = await getSongSlug(songId);
-  revalidateSongPages([changedSlug]);
+  const changedSlug = changed?.slug ?? null;
+  revalidateCatalog(changed ? [changed] : [], status);
   if (changedSlug) after(() => pingIndexNow([`/songs/${changedSlug}`, "/songs"]));
 }
 
@@ -475,6 +476,7 @@ export async function updateSong(formData: FormData) {
     : null;
 
   const admin = createAdminClient();
+  const [before] = await getSongRefs([songId]);
   const { data: songBefore, error } = await admin
     .from("songs")
     .update({
@@ -508,12 +510,12 @@ export async function updateSong(formData: FormData) {
       .eq("id", songBefore.primary_variant_id);
   }
 
-  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
-  revalidateSongPages([await getSongSlug(songId)]);
+  // Old artist too: a renamed artist field moves the song between two lists.
+  revalidateCatalog(before ? [before] : [], status, [artist]);
 
   const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
   const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
@@ -588,7 +590,7 @@ export async function updateSongFull(formData: FormData) {
   //    this variant is the primary (so view-page reads stay consistent).
   const { data: songRow } = await admin
     .from("songs")
-    .select("primary_variant_id, slug")
+    .select("primary_variant_id, slug, artist, status")
     .eq("id", songId)
     .single();
   const isPrimary = songRow?.primary_variant_id === variantId;
@@ -612,12 +614,17 @@ export async function updateSongFull(formData: FormData) {
     .eq("id", songId);
   if (songErr) throw new Error(`Помилка пісні: ${songErr.message}`);
 
-  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
-  if (songRow?.slug) revalidatePath(`/songs/${songRow.slug}`);
+  // Old artist too (read before the update): a changed artist field moves
+  // the song between two artists' lists.
+  revalidateCatalog(
+    [{ slug: songRow?.slug, artist: songRow?.artist as string | undefined, status: songRow?.status as string | undefined }],
+    status,
+    [artist],
+  );
 
   const returnTo = (formData.get("returnTo") as string) || "/admin/songs";
   const safeReturn = returnTo.startsWith("/") ? returnTo : "/admin/songs";
@@ -701,19 +708,20 @@ export async function deleteSong(formData: FormData) {
 
   const admin = createAdminClient();
   // Only allow deleting archived songs
-  const { data: song } = await admin.from("songs").select("status, slug").eq("id", songId).single();
+  const { data: song } = await admin.from("songs").select("status, slug, artist").eq("id", songId).single();
   if (song?.status !== "archived") throw new Error("Спочатку заархівуйте пісню");
 
   const { error } = await admin.from("songs").delete().eq("id", songId);
 
   if (error) throw new Error(`Помилка видалення: ${error.message}`);
 
-  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/admin");
   revalidatePath("/");
-  revalidateSongPages([song.slug as string | undefined]);
+  // Only archived songs can be deleted: they left every public list when they
+  // were archived, so only the URL itself needs dropping.
+  revalidateCatalog([{ slug: song.slug as string, artist: song.artist as string, status: "archived" }], "archived");
 }
 
 // ─── Bulk song operations ─────────────────────────────────────────────────────
@@ -728,6 +736,7 @@ export async function bulkUpdateSongStatus(formData: FormData) {
   if (!["published", "archived", "draft"].includes(status)) throw new Error("Невалідний статус");
 
   const admin = createAdminClient();
+  const refs = await getSongRefs(ids); // before the update — see revalidateCatalog
   const updated_at = new Date().toISOString();
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200);
@@ -738,12 +747,11 @@ export async function bulkUpdateSongStatus(formData: FormData) {
     if (error) throw new Error(`Помилка: ${error.message}`);
   }
 
-  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
-  revalidateSongPages(await getSongSlugs(ids));
+  revalidateCatalog(refs, status);
 }
 
 export async function bulkDeleteSongs(formData: FormData) {
@@ -753,7 +761,7 @@ export async function bulkDeleteSongs(formData: FormData) {
   if (!ids?.length) return;
 
   const admin = createAdminClient();
-  const slugs = await getSongSlugs(ids);
+  const refs = await getSongRefs(ids);
   // Only delete archived songs
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200);
@@ -765,10 +773,9 @@ export async function bulkDeleteSongs(formData: FormData) {
     if (error) throw new Error(`Помилка: ${error.message}`);
   }
 
-  revalidateTag("songs", "max");
   revalidatePath("/songs");
   revalidatePath("/admin/songs");
   revalidatePath("/admin");
   revalidatePath("/");
-  revalidateSongPages(slugs);
+  revalidateCatalog(refs, "archived");
 }

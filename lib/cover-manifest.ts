@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { assetUrl } from "@/lib/asset-url";
 
 // Build-time image snapshot (see tools/prefetch-covers.ts): home-page covers
 // and artist photos are downloaded at build, compressed and served
@@ -19,7 +20,8 @@ function lookup(key: string): string | null {
       cache = null;
     }
   }
-  return cache?.[key] ?? null;
+  const local = cache?.[key];
+  return local ? assetUrl(local) : null;
 }
 
 export function localCover(slug: string): string | null {

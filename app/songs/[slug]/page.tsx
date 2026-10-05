@@ -13,7 +13,16 @@ import { notFound, permanentRedirect } from "next/navigation";
 // the 17.09 Hobby fair-use block was still not survivable. All four now
 // resolve on the client — see SongPageClient.tsx and SongViewer's
 // pre-measure dual render.
-export const revalidate = 86400;
+//
+// 30 days: the timer is only a backstop. A song page changes when the song is
+// edited (admin/submission actions revalidatePath it), when its artist's song
+// list changes (artistSongsTag) or a linked song goes offline (SONG_LINKS_TAG)
+// — never on a timer. By 05.10.2026 35 of 37 song renders in a sample were
+// timed refreshes of unchanged pages, each one an ISR write (Vercel Hobby:
+// 200K/month). Reads below must not cache for less (a route's ISR period is
+// the minimum TTL of every unstable_cache it reads): footer artists,
+// same-artist and shared-chords lists are all 30 days too.
+export const revalidate = 2592000;
 
 // On-demand ISR only applies when generateStaticParams exists — a dynamic
 // segment without it is rendered per request, `revalidate` or not (verified
@@ -381,11 +390,11 @@ export default async function SongPage({
         <p className="mt-6 text-sm" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
           Це повний текст пісні «{song.title}» — {song.artist} з акордами для гітари. Її також
           можна грати на{" "}
-          <Link href="/songs/instrument/ukulele" className="hover:underline" style={{ color: "var(--text-mid)" }}>
+          <Link href="/songs/instrument/ukulele" prefetch={false} className="hover:underline" style={{ color: "var(--text-mid)" }}>
             укулеле
           </Link>{" "}
           або{" "}
-          <Link href="/songs/instrument/piano" className="hover:underline" style={{ color: "var(--text-mid)" }}>
+          <Link href="/songs/instrument/piano" prefetch={false} className="hover:underline" style={{ color: "var(--text-mid)" }}>
             піаніно
           </Link>{" "}
           — перемкніть інструмент над акордами й транспонуйте тональність у будь-яку зручну.

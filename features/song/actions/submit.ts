@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { revalidateCatalog, type SongRef } from "../lib/revalidate-catalog";
 import { slugify, dedupeSlug } from "@/lib/slugify";
 import { parseLyricsWithChords } from "../lib/parseLyrics";
 import { classifySubmission } from "../lib/detectLang";
@@ -186,12 +187,14 @@ function parsePatternRows(raw: string | null, songId: string) {
   }
 }
 
-function revalidatePublished(slug: string) {
-  revalidateTag("songs", "max");
+// `before` = the row as it was before the change (see revalidateCatalog):
+// edits to an unpublished submission touch no public cache at all.
+function revalidatePublished(before: SongRef, status: string, artist?: string) {
+  revalidateCatalog([before], status, artist ? [artist] : []);
+  if (before.status !== "published" && status !== "published") return;
   revalidatePath("/songs");
   revalidatePath("/artists");
   revalidatePath("/");
-  revalidatePath(`/songs/${slug}`);
 }
 
 /**
@@ -342,7 +345,7 @@ async function submitSongImpl(_prev: SubmitResult | null, formData: FormData): P
   const rows = parsePatternRows(formData.get("strumming_patterns") as string | null, songRow.id);
   if (rows.length > 0) await admin.from("song_strumming_patterns").insert(rows);
 
-  if (status === "published") revalidatePublished(finalSlug);
+  if (status === "published") revalidatePublished({ slug: finalSlug, artist: f.artist }, status);
   revalidatePath("/profile");
 
   return { ok: true, status, slug: finalSlug, songId: songRow.id, ru };
@@ -377,7 +380,7 @@ async function updateMySubmissionImpl(
   const admin = createAdminClient();
   const { data: song } = await admin
     .from("songs")
-    .select("id, slug, submitted_by, primary_variant_id, cover_image")
+    .select("id, slug, submitted_by, primary_variant_id, cover_image, artist, status")
     .eq("id", songId)
     .single();
   if (!song) return { ok: false, reason: "error", message: "Пісню не знайдено." };
@@ -455,7 +458,11 @@ async function updateMySubmissionImpl(
   const rows = parsePatternRows(formData.get("strumming_patterns") as string | null, songId);
   if (rows.length > 0) await admin.from("song_strumming_patterns").insert(rows);
 
-  revalidatePublished(song.slug);
+  revalidatePublished(
+    { slug: song.slug, artist: song.artist as string, status: song.status as string },
+    status,
+    f.artist,
+  );
   revalidatePath("/profile");
   revalidatePath(`/profile/songs/${songId}/edit`);
 
@@ -479,7 +486,7 @@ async function deleteMySubmissionImpl(songId: string): Promise<{ ok: boolean; me
   const admin = createAdminClient();
   const { data: song } = await admin
     .from("songs")
-    .select("submitted_by, slug, status")
+    .select("submitted_by, slug, status, artist")
     .eq("id", songId)
     .single();
   if (!song) return { ok: false, message: "Пісню не знайдено." };
@@ -491,6 +498,6 @@ async function deleteMySubmissionImpl(songId: string): Promise<{ ok: boolean; me
   if (error) return { ok: false, message: `Не вдалося видалити: ${error.message}` };
 
   revalidatePath("/profile");
-  if (song.status === "published") revalidatePublished(song.slug);
+  if (song.status === "published") revalidatePublished(song, "deleted");
   return { ok: true };
 }

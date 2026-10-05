@@ -1,3 +1,4 @@
+import { ASSET_PREFIX } from "@/lib/asset-url";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -60,7 +61,7 @@ export function jsonLdScript(data: unknown): string {
  * component's onError fallback.
  */
 export function snapshotSrcSet(url: string | null | undefined): string | undefined {
-  if (!url || !url.startsWith("/_covers/") || !url.endsWith(".webp")) return undefined;
+  if (!url || !url.startsWith(`${ASSET_PREFIX}/_covers/`) || !url.endsWith(".webp")) return undefined;
   return `${url.replace(/\.webp$/, ".300.webp")} 300w, ${url} 500w`;
 }
 

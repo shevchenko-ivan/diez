@@ -17,12 +17,16 @@ import { withPostHogConfig } from "@posthog/nextjs-config";
 // - Vercel: live feedback + analytics
 // - Image CDNs we already whitelist for next/image
 // - YouTube: for the embedded player iframe on song pages
+// Optional pull CDN for static files — see lib/asset-url.ts.
+const assetPrefix = (process.env.NEXT_PUBLIC_ASSET_PREFIX ?? "").replace(/\/+$/, "");
+const cdn = assetPrefix ? ` ${assetPrefix}` : "";
+
 const cspReportOnly = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://va.vercel-scripts.com https://www.googletagmanager.com",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://upload.wikimedia.org https://*.supabase.co https://*.mzstatic.com https://i.ytimg.com https://i.scdn.co https://*.dzcdn.net https://*.musify.club https://*.posthog.com https://www.google-analytics.com https://*.google-analytics.com",
-  "font-src 'self' data:",
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://va.vercel-scripts.com https://www.googletagmanager.com${cdn}`,
+  `style-src 'self' 'unsafe-inline'${cdn}`,
+  `img-src 'self' data: blob: https://upload.wikimedia.org https://*.supabase.co https://*.mzstatic.com https://i.ytimg.com https://i.scdn.co https://*.dzcdn.net https://*.musify.club https://*.posthog.com https://www.google-analytics.com https://*.google-analytics.com${cdn}`,
+  `font-src 'self' data:${cdn}`,
   "connect-src 'self' https://*.supabase.co https://eu.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com https://vitals.vercel-insights.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
   "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
   "frame-ancestors 'none'",
@@ -46,6 +50,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  ...(assetPrefix ? { assetPrefix } : {}),
   experimental: {
     // NOT enabling `inlineCss` — tried 12.09.2026 to kill the one
     // render-blocking request (PSI: 270 ms). Measured A/B (3×3 Lighthouse,
@@ -77,6 +82,13 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      // The asset CDN fetches these from us and hands them to pages on
+      // diez.net.ua — cross-origin, so fonts (and preloads with
+      // crossorigin) need CORS. Harmless when no CDN is configured.
+      ...["/_next/static/:path*", "/fonts/:file*", "/_covers/:file*"].map((source) => ({
+        source,
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      })),
       // Build-time image snapshot (tools/prefetch-covers.ts): filenames carry
       // a content hash, so the bytes behind a URL can never change — cache
       // forever instead of Vercel's default max-age=0 revalidation.
@@ -103,6 +115,21 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
+  },
+  // /songs is cached (force-static); a search or a sort order needs a fresh
+  // render, so those requests go to app/songs-search instead. beforeFiles:
+  // must win over the static /songs route. The URL in the browser stays
+  // /songs?…, and the query string is passed through.
+  async rewrites() {
+    return {
+      beforeFiles: ["q", "sort"].map((key) => ({
+        source: "/songs",
+        has: [{ type: "query" as const, key }],
+        destination: "/songs-search",
+      })),
+      afterFiles: [],
+      fallback: [],
+    };
   },
   async redirects() {
     return [

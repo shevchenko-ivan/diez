@@ -31,8 +31,9 @@ import { siteUrl, jsonLdScript } from "@/lib/utils";
 const PER_PAGE = 100;
 
 // Alphabetical order is stable, so a page's content only changes when the
-// catalogue itself does — safe to cache for an hour.
-export const revalidate = 3600;
+// catalogue itself does (and that revalidates the "songs" tag) — the timer
+// is only a 30-day backstop.
+export const revalidate = 2592000;
 
 // Required for the cache above to apply at all: a dynamic segment without
 // generateStaticParams is rendered per request, `revalidate` or not (verified

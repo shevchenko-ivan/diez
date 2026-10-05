@@ -14,7 +14,7 @@ import { siteUrl, jsonLdScript } from "@/lib/utils";
 // the 17.09.2026 Hobby fair-use block. Personalization (filled hearts, liked
 // artists floated to the top) now happens on the client via
 // SavedArtistsProvider for signed-in viewers only.
-export const revalidate = 3600;
+export const revalidate = 2592000; // 30 d backstop; artist/song saves revalidate it on demand
 
 export const metadata: Metadata = {
   title: "Виконавці — Акорди для гітари | Diez",

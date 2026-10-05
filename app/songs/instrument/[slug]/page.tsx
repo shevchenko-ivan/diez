@@ -20,7 +20,7 @@ import { siteUrl, jsonLdScript } from "@/lib/utils";
 // `force-static`: only 2 hubs, neither depends on the current user, the list
 // is rebuilt on `revalidate`. Pre-rendered HTML on first byte for Googlebot.
 export const dynamic = "force-static";
-export const revalidate = 3600;
+export const revalidate = 2592000; // 30 d backstop; catalogue changes revalidate the "songs" tag
 
 export function generateStaticParams() {
   return INSTRUMENTS.map((i) => ({ slug: i.slug }));

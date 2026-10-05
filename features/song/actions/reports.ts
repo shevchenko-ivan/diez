@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { revalidateCatalog, type SongRef } from "../lib/revalidate-catalog";
 
 export type ReportResult =
   | { ok: true }
@@ -68,6 +69,12 @@ export async function resolveReport(formData: FormData) {
   if (!reportId) throw new Error("Відсутній ID скарги");
   const admin = createAdminClient();
 
+  // The song as it was before hide/block — for scoped cache invalidation.
+  const before: SongRef | null =
+    action !== "dismiss" && songId
+      ? (await admin.from("songs").select("slug, artist, status").eq("id", songId).single()).data
+      : null;
+
   if (action === "hide" && songId) {
     // Take the reported song offline (back to draft) pending a closer look.
     const { error } = await admin
@@ -102,13 +109,13 @@ export async function resolveReport(formData: FormData) {
     .update({ status: action === "dismiss" ? "dismissed" : "resolved", resolved_at: new Date().toISOString(), resolved_by: adminId })
     .eq("id", reportId);
 
-  revalidateTag("songs", "max");
   revalidatePath("/admin/reports");
-  revalidatePath("/songs");
-  revalidatePath("/");
-  // hide/block flip the song to draft — the ISR-cached song page must go too.
-  if (action !== "dismiss" && songId) {
-    const { data: hidden } = await admin.from("songs").select("slug").eq("id", songId).single();
-    if (hidden?.slug) revalidatePath(`/songs/${hidden.slug}`);
+  // hide/block flip the song to draft — its page, its artist's lists and any
+  // links to it must go (scoped, see revalidateCatalog). Dismiss changes
+  // nothing public.
+  if (before) {
+    revalidateCatalog([before], "draft");
+    revalidatePath("/songs");
+    revalidatePath("/");
   }
 }

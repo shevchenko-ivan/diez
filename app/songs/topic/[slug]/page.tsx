@@ -21,7 +21,7 @@ import { siteUrl, jsonLdScript } from "@/lib/utils";
 // depend on the current user, and the song list is rebuilt on `revalidate`.
 // Pre-rendering gives Googlebot a fully-rendered HTML on first byte.
 export const dynamic = "force-static";
-export const revalidate = 3600;
+export const revalidate = 2592000; // 30 d backstop; catalogue changes revalidate the "songs" tag
 
 // Pre-generate the 8 known topic slugs at build time so Next emits them as
 // static .html files. Unknown slugs fall through to notFound() at request

@@ -20,7 +20,7 @@ import { PersonalHomeSections } from "@/features/home/PersonalHomeSections";
 // otherwise keep the route dynamic — same pattern as the topic/instrument
 // listings.
 export const dynamic = "force-static";
-export const revalidate = 600;
+export const revalidate = 86400; // daily; tag-invalidated on every catalogue change
 
 export const metadata: Metadata = {
   title: "Diez — Акорди для гітари",

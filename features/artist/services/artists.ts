@@ -106,11 +106,13 @@ export const getRankedArtists = unstable_cache(
     return applyCuratedArtistOrder(sorted);
   },
   ["ranked-artists"],
-  // 24 h, not 30 min: this list sits in <SiteFooter> on every page, and a
+  // 30 days, not 30 min: this list sits in <SiteFooter> on every page, and a
   // route's ISR period is the MINIMUM of every cache it reads — so this TTL
-  // was silently capping the whole site (song pages included) at 30 min.
-  // Freshness is unaffected: every song/artist mutation revalidateTag()s it.
-  { revalidate: 86400, tags: ["songs", "artists"] },
+  // caps the whole site (song pages, ISR 30 d, included).
+  // Tagged "artists" only, NOT "songs": being in the footer, a "songs" tag
+  // made every song save re-render all ~3K pages (see lib/cache-tags.ts).
+  // Song-count/popularity shifts reach the ranking on the next deploy.
+  { revalidate: 2592000, tags: ["artists"] },
 );
 
 export async function getArtists(limit = 12, offset = 0): Promise<Artist[]> {

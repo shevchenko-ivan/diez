@@ -1,0 +1,198 @@
+// Server component — see SongsCatalog below.
+import Link from "next/link";
+import { getSongsPage, type SongsPageArgs } from "@/features/song/services/songs";
+import { getSavedSlugs } from "@/features/playlist/actions/playlists";
+import { getTopicBySlug } from "@/features/song/data/topics";
+import { SortSelect } from "./SortSelect";
+import { SongsInfiniteList } from "./SongsInfiniteList";
+import { SearchSubmitButton } from "./SearchSubmitButton";
+import { siteUrl, jsonLdScript } from "@/lib/utils";
+
+/**
+ * Numbered links to the paginated catalogue (`/songs/page/N`, alphabetical).
+ * Kept in sync with PER_PAGE in app/songs/page/[n]/page.tsx.
+ */
+function CatalogueIndex({ total }: { total: number }) {
+  const PER_PAGE = 100;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  if (totalPages < 2) return null;
+  return (
+    <nav aria-label="Сторінки каталогу" className="mt-10">
+      <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+        Увесь каталог за абеткою:
+      </p>
+      <ul className="flex flex-wrap gap-1.5">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          <li key={p}>
+            <Link
+              href={`/songs/page/${p}`}
+              className="inline-flex items-center justify-center te-surface text-xs"
+              style={{ minWidth: 34, padding: "0.4rem 0.6rem", borderRadius: "0.75rem", color: "var(--text-muted)", opacity: 0.75 }}
+            >
+              {p}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+export type CatalogParams = { [key: string]: string | string[] | undefined };
+
+// The catalogue body, shared by the cached /songs page (no params) and the
+// per-request /songs?q=… / ?sort=… variant (app/songs-search, reached via a
+// rewrite in next.config.ts).
+export async function SongsCatalog({ params: resolvedParams }: { params: CatalogParams }) {
+  const rawQ = resolvedParams.q;
+  const q = typeof rawQ === "string" ? rawQ.toLowerCase() : "";
+  const sort = typeof resolvedParams.sort === "string" ? resolvedParams.sort : "";
+  const topicSlug = typeof resolvedParams.topic === "string" ? resolvedParams.topic : undefined;
+  const topic = getTopicBySlug(topicSlug);
+
+  const sortMap: Record<string, "views" | "created_at_desc" | "created_at_asc" | "source_views" | "title_asc"> = {
+    new: "created_at_desc",
+    old: "created_at_asc",
+    popular: "source_views",
+    az: "title_asc",
+    views: "views",
+  };
+  const queryArgs: Omit<SongsPageArgs, "offset" | "limit"> = {
+    q: q || undefined,
+    sortBy: sortMap[sort] ?? "source_views",
+    topic: topic?.slug,
+  };
+  const [{ songs, total }, savedSet] = await Promise.all([
+    getSongsPage({ ...queryArgs, offset: 0, limit: 50 }),
+    getSavedSlugs(),
+  ]);
+  const savedSlugs = Array.from(savedSet);
+
+  const heading = topic ? `${topic.emoji} ${topic.pageHeading}` : "Каталог пісень";
+  const subheading = topic
+    ? topic.description
+    : "Тисячі пісень. Шукайте за назвою або виконавцем.";
+
+  // Structured data for the catalog/topic index. CollectionPage tells Google
+  // this is a list page (not a single article), and the BreadcrumbList lets
+  // SERPs render "Diez › Пісні › <topic>" trails. We don't enumerate every
+  // song into itemListElement here — there are thousands, and Google's
+  // crawler will discover them via the sitemap + on-page links anyway.
+  // Mirror the canonical: the legacy ?topic= form is 308-redirected to
+  // /songs/topic/<slug>, so structured data must assert the canonical URL too.
+  const pageUrl = topic ? `${siteUrl}/songs/topic/${topic.slug}` : `${siteUrl}/songs`;
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: heading,
+    description: subheading,
+    url: pageUrl,
+    inLanguage: "uk",
+    isPartOf: { "@type": "WebSite", name: "Diez", url: siteUrl },
+    numberOfItems: total,
+  };
+  const breadcrumbsLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Diez", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Пісні", item: `${siteUrl}/songs` },
+      ...(topic
+        ? [{ "@type": "ListItem", position: 3, name: topic.pageHeading, item: pageUrl }]
+        : []),
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbsLd) }}
+      />
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text)", letterSpacing: "-0.03em" }}>
+          {heading}
+        </h1>
+        <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+          {subheading}
+        </p>
+
+        <form method="GET" action="/songs" className="flex items-center gap-3 w-full">
+          {sort && <input type="hidden" name="sort" value={sort} />}
+          {topic && <input type="hidden" name="topic" value={topic.slug} />}
+          <label htmlFor="songs-search" className="sr-only">Пошук пісень або виконавців</label>
+          <div className="te-inset flex-1 flex items-center gap-3 px-4 py-3" style={{ borderRadius: "999px" }}>
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              id="songs-search"
+              name="q"
+              type="search"
+              autoComplete="off"
+              defaultValue={typeof rawQ === "string" ? rawQ : ""}
+              placeholder={topic ? "Шукати в підбірці…" : "Пісня або виконавець..."}
+              className="flex-1 bg-transparent outline-none text-[13px] font-normal"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+          <SearchSubmitButton />
+        </form>
+      </div>
+
+      {/* Heading + sort. Column on mobile so the sort control keeps a fixed
+          spot on its own row regardless of the selected option's length
+          (long labels like "За датою: спочатку нові" no longer reflow it);
+          inline + space-between from sm up. */}
+      <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-semibold" style={{ fontSize: "1.0625rem", letterSpacing: "-0.02em", color: "var(--text)" }}>
+          {q ? `Результати для "${rawQ}"` : topic ? topic.title : sort === "new" ? "Нові підбори" : sort === "popular" ? "Топ популярних" : "Всі пісні"}
+          {total > 0 && (
+            <span className="ml-2 text-sm font-normal" style={{ color: "var(--text-muted)" }}>
+              {total}
+            </span>
+          )}
+        </h2>
+        <SortSelect value={sort} />
+      </div>
+
+      <SongsInfiniteList
+        // Remount when the query (sort / search / topic) changes so the list
+        // resets to the freshly-sorted server page instead of keeping the
+        // stale useState-seeded songs until a hard reload.
+        key={`${sort}|${q}|${topic?.slug ?? ""}`}
+        initialSongs={songs}
+        initialTotal={total}
+        savedSlugs={savedSlugs}
+        query={queryArgs}
+      />
+
+      {/* Crawlable entry into the full catalogue. The infinite list above only
+          emits <a href> for the first 50 songs, so without this everything
+          deeper is reachable by sitemap alone — orphan pages Google crawls but
+          declines to index. Deliberately visible (hidden links read as
+          cloaking) but quiet: a small numbered row under the list. */}
+      {!q && !topic && total > 50 && (
+        <CatalogueIndex total={total} />
+      )}
+
+      {/* SEO body text — rendered for crawlers but visually unobtrusive.
+          Without ~100+ words Google classifies topic pages as thin content. */}
+      {topic && !q && (
+        <p
+          className="mt-10 max-w-3xl"
+          style={{ fontSize: "0.75rem", lineHeight: 1.6, color: "var(--text-muted)" }}
+        >
+          {topic.seoIntro}
+        </p>
+      )}
+    </>
+  );
+}
+

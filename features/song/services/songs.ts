@@ -7,6 +7,7 @@ import { normalizeForSearch } from "../lib/translit";
 import type { ChordDef } from "../data/chord-templates";
 import { getTopicBySlug, type Topic } from "../data/topics";
 import { noBarreShift } from "../lib/barre";
+import { artistSongsTag, SONG_LINKS_TAG } from "../lib/cache-tags";
 import { getPublicAuthors } from "@/features/profile/services/public-profile";
 
 // Public read-only client — no auth needed for published song reads.
@@ -238,7 +239,7 @@ export const getArtistSongCounts = unstable_cache(
     return counts;
   },
   ["artist-song-counts"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 2592000, tags: ["songs"] },
 );
 
 // Aggregate popularity per artist, keyed by artist.toLowerCase().
@@ -263,7 +264,7 @@ export const getArtistPopularity = unstable_cache(
     return out;
   },
   ["artist-popularity"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 2592000, tags: ["songs"] },
 );
 
 // Look up canonical artist names matching the search query. Matches against
@@ -336,7 +337,7 @@ const getBeginnerPicks = unstable_cache(
     return picks;
   },
   ["beginner-picks"],
-  { revalidate: 3600, tags: ["songs"] },
+  { revalidate: 2592000, tags: ["songs"] },
 );
 
 const getNoBarreSlugs = async (): Promise<string[]> =>
@@ -366,7 +367,7 @@ const getMaxChordsSlugs = unstable_cache(
       .map((r) => r.slug);
   },
   ["max-chords-slugs"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 2592000, tags: ["songs"] },
 );
 
 // Resolve a Topic into a `slug IN (...)` set so the page query can paginate
@@ -491,10 +492,10 @@ type SongsQuery = ReturnType<ReturnType<ReturnType<typeof getClient>["from"]>["s
 // and each entry was rewritten every 10 minutes. That was the bulk of the
 // 289K ISR writes (limit 200K) behind the 17.09.2026 Hobby fair-use block.
 // Searches now hit the database directly (trigram-indexed, ~100 ms); the
-// shared listings keep an hour-long cache — admin saves still call
+// shared listings keep a 30-day cache — admin saves still call
 // revalidateTag("songs"), so new songs appear immediately regardless.
 const getSongsPageCached = unstable_cache(fetchSongsPage, ["songs-page"], {
-  revalidate: 3600,
+  revalidate: 2592000,
   tags: ["songs"],
 });
 
@@ -517,11 +518,10 @@ export const getFreshSongs = unstable_cache(
     return data.map(mapRow);
   },
   ["fresh-songs"],
-  { revalidate: 1800, tags: ["songs"] },
+  { revalidate: 86400, tags: ["songs"] },
 );
 
-export const getSongsByArtist = unstable_cache(
-  async (
+const fetchSongsByArtist = async (
     artist: string,
     options?: { excludeSlug?: string; limit?: number; sortBy?: SortBy },
   ): Promise<Song[]> => {
@@ -545,10 +545,20 @@ export const getSongsByArtist = unstable_cache(
     const { data, error } = await q;
     if (error || !data) return [];
     return data.map(mapRow);
-  },
-  ["songs-by-artist"],
-  { revalidate: 86400, tags: ["songs"] },  // 24 h — read on ISR pages; tag-invalidated on every mutation
-);
+  };
+
+// Per-artist tag (see lib/cache-tags.ts): a change to one artist's songs
+// re-renders that artist's pages only. 30 days — the page TTL; edits
+// revalidate the tag on demand.
+export function getSongsByArtist(
+  artist: string,
+  options?: { excludeSlug?: string; limit?: number; sortBy?: SortBy },
+): Promise<Song[]> {
+  return unstable_cache(fetchSongsByArtist, ["songs-by-artist"], {
+    revalidate: 2592000,
+    tags: [artistSongsTag(artist)],
+  })(artist, options);
+}
 
 /**
  * Songs whose chord array contains one specific chord — the song list on the
@@ -571,7 +581,8 @@ export const getSongsWithChord = unstable_cache(
     return data.map(mapRow);
   },
   ["songs-with-chord"],
-  { revalidate: 86400, tags: ["songs"] },  // 24 h — read on ISR pages; tag-invalidated on every mutation
+  // /chords/* lists (~60 pages): fine to refresh on every catalogue change.
+  { revalidate: 2592000, tags: ["songs"] },
 );
 
 /**
@@ -620,7 +631,10 @@ export const getSongsSharingChords = unstable_cache(
       .map((x) => x.song);
   },
   ["songs-sharing-chords"],
-  { revalidate: 86400, tags: ["songs"] },  // 24 h — read on ISR pages; tag-invalidated on every mutation
+  // Not on "songs": every save would re-render all song pages. A new song
+  // joins these blocks after the next deploy; one going offline drops out
+  // via SONG_LINKS_TAG. 30 days — the song page TTL.
+  { revalidate: 2592000, tags: [SONG_LINKS_TAG] },
 );
 
 // Song + all of its published variants. The viewer decides which variant to

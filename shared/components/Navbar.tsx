@@ -207,7 +207,9 @@ export function Navbar() {
       <nav className="max-w-6xl mx-auto flex items-center justify-between gap-4">
 
         {/* Logo */}
-        <Link href="/" aria-label="Diez — на головну" className="flex items-center flex-shrink-0">
+        {/* No prefetch: the logo is on every page, so a viewport prefetch of
+            "/" ran on every page view; the home page is CDN-cached anyway. */}
+        <Link href="/" prefetch={false} aria-label="Diez — на головну" className="flex items-center flex-shrink-0">
           <DiezLogo height={28} />
         </Link>
 

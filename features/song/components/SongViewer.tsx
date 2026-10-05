@@ -359,10 +359,17 @@ export function SongViewer({
     if (!trackView || !activeVariantId) return;
     const key = `diez:viewed:${activeVariantId}`;
     try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
-    fetch("/api/songs/view", {
+    // Straight to the Supabase RPC (migration 033), not through our own
+    // /api route: one Vercel function call + CDN request less per view.
+    // Plain fetch, not supabase-js — that client is a 60 KB lazy chunk.
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/increment_variant_views`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ variantId: activeVariantId }),
+      headers: {
+        "Content-Type": "application/json",
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      },
+      body: JSON.stringify({ v_id: activeVariantId }),
+      keepalive: true,
     }).catch(() => {});
   }, [activeVariantId, trackView]);
 

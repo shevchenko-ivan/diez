@@ -117,8 +117,12 @@ export function CookieBanner() {
           }}
         >
           Diez використовує cookies для аналітики. Деталі в{" "}
+          {/* No prefetch: the banner shows on every first visit, and a
+              viewport prefetch fetched /privacy several times per visitor —
+              CDN requests nobody asked for (Vercel Hobby caps them at 1M). */}
           <Link
             href="/privacy"
+            prefetch={false}
             style={{ color: "var(--text)", textDecoration: "underline", textUnderlineOffset: 2 }}
           >
             Політиці конфіденційності

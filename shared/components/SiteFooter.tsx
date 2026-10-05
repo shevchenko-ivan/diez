@@ -46,6 +46,10 @@ export async function SiteFooter() {
   const topArtists = (await getRankedArtists()).slice(0, 12);
 
   return (
+    // Every link here is prefetch={false}: the footer scrolls into view at the
+    // end of nearly every page, and its ~40 links were each prefetched — on
+    // 05.10.2026 /privacy, /songs and /songs/instrument/piano were three of
+    // the five most requested paths on the whole site (Firewall → Traffic).
     <footer
       className="mt-auto px-6 pt-12 pb-8"
       style={{ borderTop: "1px solid var(--surface-dk)" }}
@@ -57,7 +61,7 @@ export async function SiteFooter() {
 
           {/* Brand block */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
-            <Link href="/" aria-label="Diez — на головну" className="inline-flex items-center mb-3">
+            <Link href="/" prefetch={false} aria-label="Diez — на головну" className="inline-flex items-center mb-3">
               <DiezLogo height={24} />
             </Link>
             <p
@@ -86,6 +90,7 @@ export async function SiteFooter() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
+                      prefetch={false}
                       className="footer-link"
                       style={{ fontSize: "0.8rem", color: "var(--text-mid)", fontWeight: 400 }}
                     >
@@ -114,6 +119,7 @@ export async function SiteFooter() {
                 <span key={a.slug} className="inline-flex items-center gap-3">
                   <Link
                     href={`/artists/${a.slug}`}
+                    prefetch={false}
                     className="footer-link"
                     style={{ fontSize: "0.8rem", color: "var(--text-mid)", fontWeight: 500 }}
                   >
@@ -147,6 +153,7 @@ export async function SiteFooter() {
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 className="footer-link"
                 style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
               >

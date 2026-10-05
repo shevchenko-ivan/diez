@@ -26,8 +26,9 @@ import { siteUrl, jsonLdScript } from "@/lib/utils";
 // internal linking: every dictionary page links real catalogue pages and
 // every song page links back here (see SongViewer).
 
-// Songs rotate slowly; regenerate every 6 hours.
-export const revalidate = 21600;
+// Songs rotate slowly and every song save revalidates the "songs" tag;
+// the timer is only a backstop. 30 days, like song pages.
+export const revalidate = 2592000;
 
 export function generateStaticParams() {
   return CHORD_PAGES.map((p) => ({ chord: p.slug }));

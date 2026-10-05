@@ -1,3 +1,4 @@
+import { ASSET_PREFIX, assetUrl } from "@/lib/asset-url";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
@@ -8,8 +9,6 @@ import { PostHogProvider } from "@/shared/components/PostHogProvider";
 import { LiteModeProvider } from "@/shared/components/LiteModeProvider";
 import { SavedSlugsProvider } from "@/shared/components/SavedSlugsProvider";
 import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { GoogleAnalytics } from "@/shared/components/GoogleAnalytics";
 
 export const metadata: Metadata = {
@@ -84,6 +83,9 @@ export default async function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <head>
+        {/* Static files come from the asset CDN when one is configured — open
+            the connection early, it serves the CSS, JS and these fonts. */}
+        {ASSET_PREFIX && <link rel="preconnect" href={ASSET_PREFIX} crossOrigin="anonymous" />}
         {/* Preload the two e-Ukraine weights used above the fold (Regular 400
             for body/UI text, Bold 700 for h1 + nav). Without these the browser
             only discovers them after parsing the CSS, by which time it has
@@ -91,14 +93,14 @@ export default async function RootLayout({
             it. Was a primary contributor to CLS 0.45 on the home page. */}
         <link
           rel="preload"
-          href="/fonts/e-Ukraine-Regular.woff2"
+          href={assetUrl("/fonts/e-Ukraine-Regular.woff2")}
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/fonts/e-Ukraine-Bold.woff2"
+          href={assetUrl("/fonts/e-Ukraine-Bold.woff2")}
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
@@ -106,7 +108,7 @@ export default async function RootLayout({
         {/* Heading display cut — hero h1 is the largest above-the-fold text. */}
         <link
           rel="preload"
-          href="/fonts/e-UkraineHead-Bold.woff2"
+          href={assetUrl("/fonts/e-UkraineHead-Bold.woff2")}
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
@@ -193,8 +195,6 @@ export default async function RootLayout({
             </SavedSlugsProvider>
           </LiteModeProvider>
         </PostHogProvider>
-        <Analytics />
-        <SpeedInsights />
         <GoogleAnalytics />
       </body>
     </html>
