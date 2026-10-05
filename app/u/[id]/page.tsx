@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!profile) return {};
   return {
     title: `${profile.name} — пісні та варіанти на Diez`,
-    description: `${profile.name} додав(ла) на Diez ${profile.songs.length} пісень і ${profile.variants.length} варіантів акордів.`,
+    description: `${profile.name} на Diez: ${plural(profile.songs.length, "пісня", "пісні", "пісень")} і ${plural(profile.variants.length, "варіант", "варіанти", "варіантів")} акордів.`,
     alternates: { canonical: `/u/${id}` },
     // Thin by nature (a list of links to pages that live elsewhere); keep it
     // out of the index but let the links pass equity to the songs.
@@ -30,13 +30,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+// Genitive month names: «з червня 2026» (toLocaleDateString gives the
+// nominative «червень» when the day is omitted).
+const MONTHS_GEN = [
+  "січня", "лютого", "березня", "квітня", "травня", "червня",
+  "липня", "серпня", "вересня", "жовтня", "листопада", "грудня",
+];
+
 function joined(iso: string | null): string | null {
   if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleDateString("uk-UA", { month: "long", year: "numeric" });
-  } catch {
-    return null;
-  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${MONTHS_GEN[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function plural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  const word = m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many;
+  return `${n} ${word}`;
 }
 
 export default async function PublicProfilePage({ params }: Props) {
@@ -65,7 +77,8 @@ export default async function PublicProfilePage({ params }: Props) {
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
             {since ? `На Diez з ${since} · ` : ""}
-            {profile.songs.length} пісень · {profile.variants.length} варіантів
+            {plural(profile.songs.length, "пісня", "пісні", "пісень")} ·{" "}
+            {plural(profile.variants.length, "варіант", "варіанти", "варіантів")}
           </p>
         </div>
       </header>
