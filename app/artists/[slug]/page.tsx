@@ -25,11 +25,9 @@ import { LEGACY_ARTIST_SLUGS } from "@/features/artist/lib/legacy-slugs";
 import { permanentRedirect, notFound } from "next/navigation";
 import { SaveArtistButton } from "@/features/artist/components/SaveArtistButton";
 import { SavedArtistsProvider } from "@/features/artist/components/SavedArtistsProvider";
-import { AdminOnly } from "@/shared/components/AdminOnly";
-import { Pencil } from "lucide-react";
+import { AdminEditArtistButton } from "@/features/artist/components/AdminEditArtistButton";
 import Image from "next/image";
 import { ArtistSongsList } from "./ArtistSongsList";
-import { TeButton } from "@/shared/components/TeButton";
 import { BackButton } from "@/shared/components/BackButton";
 import { siteUrl, jsonLdScript, coverThumb } from "@/lib/utils";
 export async function generateMetadata({
@@ -138,17 +136,7 @@ export default async function ArtistPage({
       <div className="mb-6 flex items-center justify-between gap-3">
         <BackButton fallback="/artists" label="Виконавці" />
         {artist?.id && (
-          <AdminOnly>
-            <TeButton
-              shape="pill"
-              href={`/admin/artists/edit?id=${artist.id}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold"
-              style={{ color: "var(--orange)", borderRadius: "0.75rem" }}
-            >
-              <Pencil size={12} />
-              Редагувати
-            </TeButton>
-          </AdminOnly>
+          <AdminEditArtistButton artistId={artist.id} />
         )}
       </div>
 

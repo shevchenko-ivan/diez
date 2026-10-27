@@ -13,7 +13,7 @@ import {
 } from "@/features/song/data/chord-templates";
 import { lookupChordUke, UKE_OPEN_FREQS } from "@/features/song/data/chord-templates-ukulele";
 import { lookupChordPiano } from "@/features/song/data/chord-templates-piano";
-import { CHORD_PAGES, getChordPage, UKR_NOTE } from "@/features/song/data/chord-pages";
+import { CHORD_PAGES, cyrillicChordName, getChordPage, UKR_NOTE } from "@/features/song/data/chord-pages";
 import { getSongsWithChord } from "@/features/song/services/songs";
 import { siteUrl, jsonLdScript } from "@/lib/utils";
 
@@ -43,7 +43,7 @@ export async function generateMetadata({
   const page = getChordPage(chord);
   if (!page) return {};
   const { name, ukr } = page;
-  const title = `Акорд ${name} (${ukr}) на гітарі — аплікатура | Diez`;
+  const title = `Акорд ${name} (${cyrillicChordName(name)}, ${ukr}) на гітарі — схема | Diez`;
   const description =
     `Як затиснути акорд ${name} на гітарі: схеми аплікатури з пальцями, ` +
     `ноти акорду, варіанти для укулеле й піаніно та пісні з ${name} у каталозі Diez.`;
@@ -57,6 +57,7 @@ export async function generateMetadata({
       `як затиснути ${name}`,
       `${name} аплікатура`,
       `акорд ${ukr}`,
+      `акорд ${cyrillicChordName(name).toLowerCase()}`,
     ],
     alternates: { canonical: `/chords/${page.slug}` },
     openGraph: {

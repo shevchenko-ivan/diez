@@ -22,15 +22,18 @@ import { PersonalHomeSections } from "@/features/home/PersonalHomeSections";
 export const dynamic = "force-static";
 export const revalidate = 86400; // daily; tag-invalidated on every catalogue change
 
+// Title leads with the query, not the brand: «акорди» / «акорди на гітарі»
+// rank the home page at ~4–5 but the brand-first title got 0.8% CTR
+// (Search Console, 10.2026).
 export const metadata: Metadata = {
-  title: "Diez — Акорди для гітари",
+  title: "Акорди для гітари до українських пісень — тексти з акордами | Diez",
   description:
-    "Зручний пошук акордів для тисяч пісень — гітара, укулеле, піаніно. Українські та зарубіжні виконавці. Створено музикантами для музикантів.",
+    "Тексти тисяч українських і зарубіжних пісень з акордами над словами — для гітари, укулеле й піаніно. Транспонування, капо, схеми акордів.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Diez — Акорди для гітари",
+    title: "Акорди для гітари до українських пісень — тексти з акордами | Diez",
     description:
-      "Зручний пошук акордів для тисяч пісень — гітара, укулеле, піаніно. Українські та зарубіжні виконавці.",
+      "Тексти тисяч українських і зарубіжних пісень з акордами над словами — для гітари, укулеле й піаніно.",
     type: "website",
     url: "/",
   },
