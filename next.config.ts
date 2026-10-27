@@ -98,6 +98,17 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
+      // Site icons (favicon, apple-touch, PWA). Only the versioned URLs
+      // (`?v=N`, written by app/layout.tsx and app/manifest.ts) are
+      // immutable; a bare /favicon.ico keeps the default revalidation, so a
+      // changed icon can always be shipped by bumping the version.
+      {
+        source: "/:icon(icon\\.svg|favicon\\.ico|apple-icon\\.png|icon-192\\.png|icon-512\\.png)",
+        has: [{ type: "query", key: "v" }],
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
       // Brand fonts. Vercel's default for public/ is max-age=0 + revalidate,
       // which costs every returning visitor a 304 round-trip BEFORE any text
       // paints — three of these are <link rel="preload">ed, so they sit right

@@ -3,10 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import { HapticLink } from "@/shared/components/HapticLink";
 import { coverThumb, snapshotSrcSet } from "@/lib/utils";
+import { useNearViewport } from "@/shared/hooks/useNearViewport";
 import { loadMoreArtists } from "../actions/strip";
 import type { Artist } from "../services/artists";
 
 const PAGE_SIZE = 12;
+// Photos of the first cards — the ones a phone shows without swiping — are in
+// the HTML and load natively; the rest wait until their card nears the screen.
+const NATIVE_FIRST = 3;
+
+/** Artist photo that isn't fetched until its card nears the visible area
+ *  (see useNearViewport); the avatar's inset surface shows meanwhile. */
+function DeferredPhoto(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const [ref, near] = useNearViewport<HTMLSpanElement>();
+  return (
+    <span ref={ref} style={{ display: "block", width: "100%", height: "100%" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+      {near && <img {...props} />}
+    </span>
+  );
+}
 
 interface Props {
   initial: Artist[];
@@ -62,7 +78,8 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
       ref={scrollerRef}
       className="flex overflow-x-auto py-3 -mx-6 px-6 sm:mx-0 sm:px-0 gap-1 scrollbar-none"
     >
-      {artists.map((artist) => {
+      {artists.map((artist, i) => {
+        const Photo = i < NATIVE_FIRST ? "img" : DeferredPhoto;
         const initial = artist.name.charAt(0).toUpperCase();
         const hue = artist.name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
         const placeholderBg = `hsl(${hue}, 40%, 68%)`;
@@ -93,8 +110,7 @@ export function ArtistStrip({ initial, initialExhausted = false }: Props) {
                 // a 300px twin; this 120px circle takes it up to DPR 2.5,
                 // which was PSI's top "Improve image delivery" item (307 KiB:
                 // 500px files in 120px slots).
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Photo
                   src={photo as string}
                   srcSet={photoSrcSet}
                   sizes={photoSrcSet ? "120px" : undefined}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Guitar } from "lucide-react";
 import { coverThumb, snapshotSrcSet } from "@/lib/utils";
+import { useNearViewport } from "@/shared/hooks/useNearViewport";
 
 // ── Song cover with graceful fallback ─────────────────────────────────────────
 // Renders the cover image; when there's no src OR the URL fails to load
@@ -49,6 +50,13 @@ interface SongCoverProps {
    * eager cards, not from a single high-priority hint.
    */
   lcpPriority?: boolean;
+  /**
+   * Don't even render the <img> until the cover is near the visible area
+   * (see useNearViewport) — for carousel cards, where native lazy loading
+   * fetches far more than anyone sees. The parent's own background shows
+   * meanwhile. Ignored for eager / LCP covers.
+   */
+  deferUntilNear?: boolean;
   /** Guitar icon size for the fallback. Scale to the container. */
   iconSize?: number;
 }
@@ -63,10 +71,16 @@ export function SongCover({
   sizes,
   plainEager,
   lcpPriority,
+  deferUntilNear = false,
   iconSize = 24,
 }: SongCoverProps) {
   const [errored, setErrored] = useState(false);
-  const showImage = !!src && !errored;
+  const hasImage = !!src && !errored;
+  const defer = deferUntilNear && !plainEager && !lcpPriority;
+  const [nearRef, near] = useNearViewport<HTMLDivElement>(defer && hasImage);
+  // Deferred and not near yet: neither image nor fallback, just the parent.
+  const waiting = defer && hasImage && !near;
+  const showImage = hasImage && !waiting;
   // Serve directly from the source CDN (bypass Vercel's Image Optimization
   // quota), downscaled via the URL so the payload stays light.
   const thumb = coverThumb(src);
@@ -79,14 +93,15 @@ export function SongCover({
 
   return (
     <div
+      ref={nearRef}
       className="w-full h-full relative overflow-hidden"
       style={{
-        background: showImage
+        background: hasImage
           ? undefined
           : "linear-gradient(135deg, var(--bg), var(--surface-dk))",
       }}
     >
-      {showImage ? (
+      {waiting ? null : showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumb as string}

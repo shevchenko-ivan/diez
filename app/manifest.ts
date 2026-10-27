@@ -15,10 +15,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // Categories surface the app in PWA / Android install stores and help
     // Google understand the site's vertical.
     categories: ["music", "education", "entertainment"],
+    // `?v=` makes these URLs immutable-cacheable (icon rule in
+    // next.config.ts); bump it when the files change.
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon-192.png?v=1", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png?v=1", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png?v=1", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     // App shortcuts — show up when a user long-presses the home-screen icon
     // on Android / Chrome OS. Lets people jump straight into the tools.

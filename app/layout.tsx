@@ -11,6 +11,9 @@ import { SavedSlugsProvider } from "@/shared/components/SavedSlugsProvider";
 import { ScrollbarAutoHide } from "@/shared/components/ScrollbarAutoHide";
 import { GoogleAnalytics } from "@/shared/components/GoogleAnalytics";
 
+// Version of the icon files in /public — see `icons` below.
+const ICON_V = 1;
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Diez — Акорди для гітари",
@@ -38,10 +41,20 @@ export const metadata: Metadata = {
     title: "Diez — Акорди для гітари",
     description: "Дієз — українська платформа гітарних акордів. Пісні з акордами, підбір акордів, тексти пісень.",
   },
-  // `app/icon.svg` and `app/apple-icon.png` are picked up automatically by
-  // Next's file-convention metadata — no `icons` field needed here. The
-  // SVG is sharp at every screen density; overriding via `icons` would
-  // force PNGs instead.
+  // Icons are plain files in /public with a manual `?v=` version, cached for
+  // a year (see the icon rule in next.config.ts). They used to be Next
+  // file-convention routes (app/icon.svg …), which are served with
+  // max-age=0: the browser re-requested the favicon on EVERY page view —
+  // half of a returning visitor's requests (document + icon). Same order and
+  // attributes as the generated tags had, so the SVG still wins where
+  // supported. When an icon changes, bump ICON_V — the old URL is immutable.
+  icons: {
+    icon: [
+      { url: `/favicon.ico?v=${ICON_V}`, sizes: "16x16", type: "image/x-icon" },
+      { url: `/icon.svg?v=${ICON_V}`, sizes: "any", type: "image/svg+xml" },
+    ],
+    apple: [{ url: `/apple-icon.png?v=${ICON_V}`, sizes: "180x180", type: "image/png" }],
+  },
   manifest: "/manifest.webmanifest",
 };
 

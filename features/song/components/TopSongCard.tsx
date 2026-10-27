@@ -81,6 +81,9 @@ export function TopSongCard({
           // traps (next/image and React SSR) mapped on 2026-08-31.
           plainEager={eagerCover}
           lcpPriority={lcpPriority}
+          // Every other card of the carousel loads its cover only when it
+          // comes near the screen (SongCover ignores this for eager ones).
+          deferUntilNear
           iconSize={40}
         />
       </div>
