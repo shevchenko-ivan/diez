@@ -40,6 +40,26 @@ export const UKR_NOTE: Record<string, string> = {
   B: "сі",
 };
 
+/**
+ * Cyrillic spelling of a chord name as people type it with a Ukrainian
+ * layout («акорд ам», «акорд дм», «акорд б7»). Search Console 10.2026: these
+ * are the top queries for the dictionary pages, and the title without them
+ * got almost no clicks at positions 5–7.
+ */
+const CYR_ROOT: Record<string, string> = {
+  C: "С",
+  D: "Д",
+  E: "Е",
+  F: "Ф",
+  G: "Г",
+  A: "А",
+  B: "Б",
+};
+
+export function cyrillicChordName(name: string): string {
+  return name.replace(/^[A-G]/, (r) => CYR_ROOT[r]).replace(/m$/, "м");
+}
+
 const ROOTS = Object.keys(UKR_NOTE);
 const SEVENTH_ROOTS = ["E", "A", "D", "G", "B"];
 

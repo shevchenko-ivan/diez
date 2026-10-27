@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getSongBySlug } from "@/features/song/services/songs";
+import { coverThumb } from "@/lib/utils";
 
 // Dynamic OG card per song. When someone shares /songs/<slug> on Telegram,
 // Viber, Facebook, etc., the platform fetches this URL for a preview image
@@ -85,7 +86,9 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
           {song.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={song.coverImage}
+              // Downscaled: a full-size Wikimedia original (10 MB) made Satori
+              // fail and the route answer 500 (Search Console, 24.10.2026).
+              src={coverThumb(song.coverImage, 630) ?? song.coverImage}
               width={630}
               height={630}
               style={{ width: 630, height: 630, objectFit: "cover" }}
