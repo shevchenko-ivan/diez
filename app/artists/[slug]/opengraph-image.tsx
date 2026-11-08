@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og";
+import { DiezLogo } from "@/shared/components/DiezLogo";
 import { getArtistBySlug } from "@/features/artist/services/artists";
-import { getSongsByArtist } from "@/features/song/services/songs";
 
-// Per-artist OG card — fired when /artists/<slug> is shared. Shows the artist
-// name, song count, and three top-played song titles on a dark themed
-// background, which previews far better than the static brand image.
+// Per-artist OG card — fired when /artists/<slug> is shared. Shows the
+// artist photo and name on a dark themed background, which previews far
+// better than the static brand image.
 
 // nodejs runtime — see /songs/[slug]/opengraph-image.tsx for rationale.
 export const runtime = "nodejs";
@@ -33,14 +33,9 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
   const { slug } = await params;
   const artist = await getArtistBySlug(slug);
   const name = artist?.name ?? slug;
-  const songs = artist ? await getSongsByArtist(name) : [];
   // Truncate manually — Satori doesn't support `-webkit-line-clamp` or
   // text-overflow, and the canvas only fits ~2 lines.
   const nameDisplay = name.length > 28 ? name.slice(0, 27) + "…" : name;
-  const topTitles = songs.slice(0, 3).map((s) => s.title);
-  const titlesLine = topTitles.map((t) => `«${t}»`).join("  ·  ");
-  const titlesDisplay =
-    titlesLine.length > 80 ? titlesLine.slice(0, 79) + "…" : titlesLine;
 
   // Split layout mirrors the song card. Left = artist photo (circular crop
   // via overflow:hidden on a square is the most Satori-friendly approach),
@@ -110,33 +105,7 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
               alignItems: "center",
             }}
           >
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: 900,
-                letterSpacing: "-0.04em",
-                color: "#FF8C3C",
-              }}
-            >
-              # DIEZ
-            </div>
-            {songs.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 18,
-                  fontWeight: 700,
-                  padding: "8px 18px",
-                  borderRadius: 999,
-                  background: "rgba(255, 140, 60, 0.15)",
-                  color: "#FF8C3C",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                }}
-              >
-                {`${songs.length} пісень`}
-              </div>
-            )}
+            <DiezLogo height={44} textColor="#FFFFFF" />
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
@@ -165,36 +134,8 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
             </div>
           </div>
 
-          {topTitles.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  opacity: 0.5,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                  marginBottom: 8,
-                }}
-              >
-                Популярні пісні
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 24,
-                  fontWeight: 600,
-                  opacity: 0.9,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {titlesDisplay}
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: "flex" }} />
-          )}
+          {/* Bottom spacer keeps the name vertically centred. */}
+          <div style={{ display: "flex" }} />
         </div>
       </div>
     ),

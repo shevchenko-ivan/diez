@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { DiezLogo } from "@/shared/components/DiezLogo";
 import { getSongBySlug } from "@/features/song/services/songs";
 import { coverThumb } from "@/lib/utils";
 
@@ -131,16 +132,7 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
               alignItems: "center",
             }}
           >
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: 900,
-                letterSpacing: "-0.04em",
-                color: "#FF8C3C",
-              }}
-            >
-              # DIEZ
-            </div>
+            <DiezLogo height={44} textColor="#FFFFFF" />
             <div
               style={{
                 display: "flex",
