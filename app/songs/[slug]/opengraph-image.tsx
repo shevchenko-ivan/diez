@@ -27,6 +27,11 @@ export function generateStaticParams(): { slug: string }[] {
   return [];
 }
 
+// Next answers metadata image routes with `max-age=0, must-revalidate`,
+// which leaves the CDN free to refetch every time. s-maxage pins the card in
+// Vercel's edge cache (browsers still get max-age=0).
+const CDN_CACHE = "public, max-age=0, s-maxage=2592000, stale-while-revalidate=86400";
+
 // Next 16 passes `params` as a Promise in opengraph-image.tsx, mirroring
 // generateMetadata. Awaiting it (not `params.slug` directly) is what kept
 // the dynamic card from rendering — every shared link fell through to the
@@ -207,6 +212,6 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
         </div>
       </div>
     ),
-    size,
+    { ...size, headers: { "Cache-Control": CDN_CACHE } },
   );
 }

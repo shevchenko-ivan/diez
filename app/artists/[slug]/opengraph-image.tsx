@@ -23,6 +23,11 @@ export function generateStaticParams(): { slug: string }[] {
   return [];
 }
 
+// Next answers metadata image routes with `max-age=0, must-revalidate`,
+// which leaves the CDN free to refetch every time. s-maxage pins the card in
+// Vercel's edge cache (browsers still get max-age=0).
+const CDN_CACHE = "public, max-age=0, s-maxage=2592000, stale-while-revalidate=86400";
+
 // Next 16 wraps `params` in a Promise here, same as generateMetadata.
 export default async function OG({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -193,6 +198,6 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
         </div>
       </div>
     ),
-    size,
+    { ...size, headers: { "Cache-Control": CDN_CACHE } },
   );
 }
