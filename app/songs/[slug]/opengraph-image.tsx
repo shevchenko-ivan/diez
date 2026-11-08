@@ -69,11 +69,17 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
   // Manually truncate — Satori doesn't honor `-webkit-line-clamp` and the
   // OG canvas only has room for ~2 lines of huge text. Truncating here keeps
   // both the layout and the renderer happy.
+  // Without a cover the text column takes the whole card instead of sitting
+  // next to an empty square.
+  const hasCover = Boolean(song.coverImage);
+  const maxTitle = hasCover ? 40 : 70;
   const titleDisplay =
-    song.title.length > 40 ? song.title.slice(0, 39) + "…" : song.title;
-  // The column is ~460 px wide: short titles get the big size, longer ones
-  // step down so they still fit in four lines.
-  const titleSize = titleDisplay.length <= 12 ? 104 : titleDisplay.length <= 24 ? 84 : 68;
+    song.title.length > maxTitle ? song.title.slice(0, maxTitle - 1) + "…" : song.title;
+  // The column is ~460 px wide next to a cover, ~1090 px without: short
+  // titles get the big size, longer ones step down so they still fit.
+  const titleSize = hasCover
+    ? titleDisplay.length <= 12 ? 104 : titleDisplay.length <= 24 ? 84 : 68
+    : titleDisplay.length <= 30 ? 104 : 84;
 
   // Split layout: left half is the real album cover (the thing guitarists
   // recognise instantly), right half is the metadata column on a dark panel.
@@ -92,17 +98,9 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
       >
         {/* Left — album cover. 630×630 square so it fills the card height
             edge to edge. Satori's <img> fetches the URL at render time. */}
-        <div
-          style={{
-            display: "flex",
-            width: 630,
-            height: 630,
-            background: song.coverColor ?? "#1A1A1A",
-            position: "relative",
-          }}
-        >
-          {song.coverImage && (
-            // eslint-disable-next-line @next/next/no-img-element
+        {song.coverImage && (
+          <div style={{ display: "flex", width: 630, height: 630 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               // Downscaled: a full-size Wikimedia original (10 MB) made Satori
               // fail and the route answer 500 (Search Console, 24.10.2026).
@@ -112,8 +110,8 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
               style={{ width: 630, height: 630, objectFit: "cover" }}
               alt=""
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Right — metadata column */}
         <div
@@ -121,7 +119,7 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
             display: "flex",
             flexDirection: "column",
             flex: 1,
-            padding: "48px 56px",
+            padding: hasCover ? "48px 56px" : "48px 72px",
             justifyContent: "space-between",
           }}
         >
