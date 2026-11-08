@@ -77,9 +77,19 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
     song.title.length > maxTitle ? song.title.slice(0, maxTitle - 1) + "…" : song.title;
   // The column is ~460 px wide next to a cover, ~1090 px without: short
   // titles get the big size, longer ones step down so they still fit.
-  const titleSize = hasCover
+  const sizeByLength = hasCover
     ? titleDisplay.length <= 12 ? 104 : titleDisplay.length <= 24 ? 84 : 68
     : titleDisplay.length <= 30 ? 104 : 84;
+  // Satori never breaks inside a word, so the longest word must fit the
+  // column on its own («Подоляночка», «ЗАКОРДОНОМ» ran off the card).
+  // Average glyph width ≈ 0.6 em for lowercase, ≈ 0.72 em for capitals.
+  const columnWidth = hasCover ? 458 : 1056;
+  const longestWordWidth = Math.max(
+    ...titleDisplay.split(/\s+/).map((w) =>
+      [...w].reduce((sum, ch) => sum + (ch !== ch.toLowerCase() ? 0.72 : 0.6), 0),
+    ),
+  );
+  const titleSize = Math.min(sizeByLength, Math.floor(columnWidth / longestWordWidth));
 
   // Split layout: left half is the real album cover (the thing guitarists
   // recognise instantly), right half is the metadata column on a dark panel.
