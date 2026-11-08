@@ -12,6 +12,17 @@ export const alt = "Diez — Акорди для гітари";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Cache the rendered card like the artist page itself (30-day ISR). Without
+// this the route ran on every request with `max-age=0`: each crawler or
+// messenger hit re-rendered a 350–600 KB PNG, which was ~40% of the
+// project's Fast Origin Transfer (Vercel Usage, 11.2026). As with the page,
+// a dynamic segment needs generateStaticParams for `revalidate` to apply.
+export const revalidate = 2592000;
+
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
+
 // Next 16 wraps `params` in a Promise here, same as generateMetadata.
 export default async function OG({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

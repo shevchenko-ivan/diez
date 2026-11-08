@@ -16,6 +16,17 @@ export const alt = "Diez — Акорди для гітари";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Cache the rendered card like the song page itself (30-day ISR). Without
+// this the route ran on every request with `max-age=0`: each crawler or
+// messenger hit re-rendered a 350–600 KB PNG, which was ~40% of the
+// project's Fast Origin Transfer (Vercel Usage, 11.2026). As with the page,
+// a dynamic segment needs generateStaticParams for `revalidate` to apply.
+export const revalidate = 2592000;
+
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
+
 // Next 16 passes `params` as a Promise in opengraph-image.tsx, mirroring
 // generateMetadata. Awaiting it (not `params.slug` directly) is what kept
 // the dynamic card from rendering — every shared link fell through to the
