@@ -82,11 +82,12 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
     : titleDisplay.length <= 30 ? 104 : 84;
   // Satori never breaks inside a word, so the longest word must fit the
   // column on its own («Подоляночка», «ЗАКОРДОНОМ» ran off the card).
-  // Average glyph width ≈ 0.6 em for lowercase, ≈ 0.72 em for capitals.
+  // Average glyph width ≈ 0.52 em for lowercase, ≈ 0.66 em for capitals
+  // (measured on rendered cards).
   const columnWidth = hasCover ? 458 : 1056;
   const longestWordWidth = Math.max(
     ...titleDisplay.split(/\s+/).map((w) =>
-      [...w].reduce((sum, ch) => sum + (ch !== ch.toLowerCase() ? 0.72 : 0.6), 0),
+      [...w].reduce((sum, ch) => sum + (ch !== ch.toLowerCase() ? 0.66 : 0.52), 0),
     ),
   );
   const titleSize = Math.min(sizeByLength, Math.floor(columnWidth / longestWordWidth));
