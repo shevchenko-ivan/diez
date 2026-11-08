@@ -5,7 +5,7 @@ import { coverThumb } from "@/lib/utils";
 
 // Dynamic OG card per song. When someone shares /songs/<slug> on Telegram,
 // Viber, Facebook, etc., the platform fetches this URL for a preview image
-// and we get a branded card with the title, artist and chord list — far more
+// and we get a branded card with the cover, title and artist — far more
 // click-worthy than the generic /opengraph-image.png fallback.
 
 // nodejs runtime, not edge — getSongBySlug pulls Supabase + parses lyrics
@@ -66,13 +66,14 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
     );
   }
 
-  const difficultyLabel =
-    song.difficulty === "easy" ? "Легка" : song.difficulty === "medium" ? "Середня" : "Складна";
   // Manually truncate — Satori doesn't honor `-webkit-line-clamp` and the
   // OG canvas only has room for ~2 lines of huge text. Truncating here keeps
   // both the layout and the renderer happy.
   const titleDisplay =
     song.title.length > 40 ? song.title.slice(0, 39) + "…" : song.title;
+  // The column is ~460 px wide: short titles get the big size, longer ones
+  // step down so they still fit in four lines.
+  const titleSize = titleDisplay.length <= 12 ? 104 : titleDisplay.length <= 24 ? 84 : 68;
 
   // Split layout: left half is the real album cover (the thing guitarists
   // recognise instantly), right half is the metadata column on a dark panel.
@@ -124,40 +125,20 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
             justifyContent: "space-between",
           }}
         >
-          {/* Top row — brand + difficulty/key pill */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+          {/* Top — brand */}
+          <div style={{ display: "flex" }}>
             <DiezLogo height={44} textColor="#FFFFFF" />
-            <div
-              style={{
-                display: "flex",
-                fontSize: 18,
-                fontWeight: 700,
-                padding: "8px 18px",
-                borderRadius: 999,
-                background: "rgba(255, 255, 255, 0.1)",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-              }}
-            >
-              {`${difficultyLabel} · ${song.key}`}
-            </div>
           </div>
 
           {/* Middle — title and artist */}
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div
               style={{
-                fontSize: 26,
+                fontSize: 38,
                 fontWeight: 600,
                 opacity: 0.6,
                 letterSpacing: "-0.01em",
-                marginBottom: 4,
+                marginBottom: 8,
               }}
             >
               {song.artist}
@@ -165,7 +146,7 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
             <div
               style={{
                 display: "flex",
-                fontSize: 72,
+                fontSize: titleSize,
                 fontWeight: 900,
                 lineHeight: 1.05,
                 letterSpacing: "-0.04em",
@@ -175,32 +156,8 @@ export default async function OG({ params }: { params: Promise<{ slug: string }>
             </div>
           </div>
 
-          {/* Bottom — chord pill row */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 10,
-            }}
-          >
-            {song.chords.slice(0, 6).map((c) => (
-              <div
-                key={c}
-                style={{
-                  display: "flex",
-                  fontSize: 22,
-                  fontWeight: 700,
-                  padding: "10px 20px",
-                  borderRadius: 999,
-                  background: "rgba(255, 140, 60, 0.15)",
-                  color: "#FF8C3C",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {c}
-              </div>
-            ))}
-          </div>
+          {/* Bottom spacer keeps the title block vertically centred. */}
+          <div style={{ display: "flex", height: 44 }} />
         </div>
       </div>
     ),
