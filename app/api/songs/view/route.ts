@@ -24,7 +24,12 @@ function rateLimited(ip: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // cf-connecting-ip on Cloudflare (no x-forwarded-for there), x-forwarded-for
+  // on Vercel — see app/api/search/suggest/route.ts.
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
   if (rateLimited(ip)) {
     return NextResponse.json({ ok: false }, { status: 429 });
   }
