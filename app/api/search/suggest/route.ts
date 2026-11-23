@@ -140,8 +140,13 @@ function matchTier(row: SongRow, qNorm: string, tokens: string[], resolvedArtist
 }
 
 export async function GET(req: Request) {
-  // Rate limit by client IP — x-forwarded-for is set by Vercel's edge.
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // Rate limit by client IP. Cloudflare sends it as cf-connecting-ip and no
+  // x-forwarded-for; Vercel's edge sets x-forwarded-for. Without the first
+  // header every visitor on Cloudflare shared the single "unknown" bucket.
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
   if (!rateLimit(ip)) {
     return NextResponse.json(
       { songs: [], lyricsSongs: [], artists: [], hasMore: false, error: "rate_limited" },
