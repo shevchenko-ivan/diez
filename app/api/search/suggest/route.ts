@@ -4,7 +4,6 @@ import { hasEnvVars } from "@/lib/utils";
 import { normalizeForSearch } from "@/features/song/lib/translit";
 import { isMissingStatusColumn } from "@/features/artist/lib/status";
 
-export const runtime = "edge";
 
 function getClient() {
   return createClient(
