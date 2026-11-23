@@ -38,7 +38,7 @@ export function GoogleAnalytics() {
     return () => window.removeEventListener("diez:consent-changed", onChange);
   }, []);
 
-  if (!PROD) return null;
+  if (!PROD || !GA_ID) return null;
 
   return (
     <>

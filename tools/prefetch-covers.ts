@@ -76,7 +76,7 @@ async function main() {
 
   // sharp is a transitive dependency of next; if a future lockfile drops it,
   // fall back to storing the CDN bytes untouched rather than failing.
-  let sharp: typeof import("sharp") | null = null;
+  let sharp: (typeof import("sharp"))["default"] | null = null;
   try {
     sharp = (await import("sharp")).default;
   } catch {

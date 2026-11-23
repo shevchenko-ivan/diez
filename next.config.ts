@@ -82,6 +82,15 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      // Cloudflare test deployment (diez.<account>.workers.dev) renders with
+      // the production NEXT_PUBLIC_SITE_URL, so its robots.txt would allow
+      // crawling. Keep it out of every index; canonicals already point at
+      // diez.net.ua.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "(.*)\\.workers\\.dev" }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
       // The asset CDN fetches these from us and hands them to pages on
       // diez.net.ua — cross-origin, so fonts (and preloads with
       // crossorigin) need CORS. Harmless when no CDN is configured.

@@ -1,0 +1,4 @@
+# Runtime secrets for `wrangler dev` / `npm run cf:preview` (copy to .dev.vars).
+# In the deployed Worker set them with `npx wrangler secret put <NAME>`.
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXTJS_ENV=production
