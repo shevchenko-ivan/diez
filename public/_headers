@@ -1,0 +1,20 @@
+# Cloudflare Workers static assets. These files are served straight from the
+# asset store, before the Worker runs, so the Cache-Control rules in
+# next.config.ts `headers()` never reach them. Without this file every
+# static file answers `max-age=0, must-revalidate`.
+# Mirrors next.config.ts; Vercel ignores this file.
+
+# Build output: content-hashed filenames.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Brand fonts: no hash in the name, a re-cut face must get a new filename.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Build-time cover snapshot: content hash in the filename.
+/_covers/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
