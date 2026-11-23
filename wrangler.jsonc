@@ -1,13 +1,24 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Test deployment only: served at diez.<account>.workers.dev, no custom
-  // domain. diez.net.ua stays on Vercel until the switch is approved.
+  // Production Worker for diez.net.ua (since 23.11.2026). Workers Builds
+  // deploys it from `main`. The same Worker also answers on
+  // diez.<account>.workers.dev, kept out of search indexes by the
+  // X-Robots-Tag rule in next.config.ts.
   "name": "diez",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
   "preview_urls": true,
+  // Zone routes, the same two that were first added in the dashboard. Both
+  // DNS records are proxied CNAMEs; the routes hand every request to the
+  // Worker. www is redirected to the apex by a zone redirect rule before
+  // the Worker runs. Keep this list in sync with the dashboard: wrangler
+  // deploys exactly these routes for the Worker.
+  "routes": [
+    { "pattern": "diez.net.ua/*", "zone_name": "diez.net.ua" },
+    { "pattern": "www.diez.net.ua/*", "zone_name": "diez.net.ua" }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
