@@ -8,6 +8,12 @@
 //                 Objects, no D1 table to migrate).
 //   • DO queue  — the 30-day `revalidate` backstop: stale pages re-render
 //                 in the background, deduplicated, like Vercel ISR.
+//
+// package.json pins `cookie` to 0.7.2 for @opennextjs/aws (`overrides`).
+// With cookie 1.x the middleware bundle reads `cookie.default.parse`, which
+// is undefined there, so every request carrying a Cookie header answered
+// 500 (Error 1101). Drop the override once a request with a cookie passes
+// without it.
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
 import { withRegionalCache } from "@opennextjs/cloudflare/overrides/incremental-cache/regional-cache";
