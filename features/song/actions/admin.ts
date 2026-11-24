@@ -189,6 +189,22 @@ export async function createSong(formData: FormData) {
   redirect(`/songs/${finalSlug}`);
 }
 
+// ─── Partial updates ─────────────────────────────────────────────────────────
+//
+// The edit forms do not carry every column: /admin/songs/edit has no capo and
+// no time-signature input. A field the form did not send keeps its stored
+// value; a field sent empty is cleared.
+function capoPatchFrom(formData: FormData): { capo?: number | null } {
+  if (!formData.has("capo")) return {};
+  const raw = formData.get("capo");
+  return { capo: raw ? Number(raw) : null };
+}
+
+function timeSignaturePatchFrom(formData: FormData): { time_signature?: string | null } {
+  if (!formData.has("time_signature")) return {};
+  return { time_signature: (formData.get("time_signature") as string)?.trim() || null };
+}
+
 // ─── Song variants ────────────────────────────────────────────────────────────
 
 async function getSongSlug(songId: string): Promise<string | null> {
@@ -272,7 +288,7 @@ export async function updateVariant(formData: FormData) {
   const variantId = assertUuid(formData.get("variantId") as string, "ID варіанта");
   const label = (formData.get("label") as string)?.trim();
   const key = (formData.get("key") as string)?.trim();
-  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
+  const capoPatch = capoPatchFrom(formData);
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
 
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
@@ -290,7 +306,7 @@ export async function updateVariant(formData: FormData) {
     .update({
       ...(label ? { label } : {}),
       ...(key ? { key } : {}),
-      capo,
+      ...capoPatch,
       ...(parsed
         ? {
             sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -316,7 +332,7 @@ export async function updateVariant(formData: FormData) {
       .from("songs")
       .update({
         ...(key ? { key } : {}),
-        capo,
+        ...capoPatch,
         ...(parsed
           ? {
               sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -465,8 +481,8 @@ export async function updateSong(formData: FormData) {
   const album = (formData.get("album") as string)?.trim() || null;
   const genre = (formData.get("genre") as string)?.trim() || null;
   const key = (formData.get("key") as string)?.trim() || undefined;
-  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
-  const time_signature = (formData.get("time_signature") as string)?.trim() || null;
+  const capoPatch = capoPatchFrom(formData);
+  const timeSignaturePatch = timeSignaturePatchFrom(formData);
   const difficulty = (formData.get("difficulty") as string) || null;
   const status = (formData.get("status") as string) || null;
   const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
@@ -484,7 +500,7 @@ export async function updateSong(formData: FormData) {
   const { data: songBefore, error } = await admin
     .from("songs")
     .update({
-      title, artist, album, genre, ...(key ? { key } : {}), capo, time_signature,
+      title, artist, album, genre, ...(key ? { key } : {}), ...capoPatch, ...timeSignaturePatch,
       difficulty, status, cover_image, youtube_id,
       ...(parsed ? {
         sections: { raw: lyricsRaw, sections: parsed.sections },
@@ -505,7 +521,7 @@ export async function updateSong(formData: FormData) {
       .from("song_variants")
       .update({
         ...(key ? { key } : {}),
-        capo,
+        ...capoPatch,
         ...(parsed ? {
           sections: { raw: lyricsRaw, sections: parsed.sections },
           chords: parsed.chords,
@@ -544,7 +560,7 @@ export async function updateSongFull(formData: FormData) {
   const genre = (formData.get("genre") as string)?.trim() || null;
   const difficulty = (formData.get("difficulty") as string) || null;
   const status = (formData.get("status") as string) || null;
-  const time_signature = (formData.get("time_signature") as string)?.trim() || null;
+  const timeSignaturePatch = timeSignaturePatchFrom(formData);
   const cover_image = sanitizeUrl((formData.get("cover_image") as string)?.trim());
   const youtube_id = extractYoutubeId(formData.get("youtube_id") as string);
 
@@ -553,7 +569,7 @@ export async function updateSongFull(formData: FormData) {
   // ── Variant-level ─────────────────────────────────────────────────────────
   const label = (formData.get("label") as string)?.trim();
   const key = (formData.get("key") as string)?.trim();
-  const capo = formData.get("capo") ? Number(formData.get("capo")) : null;
+  const capoPatch = capoPatchFrom(formData);
   const lyricsRaw = (formData.get("lyrics_with_chords") as string)?.trim();
   const parsed = lyricsRaw ? parseLyricsWithChords(lyricsRaw) : null;
   const voicings = parseChordVoicings(formData.get("chord_voicings"));
@@ -579,7 +595,7 @@ export async function updateSongFull(formData: FormData) {
     .update({
       ...(label ? { label } : {}),
       ...(key ? { key } : {}),
-      capo,
+      ...capoPatch,
       ...(parsed
         ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
         : {}),
@@ -602,12 +618,12 @@ export async function updateSongFull(formData: FormData) {
   const { error: songErr } = await admin
     .from("songs")
     .update({
-      title, artist, album, genre, difficulty, status, time_signature,
+      title, artist, album, genre, difficulty, status, ...timeSignaturePatch,
       cover_image, youtube_id,
       ...(isPrimary
         ? {
             ...(key ? { key } : {}),
-            capo,
+            ...capoPatch,
             ...(parsed
               ? { sections: { raw: lyricsRaw, sections: parsed.sections }, chords: parsed.chords }
               : {}),
